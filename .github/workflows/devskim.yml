@@ -12,7 +12,7 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: '38 23 * * 1'
+    - cron: "38 23 * * 1"
 
 jobs:
   lint:
