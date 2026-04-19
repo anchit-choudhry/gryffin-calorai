@@ -1,0 +1,48 @@
+{
+  "name": "gryffin-calorai-app",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint --config eslint.config.js ./src",
+    "lint:fix": "pnpm run lint --fix",
+    "preview": "vite preview",
+    "format": "prettier --write \"./src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "dexie": "^4.4.2",
+    "react": "^19.2.5",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.5",
+    "react-icons": "^5.6.0",
+    "vite-plugin-compression2": "^2.5.3",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/ui": "^4.1.4",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "jsdom": "^29.0.2",
+    "postcss": "^8.5.10",
+    "prettier": "^3.8.3",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.8",
+    "vitest": "^4.1.4"
+  }
+}

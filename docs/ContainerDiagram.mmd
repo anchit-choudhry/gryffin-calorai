@@ -1,0 +1,11 @@
+C4Context
+  title C4 Container Diagram for Gryffin Calorai Application
+  Person(user, "User", "A person who tracks their caloric intake and recipes.")
+
+  System_Boundary(c1, "Gryffin Calorai Application") {
+    Container(spa, "Single Page Application (SPA)", "React, TypeScript", "Handles UI rendering, hash-based routing, and business logic.")
+    ContainerDb(db, "Local Data Store", "IndexedDB (Dexie.js)", "Stores food logs, user profiles, and recipe collections.")
+  }
+
+  Rel(user, spa, "Uses", "HTTPS")
+  Rel(spa, db, "Reads/Writes", "Dexie.js API")
