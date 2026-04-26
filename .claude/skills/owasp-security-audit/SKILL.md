@@ -1,3 +1,9 @@
+---
+name: owasp-security-audit
+description: Provides comprehensive security standards and checklists based on OWASP Top 10:2025. Includes language-specific secure coding patterns for 20+ languages, guidance on Agentic AI security, and ASVS 5.0 requirements to ensure robust defense-in-depth across the development lifecycle.
+license: Complete terms in file LICENSE
+---
+
 # OWASP Security Best Practices Skill
 
 Apply these security standards when writing or reviewing code.
@@ -5,7 +11,7 @@ Apply these security standards when writing or reviewing code.
 ## Quick Reference: OWASP Top 10:2025
 
 | #   | Vulnerability             | Key Prevention                                         |
-| --- | ------------------------- | ------------------------------------------------------ |
+|-----|---------------------------|--------------------------------------------------------|
 | A01 | Broken Access Control     | Deny by default, enforce server-side, verify ownership |
 | A02 | Security Misconfiguration | Harden configs, disable defaults, minimize features    |
 | A03 | Supply Chain Failures     | Lock versions, verify integrity, audit dependencies    |
@@ -147,7 +153,7 @@ def check_permission(user, resource):
 When building or reviewing AI agent systems, check for:
 
 | Risk                                  | Description                                                 | Mitigation                                                 |
-| ------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------- |
+|---------------------------------------|-------------------------------------------------------------|------------------------------------------------------------|
 | ASI01: Goal Hijack                    | Prompt injection alters agent objectives                    | Input sanitization, goal boundaries, behavioral monitoring |
 | ASI02: Tool Misuse                    | Tools used in unintended ways                               | Least privilege, fine-grained permissions, validate I/O    |
 | ASI03: Identity & Privilege Abuse     | Delegated trust, inherited credentials, role chain exploits | Short-lived scoped tokens, identity verification           |

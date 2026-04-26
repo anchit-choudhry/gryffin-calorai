@@ -1,42 +1,27 @@
 // src/pages/Recipes.tsx
-import React, { useState } from "react";
+import React from "react";
+import { useAppState } from "../state/AppState";
+import { useRecipeForm } from "../hooks/useRecipeForm";
 
 const Recipes: React.FC = () => {
-  const [recipeName, setRecipeName] = useState("");
-  const [description, setDescription] = useState("");
-  const [ingredients, setIngredients] = useState<
-    Array<{ foodItemId: number; quantity: number; serving: number }>
-  >([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const { userId } = useAppState();
+  const {
+    recipeName,
+    setRecipeName,
+    description,
+    setDescription,
+    ingredients,
+    addIngredient,
+    removeIngredient,
+    updateIngredient,
+    message,
+    isLoading,
+    saveRecipeForm,
+  } = useRecipeForm(userId);
 
-  const handleAddIngredient = () => {
-    // In a real app, we'd fetch foodItem names/details here.
-    setIngredients([...ingredients, { foodItemId: 1, quantity: 1, serving: 1 }]);
-  };
-
-  const handleRemoveIngredient = (index: number) => {
-    setIngredients(ingredients.filter((_, i) => i !== index));
-  };
-
-  const handleSaveRecipe = (e: React.FormEvent) => {
+  const handleSaveRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipeName || !description || ingredients.length === 0) {
-      setMessage("Please provide a name, description, and at least one ingredient.");
-      return;
-    }
-
-    // Calculate total calories (Mock calculation for MVP)
-    const totalCalories = ingredients.reduce((acc) => acc + 100, 0); // Mock calculation
-
-    // TODO: Call the database service to save the recipe
-    console.log("Saving Recipe:", { name: recipeName, description, ingredients, totalCalories });
-
-    setMessage(`Recipe "${recipeName}" saved successfully! Total Calories: ${totalCalories}.`);
-
-    // Reset form
-    setRecipeName("");
-    setDescription("");
-    setIngredients([]);
+    await saveRecipeForm();
   };
 
   return (
@@ -77,32 +62,41 @@ const Recipes: React.FC = () => {
 
           <div className="border dark:border-gray-700 p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50 space-y-3">
             <h4 className="font-medium dark:text-gray-200">Ingredients</h4>
-            {ingredients.map((ing, index) => (
+            {ingredients.map((ing) => (
               <div
-                key={index}
+                key={ing.id}
                 className="flex space-x-2 items-center bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700"
               >
                 <input
                   type="number"
                   placeholder="Food Item ID"
-                  defaultValue={ing.foodItemId}
+                  value={ing.foodItemId}
+                  onChange={(e) =>
+                    updateIngredient(ing.id, "foodItemId", parseInt(e.target.value) || 1)
+                  }
                   className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
                 />
                 <input
                   type="number"
                   placeholder="Quantity"
-                  defaultValue={ing.quantity}
+                  value={ing.quantity}
+                  onChange={(e) =>
+                    updateIngredient(ing.id, "quantity", parseInt(e.target.value) || 1)
+                  }
                   className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
                 />
                 <input
                   type="number"
                   placeholder="Serving Size"
-                  defaultValue={ing.serving}
+                  value={ing.serving}
+                  onChange={(e) =>
+                    updateIngredient(ing.id, "serving", parseInt(e.target.value) || 1)
+                  }
                   className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveIngredient(index)}
+                  onClick={() => removeIngredient(ing.id)}
                   className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
                 >
                   Remove
@@ -111,7 +105,7 @@ const Recipes: React.FC = () => {
             ))}
             <button
               type="button"
-              onClick={handleAddIngredient}
+              onClick={addIngredient}
               className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm"
             >
               + Add Ingredient
@@ -120,9 +114,10 @@ const Recipes: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full py-2 px-4 rounded-md text-white bg-green-600 hover:bg-green-700 transition"
+            disabled={isLoading}
+            className={`w-full py-2 px-4 rounded-md text-white transition ${isLoading ? "bg-gray-400 dark:bg-gray-600" : "bg-green-600 hover:bg-green-700"}`}
           >
-            Save Recipe
+            {isLoading ? "Saving..." : "Save Recipe"}
           </button>
         </form>
       </div>

@@ -1,34 +1,11 @@
 // src/pages/Dashboard.tsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import FoodLogger from "../components/FoodLogger";
 import BarcodeScanner from "../components/BarcodeScanner";
-import { getDailyFoodLogs } from "../db/dbService";
-
-// Mock User ID - In a real app, this comes from the state context
-const MOCK_USER_ID = "1";
+import { useAppState } from "../state/AppState";
 
 const Dashboard: React.FC = () => {
-  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch and display today's logs on mount
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        setLoading(true);
-        const logs = await getDailyFoodLogs(MOCK_USER_ID, new Date().toISOString().split("T")[0]);
-        setDailyLogs(logs);
-      } catch (e) {
-        console.error("Failed to fetch logs:", e);
-        setError("Failed to load daily logs. Please check your database connection.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchLogs();
-  }, []);
-
+  const { dailyLogs, isLoading, error } = useAppState();
   const totalCalories = dailyLogs.reduce((sum, log) => sum + log.calories, 0);
 
   return (
@@ -59,7 +36,7 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="lg:col-span-1">
           <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Log Food</h3>
-          <FoodLogger userId={MOCK_USER_ID} />
+          <FoodLogger />
         </div>
         <div className="lg:col-span-1">
           <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
@@ -72,16 +49,16 @@ const Dashboard: React.FC = () => {
         <h3 className="text-2xl font-semibold mb-4 dark:text-gray-200">
           Today's Log ({dailyLogs.length} Items)
         </h3>
-        {loading ? (
+        {isLoading ? (
           <p className="dark:text-gray-400">Loading today's logs...</p>
         ) : error ? (
           <p className="text-red-500 dark:text-red-400">{error}</p>
         ) : (
           <div className="space-y-3">
             {dailyLogs.length > 0 ? (
-              dailyLogs.map((log: any) => (
+              dailyLogs.map((log, index) => (
                 <div
-                  key={log.id}
+                  key={log.id ?? index}
                   className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-sm"
                 >
                   <div>

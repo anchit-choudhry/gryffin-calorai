@@ -1,10 +1,13 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import Recipes from "./pages/Recipes";
 import Progress from "./pages/Progress";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
+import { UserId } from "./types";
+
+const MOCK_USER_ID = UserId("1");
 
 /**
  * @component App
@@ -13,11 +16,21 @@ import { initializeDB } from "./db/dbService";
  * initialization of core services (database, global state).
  */
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem("darkMode");
+    return stored ? JSON.parse(stored) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
   const [currentPath, setCurrentPath] = useState(window.location.hash || "#dashboard");
-  const MOCK_USER_ID = "1";
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
+  useLayoutEffect(() => {
     /**
      * @function setupApp
      * @description Initializes the Dexie database and fetches initial data into the Zustand store.
@@ -32,22 +45,6 @@ function App() {
       setCurrentPath(window.location.hash || "#dashboard");
     };
 
-    // Initialize dark mode based on system preference or saved state
-    const stored = localStorage.getItem("darkMode");
-    const isDark = stored
-      ? JSON.parse(stored)
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    // Update DOM classes directly based on determined theme
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
-    // Update React state AFTER DOM manipulation to avoid synchronous state update warning
-    setDarkMode(isDark);
-
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
@@ -58,7 +55,7 @@ function App() {
    * and persists preference in localStorage.
    */
   const toggleDarkMode = () => {
-    setDarkMode((prev) => {
+    setDarkMode((prev: boolean) => {
       const isDark = !prev;
       if (isDark) {
         document.documentElement.classList.add("dark");

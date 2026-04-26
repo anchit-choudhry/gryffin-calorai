@@ -1,3 +1,9 @@
+---
+name: web-security-audit
+description: Expert guidance on identifying and mitigating common web vulnerabilities from a bug hunter's perspective. Covers access control, XSS, CSRF, SSRF, insecure file uploads, and JWT security with detailed protection strategies, implementation patterns, and verification checklists.
+license: Complete terms in file LICENSE
+---
+
 # Secure Coding Guide for Web Applications
 
 ## Overview
@@ -297,7 +303,7 @@ Any endpoint accepting a URL for redirection must be protected against open redi
 ### Bypass Techniques to Block
 
 | Technique             | Example                          | Why It Works                                             |
-| --------------------- | -------------------------------- | -------------------------------------------------------- |
+|-----------------------|----------------------------------|----------------------------------------------------------|
 | @ symbol              | `https://legit.com@evil.com`     | Browser navigates to evil.com with legit.com as username |
 | Subdomain abuse       | `https://legit.com.evil.com`     | evil.com owns the subdomain                              |
 | Protocol tricks       | `javascript:alert(1)`            | XSS via redirect                                         |
@@ -366,7 +372,7 @@ Any functionality where the server makes requests to URLs provided or influenced
 #### IP and DNS Bypass Techniques to Block
 
 | Technique            | Example                            | Description                                               |
-| -------------------- | ---------------------------------- | --------------------------------------------------------- |
+|----------------------|------------------------------------|-----------------------------------------------------------|
 | Decimal IP           | `http://2130706433`                | 127.0.0.1 as decimal                                      |
 | Octal IP             | `http://0177.0.0.1`                | Octal representation                                      |
 | Hex IP               | `http://0x7f.0x0.0x0.0x1`          | Hexadecimal                                               |
@@ -437,7 +443,7 @@ File uploads must validate type, content, and size to prevent various attacks.
 #### Common Bypasses and Attacks
 
 | Attack                 | Description                                 | Prevention                                     |
-| ---------------------- | ------------------------------------------- | ---------------------------------------------- |
+|------------------------|---------------------------------------------|------------------------------------------------|
 | Extension bypass       | `shell.php.jpg`                             | Check full extension, use allowlist            |
 | Null byte              | `shell.php%00.jpg`                          | Sanitize filename, check for null bytes        |
 | Double extension       | `shell.jpg.php`                             | Only allow single extension                    |
@@ -454,7 +460,7 @@ File uploads must validate type, content, and size to prevent various attacks.
 #### Magic Bytes Reference
 
 | Type      | Magic Bytes (hex)         |
-| --------- | ------------------------- |
+|-----------|---------------------------|
 | JPEG      | `FF D8 FF`                |
 | PNG       | `89 50 4E 47 0D 0A 1A 0A` |
 | GIF       | `47 49 46 38`             |
@@ -682,7 +688,7 @@ JWT misconfigurations can lead to full authentication bypass and token forgery.
 ### Vulnerabilities
 
 | Vulnerability         | Prevention                                                             |
-| --------------------- | ---------------------------------------------------------------------- |
+|-----------------------|------------------------------------------------------------------------|
 | `alg: none` attack    | Always verify algorithm server-side, reject `none`                     |
 | Algorithm confusion   | Explicitly specify expected algorithm, never derive from token         |
 | Weak HMAC secrets     | Use 256+ bit cryptographically random secrets                          |
@@ -759,7 +765,7 @@ This applies to any ORM/framework — always explicitly define which fields a re
 ### GraphQL
 
 | Vulnerability               | Prevention                                                   |
-| :-------------------------- | :----------------------------------------------------------- |
+|:----------------------------|:-------------------------------------------------------------|
 | Introspection in production | Disable introspection in production environments.            |
 | Query depth attack          | Implement query depth limiting (e.g., maximum of 10 levels). |
 | Query complexity attack     | Calculate and enforce strict query cost limits.              |

@@ -1,75 +1,23 @@
 // src/components/FoodLogger.tsx
-import { useCallback, useEffect, useState } from "react";
-import { addFoodItemLog, getDailyFoodLogs } from "../db/dbService";
+import { useFoodForm } from "../hooks/useFoodForm";
 
-interface FoodLoggerProps {
-  userId: string;
-}
+const FoodLogger: React.FC = () => {
+  const {
+    name,
+    setName,
+    calories,
+    setCalories,
+    servingSize,
+    setServingSize,
+    isLoading,
+    message,
+    submitFoodLog,
+  } = useFoodForm();
 
-const FoodLogger: React.FC<FoodLoggerProps> = ({ userId }) => {
-  const [name, setName] = useState("");
-  const [calories, setCalories] = useState(0);
-  const [servingSize, setServingSize] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  // Fetch initial logs when component mounts
-  useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const logs = await getDailyFoodLogs(userId, today);
-        // TODO: Dispatch initial logs to the global state store
-        console.log("Loaded daily logs:", logs);
-      } catch (error) {
-        console.error("Error loading daily logs:", error);
-        setMessage("Could not load today's logs. Please try again.");
-      }
-    };
-    loadLogs();
-  }, [userId]);
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (
-        name.trim().length < 1 ||
-        name.trim().length > 100 ||
-        calories < 0 ||
-        calories > 10000 ||
-        servingSize < 1 ||
-        servingSize > 100
-      ) {
-        setMessage("Please enter a valid name, calories (0-10000), and serving size (1-100).");
-        return;
-      }
-
-      setIsLoading(true);
-      setMessage(null);
-
-      try {
-        await addFoodItemLog({
-          userId: userId,
-          name: name,
-          calories: Number(calories),
-          servingSize: Number(servingSize),
-          dateLogged: new Date().toISOString().split("T")[0],
-        });
-
-        setMessage(`Successfully logged ${name}! Calories updated.`);
-        // Reset form and trigger state update (which would ideally be handled by a global hook)
-        setName("");
-        setCalories(0);
-        setServingSize(1);
-      } catch (error) {
-        console.error("Error logging food:", error);
-        setMessage("Failed to save food log. Check console for details.");
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [name, calories, servingSize, userId],
-  );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitFoodLog();
+  };
 
   return (
     <div className="p-4 border dark:border-gray-700 rounded-lg shadow-md bg-white dark:bg-gray-800">
