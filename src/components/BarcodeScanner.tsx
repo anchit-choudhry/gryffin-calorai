@@ -1,7 +1,6 @@
 // src/components/BarcodeScanner.tsx
-import React from "react";
 
-const BarcodeScanner: React.FC = () => {
+const BarcodeScanner = () => {
   // NOTE: Real implementation requires integrating a camera stream (e.g., using navigator.mediaDevices.getUserMedia)
   // and a library like react-barcode-scanner or QuaggaJS.
   return (

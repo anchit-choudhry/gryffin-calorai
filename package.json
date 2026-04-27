@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest",
-    "build": "tsc && vite build",
+    "format": "prettier --write \"./src/**/*.{ts,tsx}\"",
     "lint": "eslint --config eslint.config.js ./src",
     "lint:fix": "pnpm run lint --fix",
     "preview": "vite preview",
-    "format": "prettier --write \"./src/**/*.{ts,tsx}\""
+    "build": "tsc && vite build"
   },
   "dependencies": {
     "chart.js": "^4.5.1",

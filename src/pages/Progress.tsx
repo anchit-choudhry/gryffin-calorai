@@ -1,5 +1,5 @@
 // src/pages/Progress.tsx
-import React from "react";
+import { useState } from "react";
 import { Line } from "react-chartjs-2";
 import type { ChartData, ChartOptions } from "chart.js";
 import {
@@ -13,6 +13,8 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
+import { useProgressData } from "../hooks/useProgressData";
+import { useAppState } from "../state/AppState";
 
 // Register necessary Chart.js components
 Chart.register(
@@ -26,33 +28,32 @@ Chart.register(
   Filler,
 );
 
-// Mock data structure: { date: 'YYYY-MM-DD', calories: X }
-interface DailyCalorieData {
-  date: string;
-  calories: number;
-}
-
-const Progress: React.FC = () => {
-  // Mock data for the first few weeks
-  const mockData: DailyCalorieData[] = [
-    { date: "2026-03-20", calories: 1800 },
-    { date: "2026-03-21", calories: 2100 },
-    { date: "2026-03-22", calories: 1650 },
-    { date: "2026-03-23", calories: 1950 },
-    { date: "2026-03-24", calories: 2200 },
-  ];
+const Progress = () => {
+  const [days, setDays] = useState<7 | 30>(7);
+  const { labels, data, isLoading } = useProgressData(days);
+  const { user } = useAppState();
+  const calorieGoal = user?.calorieGoal ?? 2000;
 
   // Format data for Chart.js
   const chartData: ChartData<"line"> = {
-    labels: mockData.map((item) => item.date.substring(5)), // Show MM-DD
+    labels,
     datasets: [
       {
         label: "Calories Consumed",
-        data: mockData.map((item) => item.calories),
+        data,
         borderColor: "rgb(79, 70, 229)", // Indigo-600
         backgroundColor: "rgba(79, 70, 229, 0.1)",
         tension: 0.3,
         fill: true,
+      },
+      {
+        label: "Daily Goal",
+        data: labels.map(() => calorieGoal),
+        borderColor: "rgba(239, 68, 68, 0.6)", // Red-500 with transparency
+        borderDash: [5, 5],
+        fill: false,
+        pointRadius: 0,
+        borderWidth: 2,
       },
     ],
   };
@@ -88,15 +89,46 @@ const Progress: React.FC = () => {
 
   return (
     <div className="p-8 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg bg-white dark:bg-gray-800">
-      <h2 className="text-3xl font-bold mb-8 border-b dark:border-gray-700 pb-2 text-gray-700 dark:text-gray-100">
-        Progress Tracking
-      </h2>
-      <div className="h-[400px]">
-        <Line options={options} data={chartData} />
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold border-b dark:border-gray-700 pb-2 text-gray-700 dark:text-gray-100">
+          Progress Tracking
+        </h2>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setDays(7)}
+            className={`px-4 py-2 rounded-md transition ${
+              days === 7
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            7 days
+          </button>
+          <button
+            onClick={() => setDays(30)}
+            className={`px-4 py-2 rounded-md transition ${
+              days === 30
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            30 days
+          </button>
+        </div>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
-        Chart visualization powered by Chart.js.
-      </p>
+      {isLoading ? (
+        <p className="text-gray-500 dark:text-gray-400">Loading progress data...</p>
+      ) : (
+        <>
+          <div className="h-[400px]">
+            <Line options={options} data={chartData} />
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
+            Chart visualization powered by Chart.js. The dashed red line shows your daily calorie
+            goal.
+          </p>
+        </>
+      )}
     </div>
   );
 };

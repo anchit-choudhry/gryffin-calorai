@@ -1,10 +1,10 @@
 // src/pages/Recipes.tsx
-import React from "react";
 import { useAppState } from "../state/AppState";
 import { useRecipeForm } from "../hooks/useRecipeForm";
+import type { SyntheticEvent } from "react";
 
-const Recipes: React.FC = () => {
-  const { userId } = useAppState();
+const Recipes = () => {
+  const { userId, allFoodItems, recipes, deleteRecipe, fetchRecipes } = useAppState();
   const {
     recipeName,
     setRecipeName,
@@ -14,14 +14,18 @@ const Recipes: React.FC = () => {
     addIngredient,
     removeIngredient,
     updateIngredient,
+    selectIngredientFoodItem,
     message,
     isLoading,
     saveRecipeForm,
-  } = useRecipeForm(userId);
+  } = useRecipeForm(userId, allFoodItems);
 
-  const handleSaveRecipe = async (e: React.FormEvent) => {
+  const handleSaveRecipe = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    await saveRecipeForm();
+    const success = await saveRecipeForm();
+    if (success && userId) {
+      await fetchRecipes(userId);
+    }
   };
 
   return (
@@ -67,15 +71,30 @@ const Recipes: React.FC = () => {
                 key={ing.id}
                 className="flex space-x-2 items-center bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-700"
               >
-                <input
-                  type="number"
-                  placeholder="Food Item ID"
-                  value={ing.foodItemId}
-                  onChange={(e) =>
-                    updateIngredient(ing.id, "foodItemId", parseInt(e.target.value) || 1)
-                  }
-                  className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
-                />
+                <div className="relative w-1/2">
+                  <input
+                    type="text"
+                    list={`food-items-${ing.id}`}
+                    placeholder="Search food item..."
+                    value={ing.foodItemName}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      updateIngredient(ing.id, "foodItemName", name);
+                      const match = allFoodItems.find(
+                        (fi) => fi.name.toLowerCase() === name.toLowerCase(),
+                      );
+                      if (match) {
+                        selectIngredientFoodItem(ing.id, match);
+                      }
+                    }}
+                    className="w-full border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
+                  />
+                  <datalist id={`food-items-${ing.id}`}>
+                    {allFoodItems.map((fi) => (
+                      <option key={fi.id} value={fi.name} />
+                    ))}
+                  </datalist>
+                </div>
                 <input
                   type="number"
                   placeholder="Quantity"
@@ -83,16 +102,16 @@ const Recipes: React.FC = () => {
                   onChange={(e) =>
                     updateIngredient(ing.id, "quantity", parseInt(e.target.value) || 1)
                   }
-                  className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
+                  className="w-1/6 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
                 />
                 <input
                   type="number"
-                  placeholder="Serving Size"
+                  placeholder="Serving"
                   value={ing.serving}
                   onChange={(e) =>
                     updateIngredient(ing.id, "serving", parseInt(e.target.value) || 1)
                   }
-                  className="w-1/3 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
+                  className="w-1/6 border dark:border-gray-600 p-2 rounded text-sm dark:bg-gray-700 dark:text-white"
                 />
                 <button
                   type="button"
@@ -115,7 +134,7 @@ const Recipes: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className={`w-full py-2 px-4 rounded-md text-white transition ${isLoading ? "bg-gray-400 dark:bg-gray-600" : "bg-green-600 hover:bg-green-700"}`}
+            className={`w-full py-2 px-4 rounded-md text-white transition ${isLoading ? "bg-gray-400 dark:bg-gray-600" : "bg-indigo-600 hover:bg-indigo-700"}`}
           >
             {isLoading ? "Saving..." : "Save Recipe"}
           </button>
@@ -129,6 +148,43 @@ const Recipes: React.FC = () => {
           {message}
         </p>
       )}
+
+      {/* Saved Recipes List */}
+      <div className="p-6 border dark:border-gray-700 rounded-lg shadow-md bg-white dark:bg-gray-800">
+        <h3 className="text-xl font-semibold mb-4 dark:text-gray-200">
+          Saved Recipes ({recipes.length})
+        </h3>
+        {recipes.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400 italic">No recipes saved yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {recipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                className="flex justify-between items-start p-4 bg-gray-50 dark:bg-gray-900/50 border dark:border-gray-700 rounded-lg"
+              >
+                <div>
+                  <p className="font-semibold dark:text-gray-200">{recipe.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                    {recipe.description}
+                  </p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-2">
+                    {recipe.totalCalories.toLocaleString()} kcal · {recipe.ingredients.length}{" "}
+                    ingredient(s)
+                  </p>
+                </div>
+                <button
+                  onClick={() => recipe.id && deleteRecipe(recipe.id)}
+                  className="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 text-sm p-1 rounded transition flex-shrink-0 ml-4"
+                  aria-label={`Delete recipe ${recipe.name}`}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import React from "react";
+import { Component } from "react";
 
 interface Props {
   children: ReactNode;
@@ -8,16 +8,17 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorId: string;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorId: "" };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, errorId: crypto.randomUUID() };
   }
 
   componentDidCatch(error: Error) {
@@ -33,8 +34,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
               Something went wrong
             </h1>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              {this.state.error?.message || "An unexpected error occurred"}
+              An unexpected error occurred. Please try reloading the page.
             </p>
+            {this.state.errorId && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Error ID:{" "}
+                <code className="bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded">
+                  {this.state.errorId}
+                </code>
+              </p>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition"

@@ -8,6 +8,7 @@ vi.mock("../db/dbService", () => ({
     username: "Test User",
     email: "test@example.com",
     lastLogin: new Date().toISOString(),
+    calorieGoal: 2000,
   })),
   getDailyFoodLogs: vi.fn(async () => [
     {
@@ -16,10 +17,19 @@ vi.mock("../db/dbService", () => ({
       name: "Apple",
       calories: 95,
       servingSize: 1,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
       dateLogged: ISODate("2026-04-26"),
     },
   ]),
   addFoodItemLog: vi.fn(async () => FoodItemId(1)),
+  deleteFoodItem: vi.fn(async () => undefined),
+  updateUserProfile: vi.fn(async () => undefined),
+  getAllRecipes: vi.fn(async () => []),
+  deleteRecipe: vi.fn(async () => undefined),
+  getRecentFoodItems: vi.fn(async () => []),
+  getAllFoodLogs: vi.fn(async () => []),
 }));
 
 describe("AppState", () => {
@@ -58,5 +68,20 @@ describe("AppState", () => {
 
     useAppState.setState({ error: null });
     expect(useAppState.getState().error).toBeNull();
+  });
+
+  it("should have new CRUD action methods available", () => {
+    const state = useAppState.getState();
+    expect(typeof state.deleteFoodLog).toBe("function");
+    expect(typeof state.updateCalorieGoal).toBe("function");
+    expect(typeof state.fetchRecipes).toBe("function");
+    expect(typeof state.deleteRecipe).toBe("function");
+    expect(typeof state.fetchAllFoodItems).toBe("function");
+  });
+
+  it("should initialize with allFoodItems and recipes arrays", () => {
+    const state = useAppState.getState();
+    expect(Array.isArray(state.allFoodItems)).toBe(true);
+    expect(Array.isArray(state.recipes)).toBe(true);
   });
 });

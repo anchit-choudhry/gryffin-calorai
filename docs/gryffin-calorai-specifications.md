@@ -1,7 +1,7 @@
 # Gryffin Calorai: Complete Application Specification
 
 **Project:** Gryffin Calorai  
-**Version:** 0.0.1 (MVP)  
+**Version:** 0.0.2 (MVP with Macro Tracking)  
 **Type:** Single-Page Application (SPA)  
 **Status:** Development  
 **Last Updated:** 2026-04-26
@@ -10,9 +10,17 @@
 
 ## 1. Executive Summary
 
-Gryffin Calorai is a React-based calorie tracking application designed for MVP-level functionality. It enables users to log daily food intake, create reusable recipes, and visualize their calorie consumption trends over time. The application uses client-side local storage (IndexedDB) for data persistence and Zustand for state management.
+Gryffin Calorai is a React-based calorie tracking application designed for MVP-level functionality. It enables users to log daily food intake with detailed macronutrient tracking (protein, carbs, fat), create reusable recipes, and visualize their calorie consumption trends over time. The application uses client-side local storage (IndexedDB) for data persistence and Zustand for state management.
 
-**Core Value Proposition:** Lightweight, privacy-focused calorie tracking without server dependency (MVP phase).
+**Core Value Proposition:** Lightweight, privacy-focused calorie and macro tracking without server dependency (MVP phase).
+
+**Version 0.0.2 Enhancements:**
+
+- Complete macro tracking system (protein, carbs, fat fields throughout data layer and UI)
+- Enhanced Dashboard with macro breakdown cards
+- Database schema v3 with automatic migration for backward compatibility
+- Security improvements: error boundary enhancements, input validation, localStorage safety
+- React standards compliance: error handling, TypeScript strict mode, custom hook patterns
 
 ---
 
@@ -177,6 +185,9 @@ interface FoodItem {
   name: string;              // 1-100 chars
   calories: number;          // 0-10000 range
   servingSize: number;       // 1-100 range (grams or servings)
+  protein: number;           // 0-500g range (macronutrient tracking)
+  carbs: number;             // 0-500g range (macronutrient tracking)
+  fat: number;               // 0-500g range (macronutrient tracking)
   dateLogged: ISODate;       // YYYY-MM-DD format
   userId: UserId;            // Scoped to user
 }
@@ -187,6 +198,9 @@ interface FoodItem {
 - Entries are uniquely identified by auto-increment ID
 - Multiple food items can be logged per user per day (compound index allows this)
 - Calories and serving size are stored separately (not calculated)
+- Macro fields (protein, carbs, fat) track macronutrient breakdown for dietary analysis
+- Macro fields validated to 0-500g range to prevent invalid data entry
+- Database v3 migration automatically backfills existing records with 0 macro values for compatibility
 
 ---
 
@@ -1081,4 +1095,3 @@ src/
 | Version | Date       | Changes                          |
 |---------|------------|----------------------------------|
 | 1.0     | 2026-04-26 | Initial specification extraction |
-

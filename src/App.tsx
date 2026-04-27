@@ -18,7 +18,15 @@ const MOCK_USER_ID = UserId("1");
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const stored = localStorage.getItem("darkMode");
-    return stored ? JSON.parse(stored) : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (!stored) return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    try {
+      const parsed = JSON.parse(stored);
+      return typeof parsed === "boolean"
+        ? parsed
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } catch {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
   });
   const [currentPath, setCurrentPath] = useState(window.location.hash || "#dashboard");
 

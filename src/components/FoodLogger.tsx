@@ -9,6 +9,12 @@ const FoodLogger: React.FC = () => {
     setCalories,
     servingSize,
     setServingSize,
+    protein,
+    setProtein,
+    carbs,
+    setCarbs,
+    fat,
+    setFat,
     isLoading,
     message,
     submitFoodLog,
@@ -70,6 +76,60 @@ const FoodLogger: React.FC = () => {
             min="1"
             required
           />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Protein (g)
+            </label>
+            <input
+              type="number"
+              value={protein}
+              onChange={(e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.min(val, 500);
+                setProtein(Math.max(0, val));
+              }}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-2 border dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., 25"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Carbs (g)
+            </label>
+            <input
+              type="number"
+              value={carbs}
+              onChange={(e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.min(val, 500);
+                setCarbs(Math.max(0, val));
+              }}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-2 border dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., 30"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Fat (g)
+            </label>
+            <input
+              type="number"
+              value={fat}
+              onChange={(e) => {
+                let val = parseInt(e.target.value) || 0;
+                val = Math.min(val, 500);
+                setFat(Math.max(0, val));
+              }}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm p-2 border dark:bg-gray-700 dark:text-white"
+              placeholder="e.g., 10"
+              required
+            />
+          </div>
         </div>
 
         <button
