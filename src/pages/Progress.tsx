@@ -1,8 +1,10 @@
 // src/pages/Progress.tsx
 import { useState } from "react";
-import { Line } from "react-chartjs-2";
+import { Bar, Line } from "react-chartjs-2";
 import type { ChartData, ChartOptions } from "chart.js";
 import {
+  BarController,
+  BarElement,
   CategoryScale,
   Chart,
   Filler,
@@ -13,11 +15,14 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
+import { MEAL_TYPES } from "../types";
 import { useProgressData } from "../hooks/useProgressData";
 import { useAppState } from "../state/AppState";
 
 // Register necessary Chart.js components
 Chart.register(
+  BarController,
+  BarElement,
   CategoryScale,
   LinearScale,
   PointElement,
@@ -30,12 +35,20 @@ Chart.register(
 
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
-  const { labels, data, isLoading } = useProgressData(days);
+  const { labels, data, mealTypeData, isLoading } = useProgressData(days);
   const { user } = useAppState();
   const calorieGoal = user?.calorieGoal ?? 2000;
 
-  // Format data for Chart.js
-  const chartData: ChartData<"line"> = {
+  // Meal type color palette
+  const MEAL_COLORS = {
+    Breakfast: { border: "rgb(245,158,11)", bg: "rgba(245,158,11,0.75)" },
+    Lunch: { border: "rgb(34,197,94)", bg: "rgba(34,197,94,0.75)" },
+    Snacks: { border: "rgb(168,85,247)", bg: "rgba(168,85,247,0.75)" },
+    Dinner: { border: "rgb(59,130,246)", bg: "rgba(59,130,246,0.75)" },
+  } as const;
+
+  // Line chart data (for 30-day view)
+  const lineChartData: ChartData<"line"> = {
     labels,
     datasets: [
       {
@@ -58,8 +71,8 @@ const Progress = () => {
     ],
   };
 
-  // Chart.js options for styling
-  const options: ChartOptions<"line"> = {
+  // Line chart options
+  const lineOptions: ChartOptions<"line"> = {
     responsive: true,
     plugins: {
       legend: {
@@ -67,7 +80,7 @@ const Progress = () => {
       },
       title: {
         display: true,
-        text: "Weekly Calorie Trend",
+        text: "30-Day Calorie Trend",
       },
     },
     scales: {
@@ -84,6 +97,47 @@ const Progress = () => {
           text: "Date (MM-DD)",
         },
       },
+    },
+  };
+
+  // Grouped bar chart data (for 7-day view)
+  const barChartData = {
+    labels,
+    datasets: [
+      ...MEAL_TYPES.map((mt) => ({
+        type: "bar" as const,
+        label: mt,
+        data: mealTypeData?.[mt] ?? Array(7).fill(0),
+        backgroundColor: MEAL_COLORS[mt].bg,
+        borderColor: MEAL_COLORS[mt].border,
+        borderWidth: 1,
+        barPercentage: 0.8,
+        categoryPercentage: 0.9,
+      })),
+      {
+        type: "line" as const,
+        label: "Daily Goal",
+        data: labels.map(() => calorieGoal),
+        borderColor: "rgba(239,68,68,0.7)",
+        borderDash: [5, 5],
+        borderWidth: 2,
+        pointRadius: 0,
+        fill: false,
+      },
+    ],
+  } as ChartData<"bar">;
+
+  // Bar chart options
+  const barOptions: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "top" },
+      title: { display: true, text: "7-Day Calories by Meal Type" },
+    },
+    scales: {
+      x: { title: { display: true, text: "Date (MM-DD)" } },
+      y: { beginAtZero: true, stacked: false, title: { display: true, text: "Calories" } },
     },
   };
 
@@ -120,9 +174,15 @@ const Progress = () => {
         <p className="text-gray-500 dark:text-gray-400">Loading progress data...</p>
       ) : (
         <>
-          <div className="h-[400px]">
-            <Line options={options} data={chartData} />
-          </div>
+          {days === 7 && mealTypeData !== null ? (
+            <div className="h-[400px]">
+              <Bar options={barOptions} data={barChartData} />
+            </div>
+          ) : (
+            <div className="h-[400px]">
+              <Line options={lineOptions} data={lineChartData} />
+            </div>
+          )}
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-6">
             Chart visualization powered by Chart.js. The dashed red line shows your daily calorie
             goal.

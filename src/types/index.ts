@@ -33,3 +33,7 @@ export function isRecipeId(value: unknown): value is RecipeId {
 export function isISODate(value: unknown): value is ISODate {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
+
+export type MealType = "Breakfast" | "Lunch" | "Snacks" | "Dinner";
+export const MEAL_TYPES: readonly MealType[] = ["Breakfast", "Lunch", "Snacks", "Dinner"] as const;
+export const DEFAULT_MEAL_TYPE: MealType = "Breakfast";

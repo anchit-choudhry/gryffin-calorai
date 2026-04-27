@@ -1,6 +1,6 @@
 // src/db/dbService.ts
 import { Dexie, type Table } from "dexie";
-import type { FoodItemId, ISODate, RecipeId, UserId } from "../types";
+import type { FoodItemId, ISODate, MealType, RecipeId, UserId } from "../types";
 import { FoodItemId as makeFoodItemId, RecipeId as makeRecipeId } from "../types";
 
 // --- Type Definitions ---
@@ -14,6 +14,8 @@ export interface FoodItem {
   fat: number;
   dateLogged: ISODate;
   userId: UserId;
+  isFavorite: boolean;
+  mealType?: MealType;
 }
 
 export interface Recipe {
@@ -85,7 +87,41 @@ db.version(3)
       });
   });
 
-// 4. Define table references AFTER schema is set
+// 4. Version 4: add isFavorite to foodItems
+db.version(4)
+  .stores({
+    users: "id, username, email, lastLogin",
+    foodItems:
+      "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite",
+    recipes: "++id, name, description, createdBy, dateCreated, userId",
+  })
+  .upgrade((tx) => {
+    return tx
+      .table("foodItems")
+      .toCollection()
+      .modify((item) => {
+        if (item.isFavorite === undefined) item.isFavorite = false;
+      });
+  });
+
+// 5. Version 5: add mealType to foodItems
+db.version(5)
+  .stores({
+    users: "id, username, email, lastLogin",
+    foodItems:
+      "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+    recipes: "++id, name, description, createdBy, dateCreated, userId",
+  })
+  .upgrade((tx) => {
+    return tx
+      .table("foodItems")
+      .toCollection()
+      .modify((item) => {
+        if (item.mealType === undefined) item.mealType = "Breakfast";
+      });
+  });
+
+// 5. Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
 export const recipes: Table<Recipe> = db.table("recipes");
@@ -136,7 +172,9 @@ export const getOrCreateUser = async (
 ): Promise<UserProfile> => {
   const user = await users.get(userId);
   if (user) {
-    return { ...user, lastLogin: new Date().toISOString() };
+    const updatedUser = { ...user, lastLogin: new Date().toISOString() };
+    await users.put(updatedUser);
+    return updatedUser;
   }
   const newUser: UserProfile = {
     id: userId,
@@ -190,4 +228,26 @@ export const getRecentFoodItems = async (userId: UserId): Promise<FoodItem[]> =>
     if (!seen.has(item.name)) seen.set(item.name, item);
   }
   return Array.from(seen.values());
+};
+
+export const toggleFavoriteFoodItem = async (
+  id: FoodItemId,
+  isFavorite: boolean,
+): Promise<void> => {
+  await foodItems.update(id, { isFavorite });
+};
+
+export const getFavoriteFoodItems = async (userId: UserId): Promise<FoodItem[]> => {
+  return foodItems
+    .where("userId")
+    .equals(userId)
+    .filter((item) => item.isFavorite)
+    .toArray();
+};
+
+export const updateFoodItem = async (
+  id: FoodItemId,
+  updates: Partial<Omit<FoodItem, "id" | "userId">>,
+): Promise<void> => {
+  await foodItems.update(id, updates);
 };

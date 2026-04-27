@@ -3,12 +3,28 @@ import { useState } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import FoodLogger from "../components/FoodLogger";
 import BarcodeScanner from "../components/BarcodeScanner";
+import WeeklySummary from "../components/WeeklySummary";
 import { useAppState } from "../state/AppState";
+import { DEFAULT_MEAL_TYPE, todayISO } from "../types";
+import type { FoodItem } from "../db/dbService";
 
 const Dashboard = () => {
-  const { dailyLogs, isLoading, error, deleteFoodLog, user, updateCalorieGoal } = useAppState();
+  const {
+    dailyLogs,
+    isLoading,
+    error,
+    deleteFoodLog,
+    user,
+    updateCalorieGoal,
+    favoriteFoods,
+    toggleFavorite,
+    addFoodLog,
+    userId,
+  } = useAppState();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(user?.calorieGoal ?? 2000);
+  const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
+  const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
 
   const totalCalories = dailyLogs.reduce((sum, log) => sum + log.calories, 0);
   const totalProtein = dailyLogs.reduce((sum, log) => sum + (log.protein ?? 0), 0);
@@ -134,17 +150,81 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Weekly Summary */}
+      <WeeklySummary />
+
+      {/* Favorites Bar */}
+      {favoriteFoods.length > 0 && !editingLog && (
+        <div className="p-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold mb-3 dark:text-gray-200">Quick Add Favorites</h3>
+          <div className="flex flex-wrap gap-2">
+            {favoriteFoods.map((fav) => (
+              <button
+                key={fav.id}
+                onClick={async () => {
+                  if (userId) {
+                    await addFoodLog({
+                      userId,
+                      name: fav.name,
+                      calories: fav.calories,
+                      servingSize: fav.servingSize,
+                      protein: fav.protein,
+                      carbs: fav.carbs,
+                      fat: fav.fat,
+                      dateLogged: todayISO(),
+                      isFavorite: false,
+                      mealType: fav.mealType,
+                    });
+                  }
+                }}
+                className="px-3 py-2 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-sm font-medium transition-colors"
+              >
+                {fav.name} · {fav.calories} kcal
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Core Functionalities Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="lg:col-span-1">
-          <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Log Food</h3>
-          <FoodLogger />
+      {editingLog ? (
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-md">
+          <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">
+            Editing: {editingLog.name}
+          </h3>
+          <FoodLogger
+            initialFood={editingLog}
+            onCancel={() => setEditingLog(null)}
+            onSuccess={() => setEditingLog(null)}
+          />
         </div>
-        <div className="lg:col-span-1">
-          <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
-          <BarcodeScanner />
+      ) : barcodeFood ? (
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold dark:text-gray-200">
+              Barcode Scan: {barcodeFood.name}
+            </h3>
+            <button
+              onClick={() => setBarcodeFood(null)}
+              className="text-sm text-amber-600 dark:text-amber-400 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+          <FoodLogger prefillName={barcodeFood.name} onSuccess={() => setBarcodeFood(null)} />
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="lg:col-span-1">
+            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Log Food</h3>
+            <FoodLogger />
+          </div>
+          <div className="lg:col-span-1">
+            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
+            <BarcodeScanner onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })} />
+          </div>
+        </div>
+      )}
 
       {/* Log History */}
       <div className="pt-4">
@@ -169,6 +249,9 @@ const Dashboard = () => {
                       {log.servingSize} serving{log.servingSize !== 1 ? "s" : ""} · {log.dateLogged}
                     </p>
                     <div className="flex gap-2 mt-1 flex-wrap">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                        {log.mealType ?? DEFAULT_MEAL_TYPE}
+                      </span>
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                         P {log.protein ?? 0}g
                       </span>
@@ -180,10 +263,24 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 flex-shrink-0">
+                  <div className="flex items-center space-x-2 flex-shrink-0">
                     <p className="text-lg font-bold text-green-700 dark:text-green-400">
                       {log.calories.toLocaleString()} kcal
                     </p>
+                    <button
+                      onClick={() => log.id && toggleFavorite(log.id, !log.isFavorite)}
+                      className="text-yellow-400 hover:text-yellow-600 dark:text-yellow-300 dark:hover:text-yellow-500 text-lg p-1 rounded transition"
+                      aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
+                    >
+                      {log.isFavorite ? "★" : "☆"}
+                    </button>
+                    <button
+                      onClick={() => setEditingLog(log)}
+                      className="text-blue-400 hover:text-blue-600 dark:text-blue-300 dark:hover:text-blue-500 text-sm p-1 rounded transition"
+                      aria-label={`Edit ${log.name}`}
+                    >
+                      ✎
+                    </button>
                     <button
                       onClick={() => log.id && deleteFoodLog(log.id)}
                       className="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 text-sm p-1 rounded transition"

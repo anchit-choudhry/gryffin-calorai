@@ -21,6 +21,7 @@ vi.mock("../db/dbService", () => ({
       carbs: 0,
       fat: 0,
       dateLogged: ISODate("2026-04-26"),
+      isFavorite: false,
     },
   ]),
   addFoodItemLog: vi.fn(async () => FoodItemId(1)),
@@ -30,6 +31,9 @@ vi.mock("../db/dbService", () => ({
   deleteRecipe: vi.fn(async () => undefined),
   getRecentFoodItems: vi.fn(async () => []),
   getAllFoodLogs: vi.fn(async () => []),
+  getFavoriteFoodItems: vi.fn(async () => []),
+  toggleFavoriteFoodItem: vi.fn(async () => undefined),
+  updateFoodItem: vi.fn(async () => undefined),
 }));
 
 describe("AppState", () => {
@@ -83,5 +87,18 @@ describe("AppState", () => {
     const state = useAppState.getState();
     expect(Array.isArray(state.allFoodItems)).toBe(true);
     expect(Array.isArray(state.recipes)).toBe(true);
+  });
+
+  it("should have new favorites-related methods available", () => {
+    const state = useAppState.getState();
+    expect(typeof state.fetchFavorites).toBe("function");
+    expect(typeof state.toggleFavorite).toBe("function");
+    expect(typeof state.updateFoodLog).toBe("function");
+  });
+
+  it("should initialize with empty favoriteFoods array", () => {
+    const state = useAppState.getState();
+    expect(Array.isArray(state.favoriteFoods)).toBe(true);
+    expect(state.favoriteFoods).toEqual([]);
   });
 });

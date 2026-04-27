@@ -1,15 +1,21 @@
 import { useState } from "react";
+import type { FoodItem } from "../db/dbService";
 import { useAppState } from "../state/AppState";
-import { todayISO } from "../types";
+import { DEFAULT_MEAL_TYPE, type MealType, todayISO } from "../types";
 
-export function useFoodForm() {
-  const { userId, addFoodLog } = useAppState();
-  const [name, setName] = useState("");
-  const [calories, setCalories] = useState(0);
-  const [servingSize, setServingSize] = useState(1);
-  const [protein, setProtein] = useState(0);
-  const [carbs, setCarbs] = useState(0);
-  const [fat, setFat] = useState(0);
+export function calculateTotalCalories(caloriesPerServing: number, servingSize: number): number {
+  return Math.round(caloriesPerServing * servingSize);
+}
+
+export function useFoodForm(initialFood?: FoodItem) {
+  const { userId, addFoodLog, updateFoodLog } = useAppState();
+  const [name, setName] = useState(initialFood?.name ?? "");
+  const [calories, setCalories] = useState(initialFood?.calories ?? 0);
+  const [servingSize, setServingSize] = useState(initialFood?.servingSize ?? 1);
+  const [protein, setProtein] = useState(initialFood?.protein ?? 0);
+  const [carbs, setCarbs] = useState(initialFood?.carbs ?? 0);
+  const [fat, setFat] = useState(initialFood?.fat ?? 0);
+  const [mealType, setMealType] = useState<MealType>(initialFood?.mealType ?? DEFAULT_MEAL_TYPE);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -29,7 +35,7 @@ export function useFoodForm() {
       fat > 500
     ) {
       setMessage(
-        "Please enter a valid name, calories (0-10000), serving size (1-100), and protein/carbs/fat (0-500g).",
+        "Please enter a valid name, calories per serving (0-10000), serving size (1-100), and protein/carbs/fat (0-500g).",
       );
       return false;
     }
@@ -43,18 +49,36 @@ export function useFoodForm() {
     setMessage(null);
 
     try {
-      await addFoodLog({
-        userId,
-        name,
-        calories: Number(calories),
-        servingSize: Number(servingSize),
-        protein: Number(protein),
-        carbs: Number(carbs),
-        fat: Number(fat),
-        dateLogged: todayISO(),
-      });
+      const totalCalories = calculateTotalCalories(Number(calories), Number(servingSize));
+      const isEditMode = !!initialFood?.id;
 
-      setMessage(`Successfully logged ${name}! Macros updated.`);
+      if (isEditMode) {
+        await updateFoodLog(initialFood!.id!, {
+          name,
+          calories: totalCalories,
+          servingSize: Number(servingSize),
+          protein: Number(protein),
+          carbs: Number(carbs),
+          fat: Number(fat),
+          mealType,
+        });
+        setMessage(`Updated ${name}!`);
+      } else {
+        await addFoodLog({
+          userId,
+          name,
+          calories: totalCalories,
+          servingSize: Number(servingSize),
+          protein: Number(protein),
+          carbs: Number(carbs),
+          fat: Number(fat),
+          dateLogged: todayISO(),
+          isFavorite: false,
+          mealType,
+        });
+        setMessage(`Successfully logged ${name}! Macros updated.`);
+      }
+
       resetForm();
       return true;
     } catch (error) {
@@ -73,6 +97,7 @@ export function useFoodForm() {
     setProtein(0);
     setCarbs(0);
     setFat(0);
+    setMealType(DEFAULT_MEAL_TYPE);
   };
 
   return {
@@ -88,6 +113,8 @@ export function useFoodForm() {
     setCarbs,
     fat,
     setFat,
+    mealType,
+    setMealType,
     isLoading,
     message,
     submitFoodLog,

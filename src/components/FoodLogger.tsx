@@ -1,7 +1,22 @@
 // src/components/FoodLogger.tsx
+import { useEffect } from "react";
+import type { FoodItem } from "../db/dbService";
 import { useFoodForm } from "../hooks/useFoodForm";
+import { MEAL_TYPES } from "../types";
 
-const FoodLogger: React.FC = () => {
+interface FoodLoggerProps {
+  initialFood?: FoodItem;
+  onCancel?: () => void;
+  onSuccess?: () => void;
+  prefillName?: string;
+}
+
+const FoodLogger: React.FC<FoodLoggerProps> = ({
+  initialFood,
+  onCancel,
+  onSuccess,
+  prefillName,
+}) => {
   const {
     name,
     setName,
@@ -15,19 +30,40 @@ const FoodLogger: React.FC = () => {
     setCarbs,
     fat,
     setFat,
+    mealType,
+    setMealType,
     isLoading,
     message,
     submitFoodLog,
-  } = useFoodForm();
+    resetForm,
+  } = useFoodForm(initialFood);
+
+  const isEditMode = !!initialFood?.id;
+
+  useEffect(() => {
+    if (prefillName && !initialFood) {
+      setName(prefillName);
+    }
+  }, [prefillName, initialFood, setName]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitFoodLog();
+    const success = await submitFoodLog();
+    if (success) {
+      onSuccess?.();
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onCancel?.();
   };
 
   return (
     <div className="p-4 border dark:border-gray-700 rounded-lg shadow-md bg-white dark:bg-gray-800">
-      <h2 className="text-xl font-semibold mb-4 dark:text-gray-200">Log Meal Entry</h2>
+      <h2 className="text-xl font-semibold mb-4 dark:text-gray-200">
+        {isEditMode ? "Edit Meal Entry" : "Log Meal Entry"}
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -44,7 +80,28 @@ const FoodLogger: React.FC = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Calories
+            Meal Type
+          </label>
+          <div className="mt-1 flex gap-2 flex-wrap">
+            {MEAL_TYPES.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setMealType(type)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  mealType === type
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Calories per Serving
           </label>
           <input
             type="number"
@@ -132,13 +189,25 @@ const FoodLogger: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`w-full py-2 px-4 rounded-md text-white ${isLoading ? "bg-gray-400 dark:bg-gray-600" : "bg-indigo-600 hover:bg-indigo-700"}`}
-        >
-          {isLoading ? "Saving..." : "Log Food"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`flex-1 py-2 px-4 rounded-md text-white ${isLoading ? "bg-gray-400 dark:bg-gray-600" : "bg-indigo-600 hover:bg-indigo-700"}`}
+          >
+            {isLoading ? "Saving..." : isEditMode ? "Update Food" : "Log Food"}
+          </button>
+          {isEditMode && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isLoading}
+              className="flex-1 py-2 px-4 rounded-md text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
       {message && (
         <p

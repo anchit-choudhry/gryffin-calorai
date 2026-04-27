@@ -9,10 +9,13 @@ import {
   getAllFoodLogs,
   getAllRecipes,
   getDailyFoodLogs,
+  getFavoriteFoodItems,
   getOrCreateUser,
   initializeDB,
   type Recipe,
   saveRecipe,
+  toggleFavoriteFoodItem,
+  updateFoodItem,
   updateUserProfile,
 } from "./dbService";
 import { FoodItemId as makeFoodItemId, ISODate, todayISO, UserId } from "../types";
@@ -39,6 +42,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: todayISO(),
+      isFavorite: false,
     };
 
     // Add food item
@@ -67,6 +71,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: today,
+      isFavorite: false,
     });
     await foodItems.add({
       userId: UserId("2"),
@@ -77,6 +82,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: today,
+      isFavorite: false,
     });
     await foodItems.add({
       userId: UserId("1"),
@@ -87,6 +93,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: fakeDate,
+      isFavorite: false,
     });
 
     const logs = await getDailyFoodLogs(UserId("1"), today);
@@ -106,6 +113,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: todayISO(),
+      isFavorite: false,
     };
 
     const id = await foodItems.add(mockFood);
@@ -134,6 +142,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: today,
+      isFavorite: false,
     });
     await foodItems.add({
       userId,
@@ -144,6 +153,7 @@ describe("dbService", () => {
       carbs: 0,
       fat: 0,
       dateLogged: yesterday,
+      isFavorite: false,
     });
 
     const allLogs = await getAllFoodLogs(userId);
@@ -204,5 +214,129 @@ describe("dbService", () => {
 
     const retrieved = await getOrCreateUser(userId, "TestUser", "test@example.com");
     expect(retrieved.calorieGoal).toBe(2500);
+  });
+
+  it("should toggle favorite on a food item", async () => {
+    const userId = UserId("8");
+    const mockFood: FoodItem = {
+      userId,
+      name: "Pizza",
+      calories: 300,
+      servingSize: 2,
+      protein: 10,
+      carbs: 40,
+      fat: 12,
+      dateLogged: todayISO(),
+      isFavorite: false,
+    };
+
+    const id = await foodItems.add(mockFood);
+    const idTyped = makeFoodItemId(id);
+
+    await toggleFavoriteFoodItem(idTyped, true);
+    const updated = await foodItems.get(id);
+    expect(updated?.isFavorite).toBe(true);
+
+    await toggleFavoriteFoodItem(idTyped, false);
+    const updated2 = await foodItems.get(id);
+    expect(updated2?.isFavorite).toBe(false);
+  });
+
+  it("should retrieve only favorite food items for a user", async () => {
+    const userId = UserId("9");
+    const item1: FoodItem = {
+      userId,
+      name: "Chicken",
+      calories: 165,
+      servingSize: 1,
+      protein: 31,
+      carbs: 0,
+      fat: 3,
+      dateLogged: todayISO(),
+      isFavorite: true,
+    };
+    const item2: FoodItem = {
+      userId,
+      name: "Rice",
+      calories: 130,
+      servingSize: 1,
+      protein: 2,
+      carbs: 28,
+      fat: 0,
+      dateLogged: todayISO(),
+      isFavorite: false,
+    };
+
+    await foodItems.add(item1);
+    await foodItems.add(item2);
+
+    const favorites = await getFavoriteFoodItems(userId);
+    expect(favorites.some((f) => f.name === "Chicken")).toBe(true);
+    expect(favorites.some((f) => f.name === "Rice")).toBe(false);
+  });
+
+  it("should update a food item without changing userId", async () => {
+    const userId = UserId("10");
+    const mockFood: FoodItem = {
+      userId,
+      name: "Salad",
+      calories: 150,
+      servingSize: 1,
+      protein: 5,
+      carbs: 20,
+      fat: 8,
+      dateLogged: todayISO(),
+      isFavorite: false,
+    };
+
+    const id = await foodItems.add(mockFood);
+    const idTyped = makeFoodItemId(id);
+
+    await updateFoodItem(idTyped, { name: "Caesar Salad", calories: 200, protein: 8 });
+
+    const updated = await foodItems.get(id);
+    expect(updated?.name).toBe("Caesar Salad");
+    expect(updated?.calories).toBe(200);
+    expect(updated?.protein).toBe(8);
+    expect(updated?.userId).toBe(userId);
+  });
+
+  it("should store and retrieve mealType on a food item", async () => {
+    const userId = UserId("11");
+    const mockFood: FoodItem = {
+      userId,
+      name: "Oatmeal",
+      calories: 150,
+      servingSize: 1,
+      protein: 5,
+      carbs: 27,
+      fat: 3,
+      dateLogged: todayISO(),
+      isFavorite: false,
+      mealType: "Breakfast",
+    };
+
+    const id = await foodItems.add(mockFood);
+    const retrieved = await foodItems.get(id);
+    expect(retrieved?.mealType).toBe("Breakfast");
+  });
+
+  it("should default mealType to undefined for items created without it", async () => {
+    const userId = UserId("12");
+    const mockFood: FoodItem = {
+      userId,
+      name: "Sandwich",
+      calories: 350,
+      servingSize: 1,
+      protein: 15,
+      carbs: 40,
+      fat: 12,
+      dateLogged: todayISO(),
+      isFavorite: false,
+    };
+
+    const id = await foodItems.add(mockFood);
+    const retrieved = await foodItems.get(id);
+    expect(retrieved?.mealType).toBeUndefined();
   });
 });

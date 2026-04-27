@@ -6,9 +6,12 @@ import {
   type FoodItem,
   getAllRecipes,
   getDailyFoodLogs,
+  getFavoriteFoodItems,
   getOrCreateUser,
   getRecentFoodItems,
   type Recipe,
+  toggleFavoriteFoodItem,
+  updateFoodItem,
   updateUserProfile,
   type UserProfile,
 } from "../db/dbService";
@@ -20,6 +23,7 @@ interface AppState {
   dailyLogs: FoodItem[];
   allFoodItems: FoodItem[];
   recipes: Recipe[];
+  favoriteFoods: FoodItem[];
   isLoading: boolean;
   error: string | null;
   userId: UserId | null;
@@ -31,6 +35,12 @@ interface AppState {
   fetchRecipes: (userId: UserId) => Promise<void>;
   deleteRecipe: (id: RecipeId) => Promise<void>;
   fetchAllFoodItems: (userId: UserId) => Promise<void>;
+  fetchFavorites: (userId: UserId) => Promise<void>;
+  toggleFavorite: (id: FoodItemId, isFavorite: boolean) => Promise<void>;
+  updateFoodLog: (
+    id: FoodItemId,
+    updates: Partial<Omit<FoodItem, "id" | "userId">>,
+  ) => Promise<void>;
 }
 
 export const useAppState = create<AppState>((set, get) => ({
@@ -38,6 +48,7 @@ export const useAppState = create<AppState>((set, get) => ({
   dailyLogs: [],
   allFoodItems: [],
   recipes: [],
+  favoriteFoods: [],
   isLoading: true,
   error: null,
   userId: null,
@@ -51,7 +62,14 @@ export const useAppState = create<AppState>((set, get) => ({
       const logs = await getDailyFoodLogs(userId, todayISO());
       const recipeList = await getAllRecipes(userId);
       const recentItems = await getRecentFoodItems(userId);
-      set({ dailyLogs: logs, recipes: recipeList, allFoodItems: recentItems, isLoading: false });
+      const favorites = await getFavoriteFoodItems(userId);
+      set({
+        dailyLogs: logs,
+        recipes: recipeList,
+        allFoodItems: recentItems,
+        favoriteFoods: favorites,
+        isLoading: false,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load app data";
       console.error("Error fetching initial app data:", error);
@@ -148,6 +166,44 @@ export const useAppState = create<AppState>((set, get) => ({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to fetch food items";
       console.error("Error fetching food items:", error);
+      set({ error: message });
+    }
+  },
+
+  fetchFavorites: async (userId: UserId) => {
+    try {
+      const favorites = await getFavoriteFoodItems(userId);
+      set({ favoriteFoods: favorites });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to fetch favorites";
+      console.error("Error fetching favorites:", error);
+      set({ error: message });
+    }
+  },
+
+  toggleFavorite: async (id: FoodItemId, isFavorite: boolean) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await toggleFavoriteFoodItem(id, isFavorite);
+      await state.fetchFavorites(state.userId);
+      await state.fetchAllFoodItems(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to toggle favorite";
+      console.error("Error toggling favorite:", error);
+      set({ error: message });
+    }
+  },
+
+  updateFoodLog: async (id: FoodItemId, updates: Partial<Omit<FoodItem, "id" | "userId">>) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await updateFoodItem(id, updates);
+      await state.refreshDailyLogs(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update food log";
+      console.error("Error updating food log:", error);
       set({ error: message });
     }
   },

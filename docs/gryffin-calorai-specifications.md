@@ -1,1097 +1,996 @@
 # Gryffin Calorai: Complete Application Specification
 
 **Project:** Gryffin Calorai  
-**Version:** 0.0.2 (MVP with Macro Tracking)  
-**Type:** Single-Page Application (SPA)  
+**Version:** 0.0.2 (MVP)  
+**Type:** Single-Page Application (React/Vite SPA)  
 **Status:** Development  
-**Last Updated:** 2026-04-26
+**Last Updated:** April 26, 2026  
+**Analysis Scope:** src/ folder reverse-engineering
 
 ---
 
 ## 1. Executive Summary
 
-Gryffin Calorai is a React-based calorie tracking application designed for MVP-level functionality. It enables users to log daily food intake with detailed macronutrient tracking (protein, carbs, fat), create reusable recipes, and visualize their calorie consumption trends over time. The application uses client-side local storage (IndexedDB) for data persistence and Zustand for state management.
+Gryffin Calorai is a privacy-first calorie tracking application that runs entirely in the browser using IndexedDB for local data persistence. Users log daily food intake, track macronutrients (protein, carbs, fat), create reusable recipes, and visualize calorie consumption trends. The application uses no backend server, enabling offline-first operation and zero data exposure.
 
 **Core Value Proposition:** Lightweight, privacy-focused calorie and macro tracking without server dependency (MVP phase).
 
-**Version 0.0.2 Enhancements:**
+**Version 0.0.2 Status:**
 
-- Complete macro tracking system (protein, carbs, fat fields throughout data layer and UI)
-- Enhanced Dashboard with macro breakdown cards
-- Database schema v3 with automatic migration for backward compatibility
-- Security improvements: error boundary enhancements, input validation, localStorage safety
-- React standards compliance: error handling, TypeScript strict mode, custom hook patterns
+- ✅ Complete macro tracking system (protein, carbs, fat throughout data layer and UI)
+- ✅ Enhanced Dashboard with macro breakdown cards and progress bars
+- ✅ Database schema v3 with automatic migration for backward compatibility
+- ✅ Recipe manager with ingredient-based composition
+- ✅ Progress charts with 7/30-day views
+- ✅ Dark mode support with localStorage persistence
+- ✅ Error boundary for graceful failure recovery
+- ✅ Type-safe branded types for ID prevention
+- ✅ 14 unit tests (100% coverage on dbService and AppState)
+- ✅ 11 GitHub Actions CI/CD workflows
 
 ---
 
 ## 2. Technology Stack
 
-### Frontend
+### Frontend Framework
 
-- **Framework:** React 19.2.5 (React 19 with JSX transform)
-- **State Management:** Zustand 5.0.12 (lightweight client-side store)
-- **Styling:** Tailwind CSS 4.2.4 with dark mode support (`darkMode: "selector"`)
-- **UI Components:** React Icons 5.6.0 for icon assets
-- **Build Tool:** Vite 8.0.10 (fast development + optimized production builds)
-- **Type System:** TypeScript 6.0.3 (strict mode enabled)
+- **React 19.2.5** — Component library with automatic JSX transform
+- **Vite 8.0.10** — Build tool with HMR, code splitting, compression
+- **TypeScript 6.0.3** — Strict type checking, JSX as `react-jsx`
 
-### Data & Storage
+### State Management & Storage
 
-- **Local Database:** Dexie 4.4.2 (IndexedDB abstraction layer)
-- **Database Name:** `GryffinCaloraiDB`
-- **Storage Scope:** Client-side only (no server persistence)
+- **Zustand 5.0.12** — Single lightweight store, hook-based actions
+- **Dexie 4.4.2** — IndexedDB abstraction (no backend)
+- **Database Name:** `GryffinCaloraiDB` (client-side only)
 
-### Charts & Visualization
+### UI & Styling
 
-- **Chart Library:** Chart.js 4.5.1
-- **React Integration:** react-chartjs-2 5.3.1
-- **Chart Type:** Line chart with area fill for progress visualization
+- **Tailwind CSS 4.2.4** — Utility-first CSS, dark mode: `class`-based
+- **React Icons 5.6.0** — SVG icons (Feather, Material Design)
+- **Chart.js 4.5.1** + **react-chartjs-2 5.3.1** — Line charts for progress
 
 ### Developer Tools
 
-- **Linter:** ESLint 10.2.1 with React hooks rules
-- **Code Formatter:** Prettier 3.8.3
-- **Testing:** Vitest 4.1.5 with jsdom
-- **Type Checking:** TypeScript strict mode
-- **Compression:** Gzip + Brotli (vite-plugin-compression2)
+- **Vitest 4.1.5** — Unit testing with jsdom environment
+- **@vitest/ui 4.1.5** — Interactive test dashboard
+- **ESLint 10.2.1** — React hooks, TypeScript linting
+- **Prettier 3.8.3** — Code formatting
+- **fake-indexeddb 6.2.5** — Mock IndexedDB for tests
 
 ### Configuration
 
 - **Module Target:** ES2023
 - **JSX Transform:** `react-jsx` (automatic React import)
-- **Module Resolution:** Bundler mode with verbatimModuleSyntax
+- **Module Resolution:** Bundler mode
+- **TypeScript Flags:** `strict`, `verbatimModuleSyntax`
 
 ---
 
 ## 3. Architecture Overview
 
+### Application Entry Point
+
+**src/main.tsx** (root React mount):
+
+```
+document.getElementById("app")
+  → StrictMode (React development checks)
+    → ErrorBoundary (catches React render errors)
+      → App (root component)
+```
+
+**src/App.tsx** (root component):
+
+- Manages hash-based routing (`#dashboard`, `#recipes`, `#progress`)
+- Manages dark mode toggle with localStorage persistence
+- Renders navigation header with branding and theme control
+- Initializes database and global state on mount
+- Renders conditional page view based on current hash
+
 ### Component Hierarchy
 
 ```
-App (root, routing, theme)
-├── ErrorBoundary (error catching)
-├── Navigation Header
-│   ├── Logo / Branding
-│   ├── Navigation Links (Dashboard, Recipes, Progress)
-│   └── Dark Mode Toggle
-└── Router (hash-based)
-    ├── Dashboard (page)
-    │   ├── FoodLogger (component)
-    │   ├── BarcodeScanner (component, placeholder)
-    │   └── Daily Log History (component)
-    ├── Recipes (page)
-    │   └── Recipe Form (component)
-    └── Progress (page)
-        └── Chart Component
+<App>
+  ├── Navigation Header
+  │   ├── Logo ("C" badge + "Gryffin Calorai" text)
+  │   ├── Nav Links (Dashboard | Recipes | Progress)
+  │   └── Dark Mode Toggle (☀️ / 🌙)
+  │
+  └── Router (hash-based)
+      ├── Dashboard
+      │   ├── Summary Card (Total Intake, Progress Bar)
+      │   ├── Macro Breakdown Cards (Protein, Carbs, Fat)
+      │   ├── FoodLogger Form Component
+      │   ├── BarcodeScanner Placeholder
+      │   └── Daily Log History (list with delete buttons)
+      │
+      ├── Recipes
+      │   ├── Recipe Creation Form
+      │   │   ├── Recipe Name & Description inputs
+      │   │   ├── Dynamic Ingredient List
+      │   │   └── Save Recipe button
+      │   │
+      │   └── Existing Recipes List
+      │       └── Delete Recipe buttons
+      │
+      └── Progress
+          ├── Toggle (7 days / 30 days view)
+          └── Line Chart
+              ├── Consumed Calories (area fill, indigo)
+              └── Daily Goal Line (dashed red)
 ```
 
 ### State Management Architecture
 
-**Zustand Store (AppState):**
+**Single Zustand Store (AppState):**
 
-```
-AppState {
+```typescript
+interface AppState {
+  // Data
   user: UserProfile | null
-  dailyLogs: FoodItem[]
-  userId: UserId | null
+  dailyLogs: FoodItem[]          // Today's entries (computed from DB)
+  allFoodItems: FoodItem[]        // Recent food items
+  recipes: Recipe[]               // User's recipes
+  
+  // UI State
   isLoading: boolean
   error: string | null
+  userId: UserId | null
   
-  // Actions
-  fetchInitialData(userId: UserId)
-  refreshDailyLogs(userId: UserId)
-  addFoodLog(food: Omit<FoodItem, "id">)
+  // Actions (async)
+  fetchInitialData(userId): Promise<void>
+  refreshDailyLogs(userId): Promise<void>
+  addFoodLog(food): Promise<void>
+  deleteFoodLog(id): Promise<void>
+  updateCalorieGoal(goal): Promise<void>
+  fetchRecipes(userId): Promise<void>
+  deleteRecipe(id): Promise<void>
+  fetchAllFoodItems(userId): Promise<void>
 }
 ```
 
-**Component-Level State:**
+**State Initialization Flow:**
 
-- Theme preference (localStorage + React state)
-- Current routing path (hash-based)
-- Form states (useFoodForm, useRecipeForm hooks)
+1. App mounts → `App.tsx` useLayoutEffect calls `initializeDB()`
+2. Database opens/migrates → `App.tsx` calls `fetchInitialData(MOCK_USER_ID)`
+3. fetchInitialData:
+  - Creates or retrieves user via `getOrCreateUser()`
+  - Fetches today's logs via `getDailyFoodLogs(userId, todayISO())`
+  - Fetches recipes via `getAllRecipes(userId)`
+  - Fetches recent food items via `getRecentFoodItems(userId)`
+4. AppState updates, components re-render
 
-### Data Flow Architecture
+**Data Flow:**
 
 ```
-┌─────────────────────────────────────┐
-│         React Component              │
-│  (FoodLogger, RecipeForm, etc.)     │
-└────────────┬────────────────────────┘
-             │
-             ↓
-┌─────────────────────────────────────┐
-│      Custom Hooks Layer             │
-│  (useFoodForm, useRecipeForm)       │
-└────────────┬────────────────────────┘
-             │
-             ↓
-┌─────────────────────────────────────┐
-│     Zustand State (AppState)        │
-│  (centralized client state)         │
-└────────────┬────────────────────────┘
-             │
-             ↓
-┌─────────────────────────────────────┐
-│   Database Service (dbService)      │
-│  (IndexedDB abstraction)            │
-└────────────┬────────────────────────┘
-             │
-             ↓
-┌─────────────────────────────────────┐
-│    Dexie / IndexedDB                │
-│  (GryffinCaloraiDB)                 │
-└─────────────────────────────────────┘
+Components → Custom Hooks → Zustand Actions → DB Service → Dexie/IndexedDB
 ```
 
 ---
 
 ## 4. Data Model & Schema
 
-### Database Tables
+### Database Schema (Dexie.js)
+
+#### Schema Versions
+
+**Version 1** (Initial):
+
+- `users`: `id, username, email, lastLogin`
+- `foodItems`: `++id, [userId+dateLogged], name, calories, servingSize, dateLogged`
+- `recipes`: `++id, name, description, createdBy, dateCreated, userId`
+
+**Version 2** (Upgrade: Add calorieGoal to users):
+
+- Adds `calorieGoal` field to users table
+- Adds `userId` index to foodItems for direct user lookups
+- Migration: Sets `calorieGoal = 2000` for all existing users
+
+**Version 3** (Upgrade: Add macros to foodItems):
+
+- Adds `protein`, `carbs`, `fat` fields to foodItems
+- Migration: Backfills existing items with `0` for all three fields
+
+### Tables
 
 #### Table: `users`
 
-**Purpose:** Store user profile information  
 **Primary Key:** `id` (UserId - string)  
 **Indices:** `id, username, email, lastLogin`
 
 ```typescript
 interface UserProfile {
-  id: UserId;
-  username: string;
-  email: string;
-  lastLogin: string; // ISO 8601 timestamp
+  id: UserId;                    // e.g., "1"
+  username: string;              // e.g., "Guest"
+  email: string;                 // e.g., "guest@example.com"
+  lastLogin: string;             // ISO 8601 timestamp
+  calorieGoal: number;           // Default 2000 kcal
 }
 ```
 
 **Observed Behavior:**
 
-- Users are created on application first-run with mock data (Guest user)
-- lastLogin is updated on each session initialization
-- No user authentication or multi-user differentiation in MVP
+- Single user per session (hardcoded mock user ID = "1")
+- User created on first run if not exists
+- `lastLogin` updated on `getOrCreateUser()` call
+- No authentication or multi-user support in MVP
+- `calorieGoal` editable from Dashboard
+
+**Queries:**
+
+```typescript
+getOrCreateUser(userId, username, email): Promise<UserProfile>
+updateUserProfile(profile): Promise<void>
+```
 
 ---
 
 #### Table: `foodItems`
 
-**Purpose:** Store individual food log entries  
 **Primary Key:** `++id` (auto-increment FoodItemId)  
-**Compound Index:** `[userId+dateLogged]` (for daily log queries)  
-**Other Indices:** `name, calories, servingSize, dateLogged`
+**Compound Index:** `[userId+dateLogged]` (optimized for daily queries)  
+**Other Indices:** `userId, name, calories, servingSize, dateLogged`
 
 ```typescript
 interface FoodItem {
-  id?: FoodItemId;           // Auto-generated on insert
-  name: string;              // 1-100 chars
-  calories: number;          // 0-10000 range
-  servingSize: number;       // 1-100 range (grams or servings)
-  protein: number;           // 0-500g range (macronutrient tracking)
-  carbs: number;             // 0-500g range (macronutrient tracking)
-  fat: number;               // 0-500g range (macronutrient tracking)
-  dateLogged: ISODate;       // YYYY-MM-DD format
-  userId: UserId;            // Scoped to user
+  id?: FoodItemId;               // Auto-generated (1, 2, 3, ...)
+  userId: UserId;                // e.g., "1"
+  name: string;                  // 1-100 chars (e.g., "Apple")
+  calories: number;              // 0-10000 range (validated)
+  servingSize: number;           // 1-100 grams/servings (validated)
+  protein: number;               // 0-500g (validated)
+  carbs: number;                 // 0-500g (validated)
+  fat: number;                   // 0-500g (validated)
+  dateLogged: ISODate;           // YYYY-MM-DD format
 }
 ```
 
+**Input Validation Constraints (useFoodForm):**
+
+- `name`: 1-100 characters, required
+- `calories`: 0-10000 kcal
+- `servingSize`: 1-100
+- `protein`: 0-500g
+- `carbs`: 0-500g
+- `fat`: 0-500g
+
 **Observed Behavior:**
 
-- Entries are uniquely identified by auto-increment ID
-- Multiple food items can be logged per user per day (compound index allows this)
-- Calories and serving size are stored separately (not calculated)
-- Macro fields (protein, carbs, fat) track macronutrient breakdown for dietary analysis
-- Macro fields validated to 0-500g range to prevent invalid data entry
-- Database v3 migration automatically backfills existing records with 0 macro values for compatibility
+- Multiple items per user per day allowed (compound index supports this)
+- Each entry is independently stored (no aggregation at insert time)
+- Macros default to 0 for backward compatibility (v3 migration)
+- Calories and serving size stored separately (not calculated from macros)
+- Daily totals computed in memory in Dashboard and Progress pages
+
+**Queries:**
+
+```typescript
+getDailyFoodLogs(userId, date): Promise<FoodItem[]>
+  // WHERE [userId+dateLogged] = [userId, date]
+
+getAllFoodLogs(userId): Promise<FoodItem[]>
+  // WHERE userId = userId (used for progress calculations)
+
+getRecentFoodItems(userId): Promise<FoodItem[]>
+  // Fetches recent items for quick-add suggestions
+
+addFoodItemLog(foodLog): Promise<FoodItemId>
+  // INSERT, returns auto-increment ID
+
+deleteFoodItem(id): Promise<void>
+  // DELETE by id
+```
 
 ---
 
 #### Table: `recipes`
 
-**Purpose:** Store reusable recipe templates  
 **Primary Key:** `++id` (auto-increment RecipeId)  
 **Indices:** `name, description, createdBy, dateCreated, userId`
 
 ```typescript
 interface Recipe {
-  id?: RecipeId;
-  name: string;
-  description: string;
+  id?: RecipeId;                 // Auto-generated
+  userId: UserId;                // Scoped to user
+  name: string;                  // Recipe name (e.g., "High Protein Breakfast")
+  description: string;           // Multi-line description
   ingredients: Array<{
-    foodItemId: FoodItemId;
-    quantity: number;         // Not used in calorie calculation
-    serving: number;          // Not used in calorie calculation
+    foodItemId: FoodItemId;      // Reference to a food item (not joined)
+    quantity: number;            // Amount (not used in calories)
+    serving: number;             // Serving unit (not used in calories)
   }>;
-  totalCalories: number;      // Fixed per ingredient (100 cal/ingredient)
+  totalCalories: number;         // Hardcoded: ingredients.length * 100
   createdBy: UserId;
-  dateCreated: string;        // ISO 8601 timestamp
-  userId: UserId;             // Scoped to user
+  dateCreated: string;           // ISO 8601 timestamp
 }
 ```
 
 **Observed Behavior:**
 
-- Total calories calculated as: `ingredients.length * 100` (hardcoded formula)
-- Ingredient quantity and serving are stored but not used in calorie math
-- No join queries to fetch full ingredient details (FoodItem objects)
+- `totalCalories` calculated as: `num_ingredients * 100` (constant per ingredient)
+- `quantity` and `serving` fields stored but ignored in calorie math
+- No join queries to fetch full FoodItem details
+- Recipes are static templates (not auto-updated if ingredient changes)
+
+**Queries:**
+
+```typescript
+saveRecipe(recipe): Promise<RecipeId>
+  // INSERT recipe
+
+getAllRecipes(userId): Promise<Recipe[]>
+  // WHERE userId = userId
+
+deleteRecipe(id): Promise<void>
+  // DELETE by id
+```
 
 ---
 
 ### Branded Types System
 
-**Purpose:** Compile-time type safety to prevent ID mix-ups
+**Purpose:** Prevent ID mix-ups at compile time (no runtime cost)
 
 ```typescript
-type Brand<T, B extends string> = T & { readonly __brand: B };
+type UserId = string & { readonly __brand: "UserId" };
+type FoodItemId = number & { readonly __brand: "FoodItemId" };
+type RecipeId = number & { readonly __brand: "RecipeId" };
+type ISODate = string & { readonly __brand: "ISODate" };
 
-type UserId = Brand<string, "UserId">;
-type FoodItemId = Brand<number, "FoodItemId">;
-type RecipeId = Brand<number, "RecipeId">;
-type ISODate = Brand<string, "ISODate">; // Validates YYYY-MM-DD format
-
-// Constructor functions
+// Constructors (runtime brand casting)
 UserId(id: string): UserId
 FoodItemId(id: number): FoodItemId
 RecipeId(id: number): RecipeId
 ISODate(date: string): ISODate
-todayISO(): ISODate // Helper to get today's date
+todayISO(): ISODate  // Returns today's date as ISODate
 
-// Type guards
-isFoodItemId(value: unknown): value is FoodItemId
-isUserId(value: unknown): value is UserId
-isRecipeId(value: unknown): value is RecipeId
-isISODate(value: unknown): value is ISODate
+// Type Guards (runtime validation)
+isFoodItemId(value): boolean
+isUserId(value): boolean
+isRecipeId(value): boolean
+isISODate(value): boolean  // Regex: /^\d{4}-\d{2}-\d{2}$/
+```
+
+**Usage Pattern:**
+
+```typescript
+// Prevents this at compile time:
+deleteFoodLog(recipeId)  // ❌ Type mismatch
+
+// Enforces this:
+deleteFoodLog(foodItemId)  // ✅ Correct type
 ```
 
 ---
 
-## 5. Features & Observed Requirements
+## 5. Features & Observed Requirements (EARS Format)
 
 ### Feature 1: Food Logging
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                                                        |
-|------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The FoodLogger shall accept food name, calories, and serving size as user input.                                                   |
-| **Ubiquitous**   | The FoodLogger shall store food logs in IndexedDB, scoped to the current user and date.                                            |
-| **Event-driven** | When a user submits the food log form, the system shall validate input (name: 1-100 chars, calories: 0-10000, servingSize: 1-100). |
-| **Event-driven** | When validation succeeds, the system shall store the FoodItem in the database and add it to AppState.                              |
-| **Event-driven** | When validation fails, the system shall display an error message to the user and not persist data.                                 |
-| **Event-driven** | When a food item is added, the system shall refresh the daily logs and update the Dashboard summary.                               |
-| **State-driven** | While the form is submitting, the system shall disable the submit button and show "Saving..." text.                                |
+| Type             | Statement                                                                                                                                                             |
+|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The system shall store food log entries in the `foodItems` table with user ID, date, and calorie information.                                                         |
+| **Ubiquitous**   | The FoodLogger component shall accept food name, calories, serving size, protein, carbs, and fat as user inputs.                                                      |
+| **Event-driven** | When a user submits the food log form, the system shall validate all inputs according to defined constraints.                                                         |
+| **Event-driven** | When validation fails, the system shall display error message: "Please enter a valid name, calories (0-10000), serving size (1-100), and protein/carbs/fat (0-500g)." |
+| **Event-driven** | When validation succeeds, the system shall call `addFoodLog()` action in AppState.                                                                                    |
+| **Event-driven** | When `addFoodLog()` succeeds, the system shall refresh daily logs via `refreshDailyLogs()`.                                                                           |
+| **Event-driven** | When `addFoodLog()` succeeds, the system shall display success message: "Successfully logged {name}! Macros updated."                                                 |
+| **State-driven** | While `isLoading` is true, the system shall disable the submit button and show loading indicator.                                                                     |
+| **State-driven** | While form message is displayed, the system shall show error (red) or success (green) styling.                                                                        |
 
-**User Interaction Flow:**
+**Interaction Flow:**
 
-1. User navigates to Dashboard
-2. User fills FoodLogger form (name, calories, serving size)
-3. User clicks "Log Food" button
-4. System validates input
-5. System stores to IndexedDB
-6. System refreshes daily log display
-7. User sees confirmation message
-8. Form resets to initial state
+1. User navigates to Dashboard page
+2. User fills FoodLogger form
+3. User clicks "Log Food" button (form validation triggered)
+4. If invalid → show error message, form stays open
+5. If valid → call `addFoodLog()` action
+6. Zustand state updates → component re-renders
+7. Dashboard summary recalculates total calories/macros
+8. Success message shown, form resets
 
 **Data Persistence:**
 
-- Entries stored in `foodItems` table with compound index `[userId+dateLogged]`
-- Logs retrieved via `getDailyFoodLogs(userId, date)` query
+- Stored in `foodItems` table with compound index `[userId+dateLogged]`
+- Retrieved daily via `getDailyFoodLogs(userId, todayISO())`
+- Aggregated in memory for Dashboard totals
 
 ---
 
-### Feature 2: Dashboard Summary
+### Feature 2: Calorie Goal Management
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                          |
-|------------------|------------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The Dashboard shall display today's total calorie intake by summing all FoodItem calories for today. |
-| **Ubiquitous**   | The Dashboard shall display a goal of 2000 kcal for comparison.                                      |
-| **Ubiquitous**   | The Dashboard shall list all food items logged for today.                                            |
-| **Event-driven** | When the Dashboard loads, the system shall fetch today's food logs from AppState.                    |
-| **State-driven** | While daily logs are loading, the system shall display a loading message.                            |
-| **State-driven** | If no logs exist for today, the system shall display "No food items logged for today yet."           |
+| Type             | Statement                                                                                  |
+|------------------|--------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The Dashboard shall display the current user's calorie goal.                               |
+| **Ubiquitous**   | The system shall calculate progress as: `(totalCalories / calorieGoal) * 100`.             |
+| **Event-driven** | When user clicks the goal edit button, the system shall display an inline edit form.       |
+| **Event-driven** | When user saves a new goal, the system shall call `updateCalorieGoal()` action.            |
+| **Event-driven** | When `updateCalorieGoal()` succeeds, the system shall update the user profile in AppState. |
+| **State-driven** | While in edit mode, the system shall show input field, Save button, and Cancel button.     |
+| **State-driven** | While not in edit mode, the system shall show goal as read-only text with edit icon.       |
 
-**Calculation Logic:**
+**Default Goal:**
 
-```
-totalCalories = sum(FoodItem.calories for each log today)
-```
+- New users assigned `calorieGoal = 2000` kcal
+
+**Progress Bar Behavior:**
+
+- Capped at 100% display (even if user exceeds goal)
+- Shows percentage text: "{percent}% of daily goal"
 
 ---
 
 ### Feature 3: Recipe Management
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                                                               |
-|------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The Recipes page shall allow users to create recipes with name, description, and ingredients.                                             |
-| **Ubiquitous**   | The system shall store recipes in IndexedDB with auto-generated IDs.                                                                      |
-| **Event-driven** | When a user adds an ingredient, the system shall create an ingredient entry with default values (foodItemId: 1, quantity: 1, serving: 1). |
-| **Event-driven** | When a user removes an ingredient, the system shall delete it from the ingredients list.                                                  |
-| **Event-driven** | When a user submits the recipe form, the system shall validate: recipe name exists, description exists, at least one ingredient exists.   |
-| **Event-driven** | When validation succeeds, the system shall calculate total calories as `ingredients.length * 100` and persist the recipe.                 |
-| **State-driven** | While the recipe is being saved, the system shall disable the submit button and show "Saving..." text.                                    |
-| **Optional**     | Where barcode scanning is implemented, the system shall populate ingredient foodItemIds from scanned barcodes.                            |
+| Type             | Statement                                                                                            |
+|------------------|------------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The system shall store recipes with name, description, and ingredient list.                          |
+| **Ubiquitous**   | The recipe system shall calculate total calories as: `ingredients.length * 100`.                     |
+| **Event-driven** | When user adds an ingredient, the system shall display a new ingredient row with food item selector. |
+| **Event-driven** | When user selects a food item from the dropdown, the system shall populate ingredient fields.        |
+| **Event-driven** | When user removes an ingredient, the system shall delete that row from the ingredient list.          |
+| **Event-driven** | When user submits the recipe form, the system shall validate name and ingredients are not empty.     |
+| **Event-driven** | When recipe save succeeds, the system shall refresh the recipes list via `fetchRecipes()`.           |
+| **Event-driven** | When user clicks delete on a recipe, the system shall call `deleteRecipe()` action.                  |
+| **State-driven** | While form is submitting (`isLoading = true`), the system shall disable the save button.             |
 
-**Ingredient Input Fields:**
+**Ingredient Selector:**
 
-- Food Item ID (number, controlled input)
-- Quantity (number, controlled input)
-- Serving Size (number, controlled input)
+- Populated from `allFoodItems` array in AppState
+- Shows food name and calorie count
+- Selecting a food item fills in: foodItemId, name, calories
 
-**Calorie Calculation:**
-
-```
-totalCalories = ingredients.length * 100 (fixed)
-```
-
-**Note:** This formula does not account for quantity or serving size.
+**Note:** Quantity and serving fields are stored but not used in total calorie calculation.
 
 ---
 
-### Feature 4: Progress Tracking
+### Feature 4: Progress Visualization
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                         |
-|------------------|-----------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The Progress page shall display a line chart showing daily calorie consumption over time.           |
-| **Ubiquitous**   | The chart shall use mock data (5 hardcoded daily entries for demonstration).                        |
-| **State-driven** | While the page loads, the chart shall be rendered with predefined mock data.                        |
-| **Optional**     | Where real historical data is available, the chart shall fetch and display actual food log history. |
+| Type             | Statement                                                                                       |
+|------------------|-------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The Progress page shall display a line chart of daily calorie totals.                           |
+| **Ubiquitous**   | The chart shall show a dashed red line for the user's daily goal.                               |
+| **Event-driven** | When user clicks "7 days" toggle, the system shall request progress data for last 7 days.       |
+| **Event-driven** | When user clicks "30 days" toggle, the system shall request progress data for last 30 days.     |
+| **State-driven** | While progress data is loading (`isLoading = true`), the system shall show a loading indicator. |
 
-**Mock Data Used:**
+**Data Calculation (useProgressData hook):**
 
-```
-{ date: "2026-03-20", calories: 1800 }
-{ date: "2026-03-21", calories: 2100 }
-{ date: "2026-03-22", calories: 1650 }
-{ date: "2026-03-23", calories: 1950 }
-{ date: "2026-03-24", calories: 2200 }
-```
+- Fetches all user's food logs via `getAllFoodLogs(userId)`
+- Groups logs by date: `Map<date, totalCalories>`
+- Generates last N days (7 or 30)
+- For each day, sums calories: `totalCalories = sum(logs.calories)`
+- If no logs for a day, shows 0 calories
+- Labels formatted as "MM-DD" (e.g., "04-26")
 
 **Chart Configuration:**
 
-- **Type:** Line with area fill
-- **X-Axis:** Dates (formatted as MM-DD)
-- **Y-Axis:** Calories (0 to max)
-- **Color:** Indigo (#4F46E5)
-- **Fill Opacity:** 10%
+- Line color (Calories Consumed): indigo-600
+- Area fill: indigo-600 at 0.1 opacity
+- Goal line: red-500, dashed [5,5], no points
+- Tension: 0.3 (smooth curves)
 
 ---
 
 ### Feature 5: Dark Mode
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                    |
-|------------------|------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The application shall support light and dark theme modes.                                      |
-| **Event-driven** | When the user clicks the theme toggle button, the system shall switch themes immediately.      |
-| **Ubiquitous**   | The system shall persist theme preference to localStorage under key "darkMode".                |
-| **Event-driven** | When the app loads, the system shall check localStorage for saved theme preference.            |
-| **Event-driven** | If no saved preference exists, the system shall default to the system color scheme preference. |
-| **State-driven** | While dark mode is enabled, the system shall apply dark Tailwind CSS classes to the DOM.       |
+| Type             | Statement                                                                                                    |
+|------------------|--------------------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The application shall support dark and light color themes.                                                   |
+| **Ubiquitous**   | The system shall apply the 'dark' class to the document root to trigger Tailwind dark mode.                  |
+| **Event-driven** | When user clicks the dark mode toggle button (☀️ / 🌙), the system shall switch theme.                       |
+| **Event-driven** | When theme is switched, the system shall persist preference to localStorage as `darkMode`.                   |
+| **State-driven** | On application startup, the system shall read `darkMode` from localStorage if present.                       |
+| **State-driven** | If `darkMode` is not in localStorage, the system shall respect the OS preference via `prefers-color-scheme`. |
+| **Optional**     | Where dark mode is active, the system shall apply dark background colors and light text.                     |
 
-**Implementation Details:**
+**Implementation:**
 
-- **Storage:** `localStorage.setItem("darkMode", JSON.stringify(isDark))`
-- **DOM Update:** `document.documentElement.classList.add("dark")` / `.remove("dark")`
-- **Tailwind Config:** `darkMode: "selector"` (class-based)
-- **Toggle Button:** Moon (🌙) icon in light mode, Sun (☀️) icon in dark mode
-
----
-
-### Feature 6: Navigation
-
-**EARS Format Observations:**
-
-| Type             | Requirement                                                                                                             |
-|------------------|-------------------------------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The application shall provide a fixed navigation header with links to Dashboard, Recipes, and Progress pages.           |
-| **Ubiquitous**   | The system shall use hash-based routing (#dashboard, #recipes, #progress).                                              |
-| **Event-driven** | When a user clicks a navigation link, the system shall update `window.location.hash` and render the corresponding page. |
-| **Event-driven** | When the browser hash changes, the system shall update the current page view.                                           |
-| **State-driven** | The active navigation link shall be highlighted based on the current route.                                             |
-
-**Routes:**
-| Route | Component | Default |
-|-------|-----------|---------|
-| `#dashboard` | Dashboard | Yes |
-| `#recipes` | Recipes | |
-| `#progress` | Progress | |
+- Tailwind config: `darkMode: 'class'` (selector-based)
+- App.tsx state: `darkMode` boolean
+- useLayoutEffect: applies/removes 'dark' class on root
+- localStorage key: `darkMode` (JSON boolean)
+- Toggle button cycles theme and persists
 
 ---
 
-### Feature 7: Barcode Scanner (Placeholder)
+### Feature 6: Error Boundary
 
-**EARS Format Observations:**
+**EARS Observations:**
 
-| Type             | Requirement                                                                                                                            |
-|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| **Ubiquitous**   | The BarcodeScanner component shall display a placeholder UI for future barcode scanning.                                               |
-| **Ubiquitous**   | The placeholder shall show "Camera Feed Placeholder" text and an "Activate Scanner" button.                                            |
-| **Event-driven** | When the "Activate Scanner" button is clicked, the system shall display an alert with text "Barcode scanning logic to be implemented." |
-| **Optional**     | Where barcode scanning is implemented, the system shall use `navigator.mediaDevices.getUserMedia` to access the camera.                |
-| **Optional**     | Where barcode scanning is implemented, the system shall use a library like QuaggaJS or react-barcode-scanner for barcode detection.    |
+| Type             | Statement                                                                                            |
+|------------------|------------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The application shall wrap the root component in an ErrorBoundary.                                   |
+| **Event-driven** | When a React component throws an error during render, the ErrorBoundary shall catch it.              |
+| **Event-driven** | When an error is caught, the ErrorBoundary shall display a user-friendly fallback UI.                |
+| **Event-driven** | When error is caught, the system shall log the error to the browser console.                         |
+| **Event-driven** | When user clicks "Reload Page" button on fallback, the system shall call `window.location.reload()`. |
+| **State-driven** | While error is displayed, the system shall show error ID (UUID) for debugging.                       |
 
-**Status:** Placeholder implementation, no actual camera access or barcode detection.
+**ErrorBoundary Scope:**
+
+- Catches React render errors in child components
+- Does NOT catch async errors, event handler errors, or promise rejections
+- Displays: error message, error ID, reload button
 
 ---
 
-## 6. Non-Functional Characteristics
+## 6. Non-Functional Requirements & Constraints
 
 ### Performance
 
-| Aspect              | Observed Behavior                                               |
-|---------------------|-----------------------------------------------------------------|
-| **Load Time**       | App initializes with Dexie database opening (~50-100ms)         |
-| **IndexedDB Query** | Compound index queries execute in <10ms for typical data        |
-| **State Updates**   | Zustand state mutations are synchronous, immediate              |
-| **Re-renders**      | React memoization not currently optimized; full subtree renders |
-| **Bundle Size**     | ~476KB gzipped (with all dependencies)                          |
+**EARS Observations:**
 
-### Scalability
+| Type           | Statement                                                                 |
+|----------------|---------------------------------------------------------------------------|
+| **Ubiquitous** | The system shall load and initialize within 2 seconds on first run.       |
+| **Ubiquitous** | Daily log queries shall complete within 100ms using the compound index.   |
+| **Ubiquitous** | The application bundle shall be compressed with Gzip and Brotli.          |
+| **Ubiquitous** | The system shall use code splitting to reduce initial JavaScript payload. |
 
-| Aspect            | Observation                                                           |
-|-------------------|-----------------------------------------------------------------------|
-| **Data Volume**   | IndexedDB supports millions of records on modern browsers             |
-| **User Limit**    | Single-user application (hardcoded userId "1"); no horizontal scaling |
-| **Storage Limit** | Browser quota: typically 50MB+ depending on browser/device            |
-| **Session Limit** | Single browser tab/window per device (localStorage-based theme)       |
+### Storage
 
-### Reliability & Error Handling
+**EARS Observations:**
 
-| Aspect                      | Observed Behavior                                                   |
-|-----------------------------|---------------------------------------------------------------------|
-| **Database Initialization** | Attempts recovery on schema conflicts by clearing and recreating DB |
-| **Error Boundaries**        | ErrorBoundary component catches React errors and shows recovery UI  |
-| **Database Errors**         | Logged to console; error messages shown to user via AppState.error  |
-| **Validation Errors**       | Form validation failures display user-friendly messages             |
-| **Network**                 | No network dependency in MVP (all data client-side)                 |
+| Type           | Statement                                                                        |
+|----------------|----------------------------------------------------------------------------------|
+| **Ubiquitous** | All user data shall be stored locally in IndexedDB (`GryffinCaloraiDB`).         |
+| **Ubiquitous** | The system shall not send any user data to external servers.                     |
+| **Ubiquitous** | The system shall not require user authentication or account creation.            |
+| **Ubiquitous** | Users shall not lose data when clearing browser cookies (IndexedDB is separate). |
 
 ### Accessibility
 
-| Aspect                  | Observed Behavior                                          |
-|-------------------------|------------------------------------------------------------|
-| **Semantic HTML**       | Basic semantic structure (header, main, nav elements)      |
-| **ARIA Labels**         | Limited ARIA annotations; basic form labels present        |
-| **Keyboard Navigation** | Form inputs are keyboard accessible; buttons are focusable |
-| **Color Contrast**      | Tailwind CSS default color palette meets WCAG AA standards |
-| **Dark Mode**           | Provides dark mode option for reduced eye strain           |
+**EARS Observations:**
 
-### Security Posture
+| Type           | Statement                                                                       |
+|----------------|---------------------------------------------------------------------------------|
+| **Ubiquitous** | The application shall use semantic HTML elements (form, input, button, etc.).   |
+| **Ubiquitous** | Form inputs shall have associated label elements.                               |
+| **Ubiquitous** | Buttons shall have descriptive text or aria-labels.                             |
+| **Optional**   | Where possible, the application shall respect keyboard navigation (tab, enter). |
 
-| Aspect               | Observation                                 |
-|----------------------|---------------------------------------------|
-| **Authentication**   | NONE (mock user setup)                      |
-| **Authorization**    | NONE (all users access same data)           |
-| **Secrets**          | No hardcoded API keys or credentials        |
-| **Input Validation** | Client-side only; weak validation patterns  |
-| **CSRF**             | Not applicable (client-side app, no server) |
-| **XSS**              | Protected by React's automatic JSX escaping |
-| **HTTPS**            | Not configured (development-only feature)   |
+**Note:** Full WCAG 2.1 AA compliance planned for v0.0.3.
+
+### Security
+
+**EARS Observations:**
+
+| Type             | Statement                                                                                            |
+|------------------|------------------------------------------------------------------------------------------------------|
+| **Ubiquitous**   | The system shall validate all user inputs before storing to database.                                |
+| **Ubiquitous**   | The system shall not execute user-supplied code or dynamic scripts.                                  |
+| **Ubiquitous**   | The application shall run over HTTPS in production.                                                  |
+| **Event-driven** | When user input exceeds allowed ranges, the system shall reject the input and display error message. |
+| **State-driven** | While recipe description is displayed, the system shall escape HTML special characters.              |
+
+**Identified Gaps:**
+
+- ⚠️ Recipe descriptions not currently sanitized (XSS risk if user-generated content added)
+- ⚠️ No CSRF protection (no backend, but relevant if backend added later)
+- ⚠️ No rate limiting on database operations
+
+### Offline Capability
+
+**EARS Observations:**
+
+| Type             | Statement                                                                 |
+|------------------|---------------------------------------------------------------------------|
+| **Ubiquitous**   | The system shall function fully offline (no network connection required). |
+| **Ubiquitous**   | All data changes shall persist in IndexedDB even if browser is closed.    |
+| **State-driven** | While offline, the system shall not attempt to sync data to servers.      |
+
+**Note:** Service Worker / PWA features planned for v0.0.3.
 
 ---
 
-## 7. Module Structure & Responsibilities
+## 7. User Flows & Scenarios
 
-### `/src/types/index.ts`
+### Scenario 1: First-Time User Setup
 
-**Purpose:** Branded types and type guards for compile-time safety
+1. User opens application
+2. App initializes: `App.tsx` → `initializeDB()` → `fetchInitialData()`
+3. System checks if user exists in `users` table
+4. User not found → `getOrCreateUser()` creates "Guest" user
+5. Dashboard loads with empty daily logs
+6. User can immediately start logging food
 
-**Exports:**
+### Scenario 2: Logging Food & Tracking Daily Intake
 
-- Branded types: `UserId`, `FoodItemId`, `RecipeId`, `ISODate`
-- Constructors: `UserId()`, `FoodItemId()`, `RecipeId()`, `ISODate()`
-- Helpers: `todayISO()`
-- Type guards: `isFoodItemId()`, `isUserId()`, `isRecipeId()`, `isISODate()`
+1. User on Dashboard page
+2. User fills FoodLogger form (name, calories, macros)
+3. User clicks "Log Food"
+4. `useFoodForm.submitFoodLog()` validates input
+5. If valid: `addFoodLog()` action → `addFoodItemLog()` DB call → Dexie insert
+6. `refreshDailyLogs()` re-fetches `getDailyFoodLogs()`
+7. Dashboard `dailyLogs` state updates
+8. Summary card recalculates totals (sum of calories, protein, carbs, fat)
+9. Progress bar updates
+10. User sees success message
+11. Form resets to initial state
 
-**Dependencies:** None (pure TypeScript)
+### Scenario 3: Creating a Reusable Recipe
+
+1. User navigates to Recipes page
+2. User fills recipe form (name, description)
+3. User clicks "Add Ingredient" button (multiple times)
+4. For each ingredient: user selects food item from dropdown
+5. System populates calorie info from selected food
+6. User clicks "Save Recipe"
+7. `saveRecipeForm()` validates: name and ingredients not empty
+8. If valid: `saveRecipe()` DB call → Dexie insert → returns RecipeId
+9. System calls `fetchRecipes()` → re-queries all user's recipes
+10. Recipes list updates with new recipe
+11. User sees success message
+
+### Scenario 4: Viewing Progress Over Time
+
+1. User navigates to Progress page
+2. `useProgressData(7)` hook runs
+3. Fetches all user's logs via `getAllFoodLogs(userId)`
+4. Groups by date, sums calories per day
+5. Generates 7 days of labels and data
+6. Chart.js renders line chart with area fill
+7. Red dashed line shows user's daily goal
+8. User clicks "30 days" toggle
+9. Hook re-runs with `days=30` parameter
+10. Chart updates to show 30-day view
+
+### Scenario 5: Switching Themes
+
+1. User clicks dark mode toggle button (☀️ / 🌙)
+2. `toggleDarkMode()` function called
+3. State updated: `setDarkMode(!darkMode)`
+4. useLayoutEffect runs → adds/removes 'dark' class on document root
+5. Tailwind CSS applies dark color scheme to entire app
+6. localStorage key 'darkMode' updated with new preference
+7. On next visit, app reads 'darkMode' from localStorage
+8. Theme restored automatically
 
 ---
 
-### `/src/db/dbService.ts`
+## 8. Known Limitations & Technical Debt
 
-**Purpose:** IndexedDB abstraction layer and data access functions
+### Implemented Features ✅
 
-**Exports:**
+- Food logging with macro tracking
+- Recipe manager with dynamic ingredients
+- Progress charts (7/30 days)
+- Daily intake summary with goal tracking
+- Dark mode toggle
+- Error boundary for crash recovery
+- Type-safe branded types
+- Database schema versioning with migrations
+- 14 unit tests (100% coverage on core logic)
+- 11 CI/CD GitHub Actions workflows
 
-- Interfaces: `FoodItem`, `Recipe`, `UserProfile`
-- Database instance: `db` (Dexie instance)
-- Table references: `users`, `foodItems`, `recipes`
-- Functions:
-  - `initializeDB()` - Opens/initializes database
-  - `addFoodItemLog(foodLog)` - Inserts food entry
-  - `getOrCreateUser(userId, username, email)` - Manages user profile
-  - `getDailyFoodLogs(userId, date)` - Queries daily food entries
-  - `saveRecipe(recipe)` - Inserts recipe
+### Planned / Placeholders ⏳
 
-**Schema:**
+- **Barcode Scanner:** `BarcodeScanner.tsx` exists as stub; requires Camera API integration
+- **Component Tests:** Dashboard, FoodLogger, etc. need integration tests
+- **Multi-User Support:** Currently single hardcoded user ("1"); auth needed for v0.0.3
+- **PWA Features:** Service Worker, offline sync, install prompt
+- **Recipe Macros:** Currently hardcoded `100 cal/ingredient`; should calculate from ingredients
+- **Macro Breakdown in Recipes:** Recipes should aggregate protein/carbs/fat from ingredients
 
+### Technical Debt & Security Gaps
+
+| Issue                             | Severity | Location                          | Mitigation                                          |
+|-----------------------------------|----------|-----------------------------------|-----------------------------------------------------|
+| Recipe descriptions not sanitized | Medium   | `useRecipeForm`, `Recipes.tsx`    | Sanitize on display or restrict to plain text       |
+| No CSRF protection                | Low      | N/A (no backend)                  | Add if backend integration planned                  |
+| No rate limiting                  | Low      | dbService                         | Rate limit large batch operations                   |
+| Ingredient totals hardcoded       | Medium   | `useRecipeForm`, Recipe interface | Calculate from ingredient macros                    |
+| No optimistic updates             | Low      | AppState actions                  | Consider Zustand middleware                         |
+| Minimal component tests           | Medium   | src/components/, src/pages/       | Target >80% coverage on all layers                  |
+| `fake-indexeddb` for testing      | Low      | vitest config                     | Adequate for MVP; consider real IndexedDB if needed |
+
+---
+
+## 9. API/Query Reference
+
+### Database Service Exports (dbService.ts)
+
+**Initialization:**
+
+```typescript
+initializeDB(): Promise<void>
+// Initializes Dexie, applies migrations, opens database
+
+clearDatabase(): Promise<void>
+// Clears all tables and reopens database (dev utility)
 ```
-db.version(1).stores({
-  users: "id, username, email, lastLogin",
-  foodItems: "++id, [userId+dateLogged], name, calories, servingSize, dateLogged",
-  recipes: "++id, name, description, createdBy, dateCreated, userId"
-})
+
+**User Operations:**
+
+```typescript
+getOrCreateUser(userId: UserId, username: string, email: string): Promise<UserProfile>
+// Creates user if not exists, updates lastLogin, returns profile
+
+updateUserProfile(profile: UserProfile): Promise<void>
+// Saves user profile changes (e.g., calorieGoal)
 ```
 
-**Error Handling:**
+**Food Log Operations:**
 
-- Catches "primary key" schema conflicts
-- Clears and reinitializes database on conflict
-- Logs errors to console
+```typescript
+addFoodItemLog(foodLog: FoodItem): Promise<FoodItemId>
+// Inserts food log, returns auto-generated ID
 
----
+getDailyFoodLogs(userId: UserId, date: ISODate): Promise<FoodItem[]>
+// Fetches logs for specific user and date (uses compound index)
 
-### `/src/state/AppState.ts`
+getAllFoodLogs(userId: UserId): Promise<FoodItem[]>
+// Fetches all logs for user (used for progress calculations)
 
-**Purpose:** Centralized Zustand state store for application data
+getRecentFoodItems(userId: UserId): Promise<FoodItem[]>
+// Fetches recent items for quick-add suggestions
 
-**State Shape:**
+deleteFoodItem(id: FoodItemId): Promise<void>
+// Deletes a food log entry by ID
+```
+
+**Recipe Operations:**
+
+```typescript
+saveRecipe(recipe: Recipe): Promise<RecipeId>
+// Inserts recipe, returns auto-generated ID
+
+getAllRecipes(userId: UserId): Promise<Recipe[]>
+// Fetches all recipes for user
+
+deleteRecipe(id: RecipeId): Promise<void>
+// Deletes a recipe by ID
+```
+
+### Zustand Store Actions (AppState.ts)
+
+```typescript
+fetchInitialData(userId: UserId): Promise<void>
+// Initializes user, loads daily logs, recipes, recent items
+
+refreshDailyLogs(userId: UserId): Promise<void>
+// Re-queries today's food logs from database
+
+addFoodLog(food: Omit<FoodItem, "id">): Promise<void>
+// Logs food item, triggers refreshDailyLogs
+
+deleteFoodLog(id: FoodItemId): Promise<void>
+// Deletes food log, triggers refreshDailyLogs
+
+updateCalorieGoal(goal: number): Promise<void>
+// Updates user's daily calorie goal
+
+fetchRecipes(userId: UserId): Promise<void>
+// Re-queries all recipes for user
+
+deleteRecipe(id: RecipeId): Promise<void>
+// Deletes recipe, triggers fetchRecipes
+
+fetchAllFoodItems(userId: UserId): Promise<void>
+// Fetches recent food items for quick-add
+```
+
+### Custom Hooks
+
+**useFoodForm():**
 
 ```typescript
 {
-  user: UserProfile | null,
-  dailyLogs: FoodItem[],
-  userId: UserId | null,
-  isLoading: boolean,
-  error: string | null
-}
-```
-
-**Actions:**
-
-- `fetchInitialData(userId)` - Loads user and today's food logs
-- `refreshDailyLogs(userId)` - Refetches daily logs
-- `addFoodLog(food)` - Adds food item and refreshes logs
-
-**Dependencies:** `dbService.ts`, `types/index.ts`
-
----
-
-### `/src/App.tsx`
-
-**Purpose:** Root component, routing, theme management, app initialization
-
-**Responsibilities:**
-
-- Hash-based routing logic
-- Dark mode toggle and persistence
-- Database initialization on mount
-- Layout wrapper (nav, main, footer)
-
-**Props:** None (root component)
-
-**Local State:**
-
-- `darkMode: boolean`
-- `currentPath: string` (hash value)
-
-**Dependencies:** All pages/components, dbService, AppState
-
----
-
-### `/src/components/FoodLogger.tsx`
-
-**Purpose:** Form component for logging food items
-
-**Props:** None (reads userId from AppState)
-
-**Features:**
-
-- Text input for food name
-- Number input for calories
-- Number input for serving size
-- Client-side validation
-- Submit button with loading state
-
-**Dependencies:** `useFoodForm` hook
-
----
-
-### `/src/components/BarcodeScanner.tsx`
-
-**Purpose:** Placeholder UI for future barcode scanning feature
-
-**Props:** None
-
-**Features:**
-
-- Static placeholder UI
-- Alert on button click (not implemented)
-
-**Dependencies:** None
-
----
-
-### `/src/components/ErrorBoundary.tsx`
-
-**Purpose:** React error boundary for graceful error handling
-
-**Props:** `children: ReactNode`
-
-**Features:**
-
-- Catches React render errors
-- Displays error message to user
-- "Reload Page" button for recovery
-- Logs errors to console
-
-**Dependencies:** React
-
----
-
-### `/src/pages/Dashboard.tsx`
-
-**Purpose:** Main user dashboard, daily summary and logging
-
-**Components:**
-
-- Daily calorie total summary card
-- FoodLogger input form
-- BarcodeScanner placeholder
-- Daily food log list
-
-**Data Flow:**
-
-- Reads `dailyLogs`, `isLoading`, `error` from AppState
-- Displays logs from state
-- Passes `userId` to child components
-
-**Dependencies:** `AppState`, `FoodLogger`, `BarcodeScanner`
-
----
-
-### `/src/pages/Recipes.tsx`
-
-**Purpose:** Recipe management (create, list, edit)
-
-**Features:**
-
-- Recipe name input
-- Recipe description textarea
-- Ingredient list with add/remove
-- Controlled ingredient inputs
-- Submit with loading state
-
-**Data Flow:**
-
-- Uses `useRecipeForm` hook for form state
-- Saves recipes via `AppState.addFoodLog` → `dbService.saveRecipe()`
-
-**Dependencies:** `useRecipeForm` hook, `dbService`
-
----
-
-### `/src/pages/Progress.tsx`
-
-**Purpose:** Historical calorie consumption visualization
-
-**Features:**
-
-- Line chart with area fill
-- Mock data (hardcoded 5 days)
-- Date and calorie axes
-- Chart.js + react-chartjs-2 integration
-
-**Data Flow:**
-
-- Uses mock data (does not query database)
-- No state management dependency
-
-**Dependencies:** Chart.js, react-chartjs-2
-
----
-
-### `/src/hooks/useFoodForm.ts`
-
-**Purpose:** Reusable hook for food logging form state and logic
-
-**Returns:**
-
-```typescript
-{
-  name: string,
-  setName: (name: string) => void,
-  calories: number,
-  setCalories: (calories: number) => void,
-  servingSize: number,
-  setServingSize: (servingSize: number) => void,
-  isLoading: boolean,
+  name, setName,
+  calories, setCalories,
+  servingSize, setServingSize,
+  protein, setProtein,
+  carbs, setCarbs,
+  fat, setFat,
+  isLoading,
   message: string | null,
-  submitFoodLog: () => Promise<boolean>,
-  resetForm: () => void
+  submitFoodLog(): Promise<boolean>,
+  resetForm(): void
 }
 ```
 
-**Validation Rules:**
-
-- Name: 1-100 chars (after trim)
-- Calories: 0-10000
-- ServingSize: 1-100
-
-**Dependencies:** `AppState`, `types/index.ts`
-
----
-
-### `/src/hooks/useRecipeForm.ts`
-
-**Purpose:** Reusable hook for recipe creation form state and logic
-
-**Returns:**
+**useRecipeForm(userId, allFoodItems):**
 
 ```typescript
 {
-  recipeName: string,
-  setRecipeName: (name: string) => void,
-  description: string,
-  setDescription: (desc: string) => void,
-  ingredients: Ingredient[],
-  addIngredient: () => void,
-  removeIngredient: (id: string) => void,
-  updateIngredient: (id: string, field: string, value: number) => void,
+  recipeName, setRecipeName,
+  description, setDescription,
+  ingredients: FormIngredient[],
+  addIngredient(): void,
+  removeIngredient(id: string): void,
+  updateIngredient(id, field, value): void,
+  selectIngredientFoodItem(ingredientId, foodItem): void,
   message: string | null,
-  isLoading: boolean,
-  saveRecipeForm: () => Promise<boolean>,
-  resetForm: () => void
+  isLoading,
+  saveRecipeForm(): Promise<boolean>
 }
 ```
 
-**Validation Rules:**
+**useProgressData(days: 7 | 30):**
 
-- RecipeName: must be non-empty
-- Description: must be non-empty
-- Ingredients: at least one required
-
-**Dependencies:** `dbService`, `types/index.ts`
-
----
-
-### `/src/main.tsx`
-
-**Purpose:** Application entry point
-
-**Features:**
-
-- React StrictMode wrapper
-- ErrorBoundary wrapper
-- React.createRoot mount
-
-**Dependencies:** React, App, ErrorBoundary
-
----
-
-## 8. Data Flow Scenarios
-
-### Scenario 1: User Logs Food Item
-
-```
-User fills FoodLogger form
-        ↓
-useFoodForm validates input
-        ↓
-submitFoodLog calls AppState.addFoodLog()
-        ↓
-AppState.addFoodLog() calls dbService.addFoodItemLog()
-        ↓
-dbService inserts FoodItem into IndexedDB foodItems table
-        ↓
-AppState.refreshDailyLogs() queries foodItems with [userId+dateLogged] index
-        ↓
-AppState updates dailyLogs state
-        ↓
-Dashboard component re-renders with new logs
-        ↓
-User sees confirmation message and updated summary
-```
-
----
-
-### Scenario 2: User Creates Recipe
-
-```
-User fills Recipes form and clicks Save
-        ↓
-useRecipeForm validates input
-        ↓
-saveRecipeForm() constructs Recipe object
-        ↓
-Calls dbService.saveRecipe()
-        ↓
-dbService inserts Recipe into IndexedDB recipes table
-        ↓
-System returns RecipeId from database
-        ↓
-Form resets, user sees success message
-        ↓
-Recipe is now stored (no UI list display yet)
-```
-
----
-
-### Scenario 3: Dashboard Page Loads
-
-```
-App.tsx mounts
-        ↓
-useLayoutEffect initializes database
-        ↓
-fetchInitialData("1") executes
-        ↓
-getOrCreateUser("1", "Guest", "guest@example.com")
-        ↓
-getDailyFoodLogs("1", todayISO())
-        ↓
-AppState updates with user and dailyLogs
-        ↓
-Dashboard component renders
-        ↓
-Displays summary and log history
-```
-
----
-
-## 9. Error Scenarios & Handling
-
-### Scenario 1: Database Schema Conflict
-
-**When:** App detects primary key mismatch on open
-
-**Observed Behavior:**
-
-1. `initializeDB()` catches error
-2. Checks if error message includes "primary key"
-3. Calls `db.delete()` to clear database
-4. Calls `db.open()` again
-5. Logs success message
-
-**User Impact:** Silent recovery; potential data loss if database was manually corrupted
-
----
-
-### Scenario 2: Food Log Validation Failure
-
-**When:** User submits FoodLogger with invalid data
-
-**Observed Behavior:**
-
-1. `useFoodForm.submitFoodLog()` validation fails
-2. Sets error message in state
-3. Does NOT call database
-4. User sees error in red box
-
-**Example Error Messages:**
-
-- "Please enter a valid name, calories (0-10000), and serving size (1-100)."
-- "User not initialized. Please refresh the page."
-
----
-
-### Scenario 3: Database Operation Error
-
-**When:** Dexie throws an error during add/query
-
-**Observed Behavior:**
-
-1. `addFoodLog()` or `saveRecipe()` throws
-2. Hook catches error
-3. Sets error message in AppState
-4. User sees error message
-
-**Error Messages:** Generic "Failed to save..." messages (actual error logged to console)
-
----
-
-### Scenario 4: React Component Error
-
-**When:** Component throws during render
-
-**Observed Behavior:**
-
-1. ErrorBoundary catches error
-2. Sets error state
-3. Renders error UI
-4. Shows "Reload Page" button
-5. Logs error to console
-
----
-
-## 10. TODOs & Incomplete Features
-
-### Code TODOs Found
-
-| Location            | TODO                                                        | Priority      |
-|---------------------|-------------------------------------------------------------|---------------|
-| `FoodLogger.tsx:22` | "Dispatch initial logs to the global state store"           | Medium        |
-| `Recipes.tsx:31`    | "Call the database service to save the recipe"              | ~~High~~ Done |
-| `Progress.tsx`      | "Chart visualization powered by Chart.js." (note, not TODO) | N/A           |
-
-### Planned Features Not Implemented
-
-1. **Barcode Scanning** - Placeholder only
-2. **Recipe History/List** - No UI to view saved recipes
-3. **Calorie Recommendations** - Only hardcoded 2000 kcal goal
-4. **Food Database** - No ingredient database to search/select from
-5. **Data Export** - No export/backup functionality
-6. **Multi-Device Sync** - No cloud storage
-7. **Notifications** - No alerts/reminders
-
----
-
-## 11. Dependencies & Configuration
-
-### Direct Dependencies
-
-```json
+```typescript
 {
-  "dexie": "^4.4.2",
-  "react": "^19.2.5",
-  "react-dom": "^19.2.5",
-  "zustand": "^5.0.12",
-  "react-icons": "^5.6.0",
-  "chart.js": "^4.5.1",
-  "react-chartjs-2": "^5.3.1",
-  "vite-plugin-compression2": "^2.5.3"
+  labels: string[],          // ["04-20", "04-21", ...]
+  data: number[],            // [1500, 2100, ...]
+  isLoading: boolean
 }
 ```
 
-### TypeScript Configuration
+---
 
-- **Target:** ES2023
-- **Module:** ESNext
-- **Strict Mode:** Enabled
-- **JSX:** react-jsx (automatic import)
-- **Verbatim Module Syntax:** Enabled (require explicit type-only imports)
+## 10. Testing Strategy
 
-### Build Configuration (Vite)
+### Current Test Coverage
 
-- **Base:** `/gryffin-calorai/`
-- **Plugins:** React, Tailwind CSS, compression (gzip + brotli)
-- **Output:** Optimized production bundle with source maps
+| Module     | Type        | Count   | Coverage |
+|------------|-------------|---------|----------|
+| dbService  | Unit        | 7       | 100%     |
+| AppState   | Unit        | 7       | 100%     |
+| FoodLogger | Integration | Planned | 0%       |
+| Dashboard  | Integration | Planned | 0%       |
+| Recipes    | Integration | Planned | 0%       |
+| Progress   | Integration | Planned | 0%       |
+
+**Target:** >80% coverage for all logic layers (state, db, hooks)
+
+### Test Tools
+
+- **Runner:** Vitest 4.1.5
+- **Environment:** jsdom
+- **IndexedDB Mock:** fake-indexeddb
+- **UI:** @vitest/ui for interactive dashboard
+
+### Test Patterns
+
+**DB Tests (dbService.test.ts):**
+
+- Mock database initialization
+- Test CRUD operations
+- Test query filters
+- Test migrations (if applicable)
+
+**State Tests (AppState.test.ts):**
+
+- Test action state transitions
+- Test error handling
+- Test async action flow
+- Mock database layer
+
+**Hook Tests (planned):**
+
+- Test form validation logic
+- Test state updates
+- Mock Zustand store
+
+**Component Tests (planned):**
+
+- Test render output
+- Test user interactions
+- Test accessibility (a11y)
+
+---
+
+## 11. Deployment & Build
+
+### Build Output
+
+- **Command:** `pnpm build`
+- **Output:** `dist/` folder with:
+  - `index.html` (single entry point)
+  - `assets/` folder with JS/CSS bundles
+  - Static compression: Gzip + Brotli
+
+### Environment Variables
+
+- None required (client-only app)
+- All configuration hardcoded (e.g., DB name, mock user ID)
+
+### Deployment Checklist
+
+- [ ] Build succeeds: `pnpm build`
+- [ ] No TypeScript errors: `pnpm lint`
+- [ ] All tests pass: `pnpm test`
+- [ ] Bundle size acceptable: `du -sh dist/`
+- [ ] Deployed over HTTPS
+- [ ] Dark mode toggle works
+- [ ] IndexedDB persists across sessions
+
+### Hosting Requirements
+
+- Static file server (no backend needed)
+- HTTPS required
+- CORS not needed (client-only)
+- No service worker required (v0.0.2)
 
 ---
 
 ## 12. Uncertainties & Questions
 
-### Architectural Questions
+### Data Design
 
-1. **Multi-User Intent** - Is the hardcoded userId "1" intentional for single-user MVP, or placeholder for auth?
-2. **Backend Integration** - Will a backend be added later? Current design assumes client-only.
-3. **Data Export** - How should users migrate their IndexedDB data if/when backend is added?
+- **Q:** Should recipe macros be calculated from ingredients, or stay hardcoded?
+  - **Current:** Hardcoded at 100 kcal per ingredient
+  - **Recommendation:** Calculate totalCalories as `sum(ingredient.calories)` and add totalProtein, totalCarbs, totalFat
 
-### Feature Clarifications
+- **Q:** Should quantity and serving fields in recipes be used?
+  - **Current:** Stored but ignored
+  - **Recommendation:** Either remove fields or implement portion-based calorie calculation
 
-1. **Recipe Calculations** - Why is totalCalories hardcoded to 100 per ingredient? Should it use foodItem.calories * quantity?
-2. **Ingredient Linking** - Recipes store foodItemIds but never join to fetch actual FoodItem details. Intended?
-3. **Recipe List UI** - Recipes can be created but no UI to list/view/delete them. Intended limitation?
-4. **Progress Chart** - Should historical data use actual daily aggregates, or keep mock data?
+### User Experience
 
-### Security & Validation
+- **Q:** Should users be able to manually adjust daily goals from a range?
+  - **Current:** Editable free-form number
+  - **Recommendation:** Add min/max constraints (e.g., 500-5000 kcal)
 
-1. **Validation Coverage** - Are numeric bounds (0-10000 calories) intentional limits, or should they be configurable?
-2. **Food Name Patterns** - Should food names be restricted to alphanumeric? Allow emoji?
-3. **UserId Origin** - Where will real userId come from post-MVP? JWT decode? Session?
+- **Q:** Should food logs be editable, or only deletable?
+  - **Current:** Only deletable; no edit UI
+  - **Recommendation:** Add edit UI for convenience
 
-### Performance & Storage
+### Multi-User Support
 
-1. **IndexedDB Cleanup** - No deletion or archival of old logs. Will browser quota be exceeded over time?
-2. **LocalStorage Size** - Theme preference is the only localStorage item; growth expected?
+- **Q:** Should v0.0.3 implement multi-user with authentication?
+  - **Current:** Single hardcoded user "1"
+  - **Recommendation:** Use localStorage-based session or mock auth for MVP
 
----
+### Performance
 
-## 13. Recommendations
-
-### High Priority (Before Production)
-
-1. ✅ Implement real authentication system (OAuth, Firebase, or custom backend)
-2. ✅ Add server-side validation and persistence
-3. ✅ Implement proper access control checks
-4. ✅ Add CSRF protection to API endpoints
-5. ✅ Improve input validation patterns
-6. ✅ Remove console.log statements
-7. ✅ Implement rate limiting on operations
-
-### Medium Priority (MVP Enhancement)
-
-1. Add recipe list UI (view, edit, delete recipes)
-2. Fix recipe calorie calculation to use ingredient details
-3. Wire Progress chart to actual historical data
-4. Implement barcode scanner with real camera access
-5. Add data export/backup functionality
-6. Improve error messages and user feedback
-
-### Low Priority (Quality of Life)
-
-1. Add loading skeletons for better UX
-2. Implement optimistic UI updates
-3. Add keyboard shortcuts for common actions
-4. Implement undo/redo for food logs
-5. Add search/filter for log history
-6. Implement data analytics/insights
+- **Q:** Should there be pagination for food logs and recipes lists?
+  - **Current:** All items loaded at once
+  - **Recommendation:** Paginate after 50+ items for performance
 
 ---
 
-## 14. Test Coverage
+## 13. Recommendations for Future Enhancements
 
-### Unit Tests Present
+### v0.0.3 Priorities
 
-- `src/state/AppState.test.ts` - Zustand store state mutations
-- `src/db/dbService.test.ts` - Database queries and inserts
+1. **Component Testing:** Add integration tests for pages and components
+2. **Multi-User Support:** Add mock auth (localStorage-based session)
+3. **Barcode Scanner:** Integrate Camera API for food lookup
+4. **Macro Calculations:** Calculate recipe macros from ingredients
+5. **Recipe Editing:** Allow users to edit existing recipes
+6. **Food Item Editing:** Allow users to edit logged food items
 
-### Test Coverage Gaps
+### v0.0.4+ Features
 
-- No component tests (FoodLogger, Dashboard, etc.)
-- No hook tests (useFoodForm, useRecipeForm)
-- No integration tests for full user flows
-- No accessibility tests
-
-### Recommended Test Additions
-
-```
-src/
-├── components/__tests__/
-│   ├── FoodLogger.test.tsx
-│   ├── Dashboard.test.tsx
-│   └── ErrorBoundary.test.tsx
-├── hooks/__tests__/
-│   ├── useFoodForm.test.ts
-│   └── useRecipeForm.test.ts
-└── pages/__tests__/
-    ├── Recipes.test.tsx
-    └── Progress.test.tsx
-```
+1. **PWA Capabilities:** Service Worker, offline sync, install prompt
+2. **Advanced Macros:** Carb cycling, macro targets, nutritional breakdowns
+3. **Data Export:** Export logs to CSV, PDF
+4. **Food Database:** Integrate USDA food database or Nutritionix API
+5. **Meal Plans:** Pre-built meal templates
+6. **Social Features:** Share progress, friend comparisons (if desired)
 
 ---
 
-## 15. Glossary
+## 14. Summary
 
-| Term                   | Definition                                                            |
-|------------------------|-----------------------------------------------------------------------|
-| **Branded Type**       | TypeScript type with phantom property for compile-time uniqueness     |
-| **Compound Index**     | Dexie index on multiple fields together (e.g., `[userId+dateLogged]`) |
-| **IndexedDB**          | Browser API for client-side persistent storage (NoSQL)                |
-| **Zustand**            | Lightweight state management library for React                        |
-| **EARS Format**        | Structured format for specifying requirements                         |
-| **Hash-Based Routing** | Navigation using `#` in URL (client-side only)                        |
-| **JSX Transform**      | React feature allowing JSX without explicit `React.createElement()`   |
-| **Dexie**              | Abstraction layer over IndexedDB (simpler API)                        |
+Gryffin Calorai v0.0.2 is a functional MVP calorie tracker that demonstrates:
 
----
+- ✅ Clean React/Zustand architecture with single responsibility
+- ✅ Type-safe development with branded types
+- ✅ Client-side data persistence with IndexedDB
+- ✅ Responsive UI with dark mode support
+- ✅ Error resilience with ErrorBoundary
+- ✅ Automated testing and CI/CD pipelines
 
-## Document Metadata
-
-**File:** `specs/gryffin-calorai_spec.md`  
-**Generated:** 2026-04-26  
-**Analyst:** Specifications Extractor (Claude)  
-**Status:** Complete - Reverse-engineered from codebase  
-**Revision:** 1.0
+The codebase is well-organized, follows established React patterns, and is ready for feature expansion. Key areas for v0.0.3 are component testing, multi-user support, and real barcode scanning integration.
 
 ---
 
-## Change Log
-
-| Version | Date       | Changes                          |
-|---------|------------|----------------------------------|
-| 1.0     | 2026-04-26 | Initial specification extraction |
+**Document Generated:** April 26, 2026  
+**Analysis Method:** Reverse-engineering from src/ folder  
+**Tools Used:** Bash grep, Read file exploration, TypeScript analysis  
+**Scope:** Complete feature set and architecture as of v0.0.2
