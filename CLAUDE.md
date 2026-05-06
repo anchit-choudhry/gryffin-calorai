@@ -4,7 +4,7 @@
 
 **Project Name:** Gryffin Calorai  
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and visualizing calorie progress.  
-**Context:** MVP v0.0.2 (April 2026), client-side only, no backend dependency. Health-focused personal tool.
+**Context:** v0.0.4 (May 2026), client-side only, no backend dependency. Health-focused personal tool.
 
 ---
 
@@ -22,12 +22,12 @@
 **Strict Rules:**
 
 - ✅ Always use **Tailwind only** for styling; no inline styles or CSS modules
-- ✅ Use **branded TypeScript types** for IDs (UserId, FoodItemId, RecipeId) to prevent mix-ups
+- ✅ Use **branded TypeScript types** for IDs (UserId, FoodItemId, RecipeId, WaterLogId, BodyMeasurementId, ISODate) to prevent mix-ups
 - ✅ All state goes in **Zustand store** (`src/state/AppState.ts`); no local component state except forms
 - ✅ **IndexedDB queries must use indices**; never scan full tables (`[userId+dateLogged]` pattern)
 - ✅ Components must have **accompanying `.test.ts` files** with >80% coverage target
 - ✅ All async operations include loading/error states in Zustand
-- ✅ **No custom routing**; App.tsx uses conditional rendering for pages
+- ✅ **No router library**; App.tsx uses hash-based navigation (`window.location.hash`) with `React.lazy` + `Suspense`
 
 **Naming Conventions:**
 
@@ -39,11 +39,14 @@
 
 **Architecture:**
 
-- **Entry:** `index.html` → `src/main.tsx` (ErrorBoundary wrapper) → `src/App.tsx` (conditional page rendering)
-- **Folders:** `src/{pages,components,hooks,state,db,types,assets}`
-- **Pages:** Dashboard, Recipes, Progress (in `src/pages/`)
-- **Store:** Single Zustand instance with actions (`initUser`, `addFoodItem`, `createRecipe`, etc.)
-- **DB:** Dexie.js tables (users, foodItems, recipes) with compound indices
+- **Entry:** `index.html` → `src/main.tsx` (ErrorBoundary wrapper) → `src/App.tsx` (hash-based navigation + Suspense)
+- **Folders:** `src/{pages,components,hooks,state,db,types}`
+- **Pages:** Dashboard, Recipes, Progress (in `src/pages/`) — lazy-loaded via `React.lazy` + `Suspense`
+- **Navigation:** Hash-based (`window.location.hash`); no router library; `PageLoading` used as Suspense fallback
+- **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body measurements.
+- **DB:** Dexie.js tables with compound indices; currently at **schema version 7**
+- **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`, `userId`, `isFavorite`, `mealType`
+- **MealType:** `"Breakfast" | "Lunch" | "Snacks" | "Dinner"` (defined in `src/types/index.ts`)
 
 ---
 
@@ -52,9 +55,9 @@
 **Testing (REQUIRED):**
 
 - Write failing test first when fixing bugs; use Vitest with jsdom
-- Run `pnpm test` before every commit; all tests must pass
+- Run `pnpm test` before every commit; all tests must pass (includes coverage report)
 - New features: add `.test.ts` alongside implementation
-- Target: >80% coverage for state/db layer; component tests planned for v0.0.3
+- Target: >80% coverage for state/db layer and UI components
 
 **Git & Commits:**
 
@@ -83,22 +86,23 @@
 For architecture details, see @@specifications/gryffin-calorai-specifications.md  
 For React patterns & best practices, see @@docs/REACT_STANDARDS_REVIEW.md  
 For security guidelines, see @@docs/SECURITY_AUDIT.md and @@.claude/skills/owasp-security-audit/SKILL.md  
-For release history & changes, see @@release-notes/0.0.2.md  
+For release history & changes, see @@release-notes/0.0.4.md (current), @@release-notes/0.0.3.md, and @@release-notes/0.0.2.md  
 For quick dev commands, see @@README.md
 
 ---
 
 ## Critical File Locations
 
-| Category   | File                                                       | Key Info                                     |
-|------------|------------------------------------------------------------|----------------------------------------------|
-| **State**  | `src/state/AppState.ts`                                    | Single Zustand store; all mutations here     |
-| **DB**     | `src/db/dbService.ts`                                      | Dexie schema, CRUD, indices                  |
-| **Types**  | `src/types/index.ts`                                       | Branded types, type guards                   |
-| **Pages**  | `src/pages/{Dashboard,Recipes,Progress}.tsx`               | Main views                                   |
-| **Hooks**  | `src/hooks/{useFoodForm,useRecipeForm,useProgressData}.ts` | Form & data logic                            |
-| **Tests**  | `src/**/*.test.ts`                                         | Vitest suites (14 total, 100% on core logic) |
-| **Config** | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`      | Build & test setup                           |
+| Category       | File                                                                                          | Key Info                                            |
+|----------------|-----------------------------------------------------------------------------------------------|-----------------------------------------------------|
+| **State**      | `src/state/AppState.ts`                                                                       | Single Zustand store; all mutations here            |
+| **DB**         | `src/db/dbService.ts`                                                                         | Dexie schema v7, CRUD, compound indices             |
+| **Types**      | `src/types/index.ts`                                                                          | Branded types, type guards, sanitizers, fuzzy match |
+| **Pages**      | `src/pages/{Dashboard,Recipes,Progress}.tsx`                                                  | Main views (lazy-loaded)                            |
+| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,BodyMeasurements}.tsx` | UI components; Voice, Water, and Body trackers      |
+| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useBodyForm,useStreaks}.ts`              | Core logic for logging and tracking                 |
+| **Tests**      | `src/**/*.test.{ts,tsx}`                                                                      | Vitest + jsdom + fake-indexeddb + coverage          |
+| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                         | Build (with CSP) & test setup                       |
 
 ---
 
@@ -106,7 +110,7 @@ For quick dev commands, see @@README.md
 
 ```bash
 pnpm dev              # Start dev server
-pnpm test             # Run all tests (once)
+pnpm test             # Run all tests with coverage
 pnpm test --watch     # Watch mode
 pnpm test --ui        # Interactive UI
 pnpm lint:fix         # ESLint + Prettier
@@ -117,13 +121,31 @@ pnpm build            # Production build
 
 ## Known Constraints & Roadmap
 
-**Implemented:** Database, food logging, recipe manager, progress charts, dark mode, ErrorBoundary, 14 tests, 11 CI/CD workflows  
-**Placeholders:** Barcode scanner (needs camera API), multi-user auth, PWA, macro breakdown  
-**Technical Debt:** Minimal component tests, no optimistic updates, recipe descriptions need sanitization
+**Implemented (v0.0.1–v0.0.4):**
 
-See @@release-notes/0.0.2.md for full v0.0.2 changelog.
+- Database (Dexie v7), food logging with macros, recipe manager, water tracker, body measurements
+- Voice food logging (Web Speech API) with fuzzy matching, barcode scanner interface
+- Progress charts, weekly summary, streak tracking (`computeStreaks`)
+- Dark mode, ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
+- 11 GitHub Actions workflows, OWASP/Security skills, 11+ test files with coverage
+
+**Still Pending / Placeholders:**
+
+- Barcode → food lookup API integration (scanning works; lookup not implemented)
+- Component test coverage >80% (ongoing)
+- Macro breakdown display for recipes
+- Multi-user auth, PWA / offline sync, advanced filtering & search, data export/import
+
+**Technical Debt:** No optimistic updates, recipe descriptions need sanitization, WCAG 2.1 full compliance pending
+
+**v0.0.5 Roadmap:**
+
+- [ ] Barcode food-lookup API integration
+- [ ] 100% component and integration test coverage
+- [ ] Macro nutrient breakdown display for recipes
+- [ ] Advanced filtering and search
 
 ---
 
-**Last Updated:** April 26, 2026  
+**Last Updated:** May 5, 2026  
 **Maintainer:** Anchit Choudhry

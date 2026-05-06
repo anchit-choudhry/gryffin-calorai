@@ -1,14 +1,20 @@
 // src/db/dbService.test.ts
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  addBodyMeasurement,
+  addWaterLog,
   db,
+  deleteBodyMeasurement,
   deleteFoodItem,
   deleteRecipe,
+  deleteWaterLog,
   type FoodItem,
   foodItems,
+  getAllBodyMeasurements,
   getAllFoodLogs,
   getAllRecipes,
   getDailyFoodLogs,
+  getDailyWaterLogs,
   getFavoriteFoodItems,
   getOrCreateUser,
   initializeDB,
@@ -104,8 +110,9 @@ describe("dbService", () => {
   });
 
   it("should delete a food item", async () => {
+    const userId = UserId("3");
     const mockFood: FoodItem = {
-      userId: UserId("3"),
+      userId,
       name: "Carrot",
       calories: 50,
       servingSize: 1,
@@ -117,12 +124,12 @@ describe("dbService", () => {
     };
 
     const id = await foodItems.add(mockFood);
-    const allBefore = await getDailyFoodLogs(UserId("3"), todayISO());
+    const allBefore = await getDailyFoodLogs(userId, todayISO());
     expect(allBefore.length).toBeGreaterThan(0);
 
-    await deleteFoodItem(makeFoodItemId(id));
+    await deleteFoodItem(makeFoodItemId(id), userId);
 
-    const allAfter = await getDailyFoodLogs(UserId("3"), todayISO());
+    const allAfter = await getDailyFoodLogs(userId, todayISO());
     expect(allAfter.find((log) => log.name === "Carrot")).toBeUndefined();
   });
 
@@ -198,7 +205,7 @@ describe("dbService", () => {
     const recipesBefore = await getAllRecipes(userId);
     expect(recipesBefore.some((r) => r.name === "Deletable Recipe")).toBe(true);
 
-    await deleteRecipe(id);
+    await deleteRecipe(id, userId);
 
     const recipesAfter = await getAllRecipes(userId);
     expect(recipesAfter.some((r) => r.name === "Deletable Recipe")).toBe(false);
@@ -210,7 +217,7 @@ describe("dbService", () => {
     expect(user.calorieGoal).toBe(2000);
 
     const updatedUser = { ...user, calorieGoal: 2500 };
-    await updateUserProfile(updatedUser);
+    await updateUserProfile(updatedUser, userId);
 
     const retrieved = await getOrCreateUser(userId, "TestUser", "test@example.com");
     expect(retrieved.calorieGoal).toBe(2500);
@@ -233,11 +240,11 @@ describe("dbService", () => {
     const id = await foodItems.add(mockFood);
     const idTyped = makeFoodItemId(id);
 
-    await toggleFavoriteFoodItem(idTyped, true);
+    await toggleFavoriteFoodItem(idTyped, true, userId);
     const updated = await foodItems.get(id);
     expect(updated?.isFavorite).toBe(true);
 
-    await toggleFavoriteFoodItem(idTyped, false);
+    await toggleFavoriteFoodItem(idTyped, false, userId);
     const updated2 = await foodItems.get(id);
     expect(updated2?.isFavorite).toBe(false);
   });
@@ -292,7 +299,7 @@ describe("dbService", () => {
     const id = await foodItems.add(mockFood);
     const idTyped = makeFoodItemId(id);
 
-    await updateFoodItem(idTyped, { name: "Caesar Salad", calories: 200, protein: 8 });
+    await updateFoodItem(idTyped, { name: "Caesar Salad", calories: 200, protein: 8 }, userId);
 
     const updated = await foodItems.get(id);
     expect(updated?.name).toBe("Caesar Salad");
@@ -338,5 +345,119 @@ describe("dbService", () => {
     const id = await foodItems.add(mockFood);
     const retrieved = await foodItems.get(id);
     expect(retrieved?.mealType).toBeUndefined();
+  });
+
+  describe("water logs", () => {
+    it("should add and retrieve daily water logs", async () => {
+      const userId = UserId("wl-1");
+      const today = todayISO();
+
+      await addWaterLog({
+        userId,
+        amount: 500,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addWaterLog({
+        userId,
+        amount: 250,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const logs = await getDailyWaterLogs(userId, today);
+      expect(logs).toHaveLength(2);
+      expect(logs.map((l) => l.amount).sort()).toEqual([250, 500]);
+    });
+
+    it("should not return water logs from other dates", async () => {
+      const userId = UserId("wl-2");
+      const today = todayISO();
+      const other = ISODate("2023-06-01");
+
+      await addWaterLog({
+        userId,
+        amount: 300,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addWaterLog({
+        userId,
+        amount: 700,
+        dateLogged: other,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const logs = await getDailyWaterLogs(userId, today);
+      expect(logs).toHaveLength(1);
+      expect(logs[0].amount).toBe(300);
+    });
+
+    it("should delete a water log", async () => {
+      const userId = UserId("wl-3");
+      const today = todayISO();
+
+      const id = await addWaterLog({
+        userId,
+        amount: 400,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      const before = await getDailyWaterLogs(userId, today);
+      expect(before).toHaveLength(1);
+
+      await deleteWaterLog(id, userId);
+      const after = await getDailyWaterLogs(userId, today);
+      expect(after).toHaveLength(0);
+    });
+  });
+
+  describe("body measurements", () => {
+    it("should add and retrieve body measurements", async () => {
+      const userId = UserId("bm-1");
+
+      await addBodyMeasurement({
+        userId,
+        measuredAt: ISODate("2026-04-01"),
+        weight: 70,
+        bodyFat: 18,
+      });
+      await addBodyMeasurement({ userId, measuredAt: ISODate("2026-05-01"), weight: 69.5 });
+
+      const measurements = await getAllBodyMeasurements(userId);
+      expect(measurements).toHaveLength(2);
+      expect(measurements.map((m) => m.weight).sort()).toEqual([69.5, 70]);
+    });
+
+    it("should support optional fields", async () => {
+      const userId = UserId("bm-2");
+
+      await addBodyMeasurement({
+        userId,
+        measuredAt: todayISO(),
+        weight: 75,
+        waist: 85,
+        chest: 100,
+        hips: 95,
+      });
+
+      const measurements = await getAllBodyMeasurements(userId);
+      expect(measurements).toHaveLength(1);
+      expect(measurements[0].waist).toBe(85);
+      expect(measurements[0].chest).toBe(100);
+      expect(measurements[0].bodyFat).toBeUndefined();
+    });
+
+    it("should delete a body measurement", async () => {
+      const userId = UserId("bm-3");
+
+      const id = await addBodyMeasurement({ userId, measuredAt: todayISO(), weight: 68 });
+      const before = await getAllBodyMeasurements(userId);
+      expect(before).toHaveLength(1);
+
+      await deleteBodyMeasurement(id, userId);
+      const after = await getAllBodyMeasurements(userId);
+      expect(after).toHaveLength(0);
+    });
   });
 });

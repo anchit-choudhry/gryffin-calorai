@@ -1,20 +1,17 @@
 // src/App.tsx
-import { useLayoutEffect, useState } from "react";
-import Dashboard from "./pages/Dashboard";
-import Recipes from "./pages/Recipes";
-import Progress from "./pages/Progress";
+import { lazy, Suspense, useLayoutEffect, useState } from "react";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import PageLoading from "./components/PageLoading";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Recipes = lazy(() => import("./pages/Recipes"));
+const Progress = lazy(() => import("./pages/Progress"));
 
 const MOCK_USER_ID = UserId("1");
 
-/**
- * @component App
- * @description Root application component.
- * Manages global hash-based routing, dark/light theme state, and
- * initialization of core services (database, global state).
- */
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
     const stored = localStorage.getItem("darkMode");
@@ -39,10 +36,6 @@ function App() {
   }, [darkMode]);
 
   useLayoutEffect(() => {
-    /**
-     * @function setupApp
-     * @description Initializes the Dexie database and fetches initial data into the Zustand store.
-     */
     const setupApp = async () => {
       await initializeDB();
       await useAppState.getState().fetchInitialData(MOCK_USER_ID);
@@ -57,11 +50,6 @@ function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  /**
-   * @function toggleDarkMode
-   * @description Toggles between light and dark themes. Updates the 'dark' class on the document root
-   * and persists preference in localStorage.
-   */
   const toggleDarkMode = () => {
     setDarkMode((prev: boolean) => {
       const isDark = !prev;
@@ -75,10 +63,6 @@ function App() {
     });
   };
 
-  /**
-   * @function renderPage
-   * @description Switcher for current view based on URL hash.
-   */
   const renderPage = () => {
     switch (currentPath) {
       case "#recipes":
@@ -137,7 +121,11 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">{renderPage()}</main>
+      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoading />}>{renderPage()}</Suspense>
+        </ErrorBoundary>
+      </main>
     </div>
   );
 }

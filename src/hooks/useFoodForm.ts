@@ -23,14 +23,19 @@ export function useFoodForm(initialFood?: FoodItem) {
     if (
       name.trim().length < 1 ||
       name.trim().length > 100 ||
+      !Number.isFinite(calories) ||
       calories < 0 ||
       calories > 10000 ||
+      !Number.isFinite(servingSize) ||
       servingSize < 1 ||
       servingSize > 100 ||
+      !Number.isFinite(protein) ||
       protein < 0 ||
       protein > 500 ||
+      !Number.isFinite(carbs) ||
       carbs < 0 ||
       carbs > 500 ||
+      !Number.isFinite(fat) ||
       fat < 0 ||
       fat > 500
     ) {

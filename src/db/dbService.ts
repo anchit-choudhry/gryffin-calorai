@@ -1,7 +1,20 @@
 // src/db/dbService.ts
 import { Dexie, type Table } from "dexie";
-import type { FoodItemId, ISODate, MealType, RecipeId, UserId } from "../types";
-import { FoodItemId as makeFoodItemId, RecipeId as makeRecipeId } from "../types";
+import type {
+  BodyMeasurementId,
+  FoodItemId,
+  ISODate,
+  MealType,
+  RecipeId,
+  UserId,
+  WaterLogId,
+} from "../types";
+import {
+  BodyMeasurementId as makeBodyMeasurementId,
+  FoodItemId as makeFoodItemId,
+  RecipeId as makeRecipeId,
+  WaterLogId as makeWaterLogId,
+} from "../types";
 
 // --- Type Definitions ---
 export interface FoodItem {
@@ -39,6 +52,25 @@ export interface UserProfile {
   email: string;
   lastLogin: string;
   calorieGoal: number;
+}
+
+export interface WaterLog {
+  id?: WaterLogId;
+  userId: UserId;
+  amount: number; // ml
+  dateLogged: ISODate;
+  loggedAt: string; // ISO timestamp for intra-day ordering
+}
+
+export interface BodyMeasurement {
+  id?: BodyMeasurementId;
+  userId: UserId;
+  measuredAt: ISODate;
+  weight?: number; // kg
+  bodyFat?: number; // %
+  waist?: number; // cm
+  chest?: number; // cm
+  hips?: number; // cm
 }
 
 // 1. Initialize Dexie Database
@@ -121,22 +153,47 @@ db.version(5)
       });
   });
 
-// 5. Define table references AFTER schema is set
+// 6. Version 6: add waterLogs table
+db.version(6).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+});
+
+// 7. Version 7: add bodyMeasurements table
+db.version(7).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+});
+
+// Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
 export const recipes: Table<Recipe> = db.table("recipes");
+export const waterLogs: Table<WaterLog> = db.table("waterLogs");
+export const bodyMeasurements: Table<BodyMeasurement> = db.table("bodyMeasurements");
 
 export const initializeDB = async () => {
   try {
     await db.open();
-    console.log("Database initialized and opened.");
   } catch (error) {
-    // If migration fails, delete and recreate the database
     if (error instanceof Error && error.message.includes("primary key")) {
-      console.warn("Database schema conflict detected. Clearing and reinitializing...");
+      // Schema conflict — only auto-recover in non-production to avoid silent data loss.
+      if (import.meta.env.MODE === "production") {
+        throw new Error(
+          "Database schema conflict detected. Manual migration required to avoid data loss.",
+          { cause: error },
+        );
+      }
+      console.warn("Database schema conflict detected. Clearing and reinitializing (dev only)...");
       await db.delete();
       await db.open();
-      console.log("Database cleared and recreated successfully.");
     } else {
       throw error;
     }
@@ -144,25 +201,16 @@ export const initializeDB = async () => {
 };
 
 export const addFoodItemLog = async (foodLog: FoodItem): Promise<FoodItemId> => {
-  try {
-    const id = await foodItems.add(foodLog);
-    return makeFoodItemId(id);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("Key already exists")) {
-      console.warn("Database constraint error detected. Clearing and reinitializing database...");
-      await db.delete();
-      await db.open();
-      const id = await foodItems.add(foodLog);
-      return makeFoodItemId(id);
-    }
-    throw error;
-  }
+  const id = await foodItems.add(foodLog);
+  return makeFoodItemId(id);
 };
 
 export const clearDatabase = async (): Promise<void> => {
+  if (import.meta.env.MODE === "production") {
+    throw new Error("clearDatabase must not be called in production");
+  }
   await db.delete();
   await db.open();
-  console.log("Database cleared and reinitialized.");
 };
 
 export const getOrCreateUser = async (
@@ -184,7 +232,6 @@ export const getOrCreateUser = async (
     calorieGoal: 2000,
   };
   await users.add(newUser);
-  console.log(`✅ New user created for ID: ${userId}`);
   return newUser;
 };
 
@@ -197,11 +244,18 @@ export const saveRecipe = async (recipe: Recipe): Promise<RecipeId> => {
   return makeRecipeId(id);
 };
 
-export const updateUserProfile = async (profile: UserProfile): Promise<void> => {
+export const updateUserProfile = async (
+  profile: UserProfile,
+  requestingUserId: UserId,
+): Promise<void> => {
+  if (profile.id !== requestingUserId)
+    throw new Error("Unauthorized: cannot modify another user's profile");
   await users.put(profile);
 };
 
-export const deleteFoodItem = async (id: FoodItemId): Promise<void> => {
+export const deleteFoodItem = async (id: FoodItemId, userId: UserId): Promise<void> => {
+  const item = await foodItems.get(id);
+  if (!item || item.userId !== userId) return;
   await foodItems.delete(id);
 };
 
@@ -213,12 +267,18 @@ export const getAllRecipes = async (userId: UserId): Promise<Recipe[]> => {
   return recipes.where("userId").equals(userId).toArray();
 };
 
-export const deleteRecipe = async (id: RecipeId): Promise<void> => {
+export const deleteRecipe = async (id: RecipeId, userId: UserId): Promise<void> => {
+  const recipe = await recipes.get(id);
+  if (!recipe || recipe.userId !== userId) return;
   await recipes.delete(id);
 };
 
-export const getFoodItemById = async (id: FoodItemId): Promise<FoodItem | undefined> => {
-  return foodItems.get(id);
+export const getFoodItemById = async (
+  id: FoodItemId,
+  userId: UserId,
+): Promise<FoodItem | undefined> => {
+  const item = await foodItems.get(id);
+  return item?.userId === userId ? item : undefined;
 };
 
 export const getRecentFoodItems = async (userId: UserId): Promise<FoodItem[]> => {
@@ -233,7 +293,10 @@ export const getRecentFoodItems = async (userId: UserId): Promise<FoodItem[]> =>
 export const toggleFavoriteFoodItem = async (
   id: FoodItemId,
   isFavorite: boolean,
+  userId: UserId,
 ): Promise<void> => {
+  const item = await foodItems.get(id);
+  if (!item || item.userId !== userId) return;
   await foodItems.update(id, { isFavorite });
 };
 
@@ -248,6 +311,46 @@ export const getFavoriteFoodItems = async (userId: UserId): Promise<FoodItem[]> 
 export const updateFoodItem = async (
   id: FoodItemId,
   updates: Partial<Omit<FoodItem, "id" | "userId">>,
+  userId: UserId,
 ): Promise<void> => {
+  const item = await foodItems.get(id);
+  if (!item || item.userId !== userId) return;
   await foodItems.update(id, updates);
+};
+
+// --- Water Log CRUD ---
+
+export const addWaterLog = async (log: WaterLog): Promise<WaterLogId> => {
+  const id = await waterLogs.add(log);
+  return makeWaterLogId(id);
+};
+
+export const getDailyWaterLogs = async (userId: UserId, date: ISODate): Promise<WaterLog[]> => {
+  return waterLogs.where("[userId+dateLogged]").equals([userId, date]).toArray();
+};
+
+export const deleteWaterLog = async (id: WaterLogId, userId: UserId): Promise<void> => {
+  const log = await waterLogs.get(id);
+  if (!log || log.userId !== userId) return;
+  await waterLogs.delete(id);
+};
+
+// --- Body Measurement CRUD ---
+
+export const addBodyMeasurement = async (m: BodyMeasurement): Promise<BodyMeasurementId> => {
+  const id = await bodyMeasurements.add(m);
+  return makeBodyMeasurementId(id);
+};
+
+export const getAllBodyMeasurements = async (userId: UserId): Promise<BodyMeasurement[]> => {
+  return bodyMeasurements.where("userId").equals(userId).sortBy("measuredAt");
+};
+
+export const deleteBodyMeasurement = async (
+  id: BodyMeasurementId,
+  userId: UserId,
+): Promise<void> => {
+  const m = await bodyMeasurements.get(id);
+  if (!m || m.userId !== userId) return;
+  await bodyMeasurements.delete(id);
 };

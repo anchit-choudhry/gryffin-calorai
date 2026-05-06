@@ -43,9 +43,14 @@ export function useRecipeForm(userId: UserId | null, allFoodItems: FoodItem[]) {
     value: number | string,
   ) => {
     setIngredients(
-      ingredients.map((ing) =>
-        ing.id === id ? { ...ing, [field]: typeof value === "number" ? value : value } : ing,
-      ),
+      ingredients.map((ing) => {
+        if (ing.id !== id) return ing;
+        let coerced = typeof value === "number" ? value : value;
+        if ((field === "quantity" || field === "serving") && typeof coerced === "number") {
+          coerced = Math.min(999, Math.max(1, coerced));
+        }
+        return { ...ing, [field]: coerced };
+      }),
     );
   };
 
@@ -82,6 +87,20 @@ export function useRecipeForm(userId: UserId | null, allFoodItems: FoodItem[]) {
 
     if (ingredients.some((ing) => ing.foodItemId === makeFoodItemId(0))) {
       setMessage("All ingredients must be linked to a food item.");
+      return false;
+    }
+
+    const INGREDIENT_MAX = 999;
+    if (
+      ingredients.some(
+        (ing) =>
+          ing.quantity < 1 ||
+          ing.quantity > INGREDIENT_MAX ||
+          ing.serving < 1 ||
+          ing.serving > INGREDIENT_MAX,
+      )
+    ) {
+      setMessage("Ingredient quantity and serving must be between 1 and 999.");
       return false;
     }
 

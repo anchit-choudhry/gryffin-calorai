@@ -1,0 +1,34 @@
+# Build Outputs & Generated Files
+**/build/
+**/dist/
+**/target/
+**/*.class
+**/*.jar
+
+# Dependencies
+**/node_modules/
+**/vendor/
+**/Pods/
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+**/secrets/
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs & Temporary Files
+*.log
+**/tmp/
+*.tmp
+
+# Version Control
+.git/
+.gitignore

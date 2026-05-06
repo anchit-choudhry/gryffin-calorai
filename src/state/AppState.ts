@@ -1,11 +1,18 @@
 import { create } from "zustand";
 import {
+  addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
+  addWaterLog as addWaterLogToDB,
+  type BodyMeasurement,
+  deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
   deleteRecipe as deleteRecipeFromDB,
+  deleteWaterLog as deleteWaterLogFromDB,
   type FoodItem,
+  getAllBodyMeasurements,
   getAllRecipes,
   getDailyFoodLogs,
+  getDailyWaterLogs,
   getFavoriteFoodItems,
   getOrCreateUser,
   getRecentFoodItems,
@@ -14,8 +21,9 @@ import {
   updateFoodItem,
   updateUserProfile,
   type UserProfile,
+  type WaterLog,
 } from "../db/dbService";
-import type { FoodItemId, RecipeId, UserId } from "../types";
+import type { BodyMeasurementId, FoodItemId, RecipeId, UserId, WaterLogId } from "../types";
 import { todayISO } from "../types";
 
 interface AppState {
@@ -24,6 +32,8 @@ interface AppState {
   allFoodItems: FoodItem[];
   recipes: Recipe[];
   favoriteFoods: FoodItem[];
+  dailyWaterLogs: WaterLog[];
+  bodyMeasurements: BodyMeasurement[];
   isLoading: boolean;
   error: string | null;
   userId: UserId | null;
@@ -41,6 +51,12 @@ interface AppState {
     id: FoodItemId,
     updates: Partial<Omit<FoodItem, "id" | "userId">>,
   ) => Promise<void>;
+  fetchDailyWaterLogs: (userId: UserId) => Promise<void>;
+  addWaterLog: (amount: number) => Promise<void>;
+  deleteWaterLog: (id: WaterLogId) => Promise<void>;
+  fetchBodyMeasurements: (userId: UserId) => Promise<void>;
+  addBodyMeasurement: (m: Omit<BodyMeasurement, "id">) => Promise<void>;
+  deleteBodyMeasurement: (id: BodyMeasurementId) => Promise<void>;
 }
 
 export const useAppState = create<AppState>((set, get) => ({
@@ -49,6 +65,8 @@ export const useAppState = create<AppState>((set, get) => ({
   allFoodItems: [],
   recipes: [],
   favoriteFoods: [],
+  dailyWaterLogs: [],
+  bodyMeasurements: [],
   isLoading: true,
   error: null,
   userId: null,
@@ -63,11 +81,15 @@ export const useAppState = create<AppState>((set, get) => ({
       const recipeList = await getAllRecipes(userId);
       const recentItems = await getRecentFoodItems(userId);
       const favorites = await getFavoriteFoodItems(userId);
+      const waterLogsToday = await getDailyWaterLogs(userId, todayISO());
+      const measurements = await getAllBodyMeasurements(userId);
       set({
         dailyLogs: logs,
         recipes: recipeList,
         allFoodItems: recentItems,
         favoriteFoods: favorites,
+        dailyWaterLogs: waterLogsToday,
+        bodyMeasurements: measurements,
         isLoading: false,
       });
     } catch (error) {
@@ -112,7 +134,7 @@ export const useAppState = create<AppState>((set, get) => ({
     const state = get();
     if (!state.userId) return;
     try {
-      await deleteFoodItem(id);
+      await deleteFoodItem(id, state.userId);
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete log";
@@ -122,11 +144,12 @@ export const useAppState = create<AppState>((set, get) => ({
   },
 
   updateCalorieGoal: async (goal: number) => {
+    if (!Number.isFinite(goal) || goal < 1 || goal > 99999) return;
     const state = get();
-    if (!state.user) return;
+    if (!state.user || !state.userId) return;
     try {
       const updatedUser = { ...state.user, calorieGoal: goal };
-      await updateUserProfile(updatedUser);
+      await updateUserProfile(updatedUser, state.userId);
       set({ user: updatedUser });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update goal";
@@ -150,7 +173,7 @@ export const useAppState = create<AppState>((set, get) => ({
     const state = get();
     if (!state.userId) return;
     try {
-      await deleteRecipeFromDB(id);
+      await deleteRecipeFromDB(id, state.userId);
       await state.fetchRecipes(state.userId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to delete recipe";
@@ -185,7 +208,7 @@ export const useAppState = create<AppState>((set, get) => ({
     const state = get();
     if (!state.userId) return;
     try {
-      await toggleFavoriteFoodItem(id, isFavorite);
+      await toggleFavoriteFoodItem(id, isFavorite, state.userId);
       await state.fetchFavorites(state.userId);
       await state.fetchAllFoodItems(state.userId);
     } catch (error) {
@@ -199,11 +222,87 @@ export const useAppState = create<AppState>((set, get) => ({
     const state = get();
     if (!state.userId) return;
     try {
-      await updateFoodItem(id, updates);
+      await updateFoodItem(id, updates, state.userId);
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update food log";
       console.error("Error updating food log:", error);
+      set({ error: message });
+    }
+  },
+
+  fetchDailyWaterLogs: async (userId: UserId) => {
+    try {
+      const logs = await getDailyWaterLogs(userId, todayISO());
+      set({ dailyWaterLogs: logs });
+    } catch (error) {
+      console.error("Error fetching water logs:", error);
+    }
+  },
+
+  addWaterLog: async (amount: number) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const log: WaterLog = {
+        userId: state.userId,
+        amount,
+        dateLogged: todayISO(),
+        loggedAt: new Date().toISOString(),
+      };
+      await addWaterLogToDB(log);
+      await state.fetchDailyWaterLogs(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to add water log";
+      console.error("Error adding water log:", error);
+      set({ error: message });
+    }
+  },
+
+  deleteWaterLog: async (id: WaterLogId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteWaterLogFromDB(id, state.userId);
+      await state.fetchDailyWaterLogs(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete water log";
+      console.error("Error deleting water log:", error);
+      set({ error: message });
+    }
+  },
+
+  fetchBodyMeasurements: async (userId: UserId) => {
+    try {
+      const measurements = await getAllBodyMeasurements(userId);
+      set({ bodyMeasurements: measurements });
+    } catch (error) {
+      console.error("Error fetching body measurements:", error);
+    }
+  },
+
+  addBodyMeasurement: async (m: Omit<BodyMeasurement, "id">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await addBodyMeasurementToDB({ ...m, userId: state.userId });
+      await state.fetchBodyMeasurements(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to add measurement";
+      console.error("Error adding body measurement:", error);
+      set({ error: message });
+    }
+  },
+
+  deleteBodyMeasurement: async (id: BodyMeasurementId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteBodyMeasurementFromDB(id, state.userId);
+      await state.fetchBodyMeasurements(state.userId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete measurement";
+      console.error("Error deleting body measurement:", error);
       set({ error: message });
     }
   },

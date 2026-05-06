@@ -1,6 +1,20 @@
 // Domain-specific branded types to prevent ID mix-ups at compile time
 type Brand<T, B extends string> = T & { readonly __brand: B };
 
+export type WaterLogId = Brand<number, "WaterLogId">;
+export type BodyMeasurementId = Brand<number, "BodyMeasurementId">;
+
+export const WaterLogId = (id: number): WaterLogId => id as WaterLogId;
+export const BodyMeasurementId = (id: number): BodyMeasurementId => id as BodyMeasurementId;
+
+export function isWaterLogId(value: unknown): value is WaterLogId {
+  return typeof value === "number" && value > 0;
+}
+
+export function isBodyMeasurementId(value: unknown): value is BodyMeasurementId {
+  return typeof value === "number" && value > 0;
+}
+
 export type UserId = Brand<string, "UserId">;
 export type FoodItemId = Brand<number, "FoodItemId">;
 export type RecipeId = Brand<number, "RecipeId">;
@@ -34,6 +48,128 @@ export function isISODate(value: unknown): value is ISODate {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+const MAX_BARCODE_LENGTH = 100;
+const PRINTABLE_ASCII_RE = /[^\x20-\x7E]/g;
+
+export function sanitizeBarcodeInput(raw: string): string | null {
+  const trimmed = raw.trim().replace(PRINTABLE_ASCII_RE, "");
+  if (trimmed.length === 0 || trimmed.length > MAX_BARCODE_LENGTH) return null;
+  return trimmed;
+}
+
+const MAX_TRANSCRIPT_LENGTH = 200;
+const MULTI_SPACE_RE = /\s+/g;
+
+export function sanitizeVoiceTranscript(raw: string): string | null {
+  let cleaned = "";
+  for (const ch of raw) {
+    const code = ch.charCodeAt(0);
+    if (code >= 0x20 && code !== 0x7f) cleaned += ch;
+  }
+  cleaned = cleaned.replace(MULTI_SPACE_RE, " ").trim();
+  if (cleaned.length === 0 || cleaned.length > MAX_TRANSCRIPT_LENGTH) return null;
+  return cleaned;
+}
+
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[] = Array.from({ length: n + 1 }, (_, i) => i);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j];
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[j] = Math.min(dp[j - 1] + 1, dp[j] + 1, prev + cost);
+      prev = temp;
+    }
+  }
+  return dp[n];
+}
+
+export function fuzzyMatchFoodName<T extends { name: string }>(
+  query: string,
+  corpus: readonly T[],
+  limit = 3,
+): T[] {
+  if (!query || corpus.length === 0) return [];
+  const q = query.toLowerCase();
+  const threshold = Math.max(2, Math.floor(q.length / 4));
+
+  const scored = corpus.map((item) => {
+    const n = item.name.toLowerCase();
+    let score: number;
+    if (n === q) {
+      score = 0;
+    } else if (n.startsWith(q) || q.startsWith(n)) {
+      score = 1;
+    } else if (n.includes(q) || q.includes(n)) {
+      score = 2;
+    } else {
+      score = levenshtein(q, n);
+    }
+    return { item, score };
+  });
+
+  return scored
+    .filter(({ score }) => score <= threshold)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, limit)
+    .map(({ item }) => item);
+}
+
 export type MealType = "Breakfast" | "Lunch" | "Snacks" | "Dinner";
 export const MEAL_TYPES: readonly MealType[] = ["Breakfast", "Lunch", "Snacks", "Dinner"] as const;
 export const DEFAULT_MEAL_TYPE: MealType = "Breakfast";
+
+export const DAILY_WATER_GOAL_ML = 2000;
+
+export type WeightUnit = "kg" | "lb";
+export type LengthUnit = "cm" | "in";
+
+export const kgToLb = (kg: number): number => Math.round(kg * 2.20462 * 10) / 10;
+export const lbToKg = (lb: number): number => Math.round((lb / 2.20462) * 100) / 100;
+export const cmToIn = (cm: number): number => Math.round((cm / 2.54) * 10) / 10;
+export const inToCm = (inch: number): number => Math.round(inch * 2.54 * 10) / 10;
+
+export function computeStreaks(uniqueDates: readonly string[]): {
+  currentStreak: number;
+  longestStreak: number;
+} {
+  if (uniqueDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
+
+  const dateSet = new Set(uniqueDates);
+  const today = new Date().toISOString().split("T")[0];
+
+  const shiftDay = (date: string, n: number): string => {
+    const d = new Date(`${date}T00:00:00`);
+    d.setDate(d.getDate() + n);
+    return d.toISOString().split("T")[0];
+  };
+
+  // Walk back from today (or yesterday if today has no log)
+  const start = dateSet.has(today) ? today : shiftDay(today, -1);
+  let currentStreak = 0;
+  let cursor = start;
+  while (dateSet.has(cursor)) {
+    currentStreak++;
+    cursor = shiftDay(cursor, -1);
+  }
+
+  // Longest consecutive run
+  const sorted = [...uniqueDates].sort();
+  let longest = sorted.length > 0 ? 1 : 0;
+  let run = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === shiftDay(sorted[i - 1], 1)) {
+      longest = Math.max(longest, ++run);
+    } else {
+      run = 1;
+    }
+  }
+
+  return { currentStreak, longestStreak: longest };
+}

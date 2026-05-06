@@ -1,40 +1,55 @@
-# Project Documentation: Gryffin Calorai
+# Project Documentation: Gryffin Calorai (v0.0.4)
 
 ## Architectural Overview
 
-The application is a client-side, state-persistent React single-page application (SPA). It utilizes a hash-based routing mechanism to manage navigation between views without server-side routing. Data persistence is handled locally via IndexedDB (Dexie.js), and global state management is facilitated by Zustand.
+Gryffin Calorai is a client-side, offline-first React single-page application (SPA). It is designed for privacy and speed, persisting all data locally via IndexedDB (Dexie.js) without a backend dependency.
+
+- **Routing:** Hash-based navigation (`window.location.hash`) using `React.lazy` and `Suspense` for code-splitting.
+- **State Management:** Global state is managed by a single Zustand store (`src/state/AppState.ts`).
+- **Persistence:** Local storage via Dexie.js (currently **schema version 7**) with compound indices for performance.
+- **Styling:** Tailwind CSS v4 using modern CSS-only `@import` directives.
+- **Security:** Strict Content Security Policy (CSP) and HTTP security headers configured in `vite.config.ts`.
 
 ## Core File Documentation
 
 ### Configuration & Tooling
 
-- `package.json`: Manages dependencies and defines project scripts (`dev`, `build`, `preview`). Uses `pnpm` workspace standards.
-- `vite.config.ts`: Configures the build system and plugins, notably `@tailwindcss/vite` for optimized Tailwind v4 processing.
-- `tsconfig.json`: TypeScript configuration, strict-mode enabled with path mappings for module resolution.
-- `postcss.config.js`: PostCSS configuration for styling post-processing, primarily supporting `@tailwindcss/postcss`.
-- `tailwind.config.js`: Legacy configuration retained for compatibility; v4 transitions now favor CSS-level `@import "tailwindcss";` directives.
+- `package.json`: Project dependencies and scripts. Pinned `pnpm` workspace standards.
+- `vite.config.ts`: Configures the build system, Tailwind v4 plugin, and defines production security headers (CSP, X-Frame-Options, etc.).
+- `tsconfig.json`: TypeScript configuration with strict mode and path mappings.
+- `vitest.config.ts`: Configured for Vitest with `jsdom` and code coverage reporting.
 
 ### Application Logic & State (`/src`)
 
-- `main.tsx`: Application entry point; mounts the React root and renders the `App` component.
-- `App.tsx`: Orchestrator component. Manages global hash-based routing, dark/light theme state, and initialization of services (database, global store).
-- `style.css`: Global entry point for styles. Implements Tailwind v4 via `@import "tailwindcss";`.
-- `state/AppState.ts`: Zustand store definition. Holds the application's global business logic and state for caloric data, recipe collections, and progress tracking.
-- `db/dbService.ts`: Dexie.js database schema definition and CRUD operation abstractions for local persistent storage.
+- `main.tsx`: Entry point. Wraps the app in an `ErrorBoundary`.
+- `App.tsx`: Orchestrator component. Manages hash-based routing, dark/light theme persistence, and provides the `Suspense` boundary for lazy-loaded pages.
+- `state/AppState.ts`: Central Zustand store. Manages state and async actions for food logs, recipes, water intake, body measurements, and user goals.
+- `db/dbService.ts`: Dexie.js service layer. Defines schema v7 (adding `waterLogs` and `bodyMeasurements`) and provides CRUD abstractions with compound index queries.
+- `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId, BodyMeasurementId, ISODate). Includes sanitizers for barcode/voice inputs and utility functions like `computeStreaks` and `fuzzyMatchFoodName`.
 
 ### UI Components (`/src/components`)
 
-- `BarcodeScanner.tsx`: Interface for scanning product barcodes.
-- `FoodLogger.tsx`: Form-based component for logging caloric intake data into the persistent store.
+- `FoodLogger.tsx`: Standard form for logging nutrition data.
+- `VoiceFoodLogger.tsx`: Hands-free logging using Web Speech API with fuzzy matching.
+- `BarcodeScanner.tsx`: Interface for camera-based barcode scanning (ZXing).
+- `WaterTracker.tsx`: Daily hydration tracking against a 2000ml goal.
+- `BodyMeasurements.tsx`: Tracker for weight, body fat, and dimensions with unit conversions.
+- `StreakCard.tsx`: Displays current and longest logging streaks.
+- `PageLoading.tsx`: Minimal spinner used as a Suspense fallback.
 
 ### Page Components (`/src/pages`)
 
-- `Dashboard.tsx`: Main overview page. Displays data visualizations using `react-chartjs-2`.
-- `Recipes.tsx`: Interface for browsing and searching user-defined recipes.
-- `Progress.tsx`: Data visualization page tracking dietary patterns over time.
+- `Dashboard.tsx`: Main overview. Integrates food logging (manual/barcode/voice), hydration tracking, and streaks.
+- `Recipes.tsx`: User-defined recipe management system.
+- `Progress.tsx`: Data visualizations (Chart.js) and body measurement history.
 
-## Operational Paradigms
+## Operational Standards
 
-- **Theme Management:** Logic resides in `App.tsx` (using `localStorage` + `document.documentElement` class manipulation).
-- **Navigation:** Managed via `window.location.hash` observers inside the `App` component.
-- **Database:** Dexie.js is treated as an asynchronous service layer (`dbService.ts`).
+- **Theme Management:** class-based dark mode toggled via `App.tsx` and persisted in `localStorage`.
+- **Database Safety:** `clearDatabase()` is disabled in production. Schema recovery is restricted to development environments.
+- **Testing:** Every component and logic file must have a `.test.ts/tsx` counterpart. Target coverage is >80%.
+- **Validation:** User input is sanitized (e.g., `sanitizeVoiceTranscript`) before reaching the store or database.
+- **Security:** CSP restricts hardware (camera/mic) to `self` and disables geolocation.
+
+---
+**Last Updated:** May 5, 2026

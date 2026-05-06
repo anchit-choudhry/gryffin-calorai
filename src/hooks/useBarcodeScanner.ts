@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { sanitizeBarcodeInput } from "../types";
 
 export const useBarcodeScanner = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -31,12 +32,15 @@ export const useBarcodeScanner = () => {
           videoRef.current,
           (result, err) => {
             if (result && scanningRef.current) {
-              setScanResult(result.getText());
-              stopScanning();
+              const sanitized = sanitizeBarcodeInput(result.getText());
+              if (sanitized) {
+                setScanResult(sanitized);
+                stopScanning();
+              }
             }
             if (err && !(err as Error).message.includes("NotFoundException")) {
               if (scanningRef.current) {
-                setError((err as Error).message);
+                setError("Scanner encountered an error. Please try again.");
               }
             }
           },
@@ -50,7 +54,7 @@ export const useBarcodeScanner = () => {
         } else if (message.includes("NotFoundError")) {
           setError("No camera device found.");
         } else {
-          setError(message);
+          setError("Scanner encountered an error. Please try again.");
         }
         setIsScanning(false);
         scanningRef.current = false;
@@ -62,7 +66,7 @@ export const useBarcodeScanner = () => {
       } else if (message.includes("NotFoundError")) {
         setError("No camera device found.");
       } else {
-        setError(message);
+        setError("Scanner encountered an error. Please try again.");
       }
       setIsScanning(false);
       scanningRef.current = false;

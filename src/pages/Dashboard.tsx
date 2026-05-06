@@ -3,7 +3,10 @@ import { useState } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import FoodLogger from "../components/FoodLogger";
 import BarcodeScanner from "../components/BarcodeScanner";
+import VoiceFoodLogger from "../components/VoiceFoodLogger";
 import WeeklySummary from "../components/WeeklySummary";
+import WaterTracker from "../components/WaterTracker";
+import StreakCard from "../components/StreakCard";
 import { useAppState } from "../state/AppState";
 import { DEFAULT_MEAL_TYPE, todayISO } from "../types";
 import type { FoodItem } from "../db/dbService";
@@ -25,6 +28,7 @@ const Dashboard = () => {
   const [goalInput, setGoalInput] = useState(user?.calorieGoal ?? 2000);
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
   const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
+  const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
 
   const totalCalories = dailyLogs.reduce((sum, log) => sum + log.calories, 0);
   const totalProtein = dailyLogs.reduce((sum, log) => sum + (log.protein ?? 0), 0);
@@ -153,6 +157,12 @@ const Dashboard = () => {
       {/* Weekly Summary */}
       <WeeklySummary />
 
+      {/* Water & Streaks */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <StreakCard />
+        <WaterTracker />
+      </div>
+
       {/* Favorites Bar */}
       {favoriteFoods.length > 0 && !editingLog && (
         <div className="p-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-md">
@@ -213,15 +223,38 @@ const Dashboard = () => {
           </div>
           <FoodLogger prefillName={barcodeFood.name} onSuccess={() => setBarcodeFood(null)} />
         </div>
+      ) : voiceFood ? (
+        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold dark:text-gray-200">
+              Voice Match: {voiceFood.name}
+            </h3>
+            <button
+              onClick={() => setVoiceFood(null)}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+          <FoodLogger
+            prefillName={voiceFood.name}
+            onCancel={() => setVoiceFood(null)}
+            onSuccess={() => setVoiceFood(null)}
+          />
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div>
             <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Log Food</h3>
             <FoodLogger />
           </div>
-          <div className="lg:col-span-1">
+          <div>
             <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
             <BarcodeScanner onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })} />
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Voice Log</h3>
+            <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
           </div>
         </div>
       )}

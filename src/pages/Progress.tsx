@@ -18,6 +18,7 @@ import {
 import { MEAL_TYPES } from "../types";
 import { useProgressData } from "../hooks/useProgressData";
 import { useAppState } from "../state/AppState";
+import BodyMeasurements from "../components/BodyMeasurements";
 
 // Register necessary Chart.js components
 Chart.register(
@@ -189,6 +190,14 @@ const Progress = () => {
           </p>
         </>
       )}
+
+      {/* Body Measurements */}
+      <div className="mt-10 pt-8 border-t dark:border-gray-700">
+        <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-100 mb-6">
+          Body Measurements
+        </h2>
+        <BodyMeasurements />
+      </div>
     </div>
   );
 };

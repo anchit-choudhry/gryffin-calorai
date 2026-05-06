@@ -34,6 +34,12 @@ vi.mock("../db/dbService", () => ({
   getFavoriteFoodItems: vi.fn(async () => []),
   toggleFavoriteFoodItem: vi.fn(async () => undefined),
   updateFoodItem: vi.fn(async () => undefined),
+  getDailyWaterLogs: vi.fn(async () => []),
+  addWaterLog: vi.fn(async () => 1),
+  deleteWaterLog: vi.fn(async () => undefined),
+  getAllBodyMeasurements: vi.fn(async () => []),
+  addBodyMeasurement: vi.fn(async () => 1),
+  deleteBodyMeasurement: vi.fn(async () => undefined),
 }));
 
 describe("AppState", () => {
@@ -100,5 +106,29 @@ describe("AppState", () => {
     const state = useAppState.getState();
     expect(Array.isArray(state.favoriteFoods)).toBe(true);
     expect(state.favoriteFoods).toEqual([]);
+  });
+
+  it("should initialize with empty dailyWaterLogs array", () => {
+    const state = useAppState.getState();
+    expect(Array.isArray(state.dailyWaterLogs)).toBe(true);
+  });
+
+  it("should initialize with empty bodyMeasurements array", () => {
+    const state = useAppState.getState();
+    expect(Array.isArray(state.bodyMeasurements)).toBe(true);
+  });
+
+  it("should have water log action methods available", () => {
+    const state = useAppState.getState();
+    expect(typeof state.fetchDailyWaterLogs).toBe("function");
+    expect(typeof state.addWaterLog).toBe("function");
+    expect(typeof state.deleteWaterLog).toBe("function");
+  });
+
+  it("should have body measurement action methods available", () => {
+    const state = useAppState.getState();
+    expect(typeof state.fetchBodyMeasurements).toBe("function");
+    expect(typeof state.addBodyMeasurement).toBe("function");
+    expect(typeof state.deleteBodyMeasurement).toBe("function");
   });
 });

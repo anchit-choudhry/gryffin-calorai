@@ -155,10 +155,12 @@ interface AppState {
 1. App mounts → `App.tsx` useLayoutEffect calls `initializeDB()`
 2. Database opens/migrates → `App.tsx` calls `fetchInitialData(MOCK_USER_ID)`
 3. fetchInitialData:
-  - Creates or retrieves user via `getOrCreateUser()`
-  - Fetches today's logs via `getDailyFoodLogs(userId, todayISO())`
-  - Fetches recipes via `getAllRecipes(userId)`
-  - Fetches recent food items via `getRecentFoodItems(userId)`
+
+- Creates or retrieves user via `getOrCreateUser()`
+- Fetches today's logs via `getDailyFoodLogs(userId, todayISO())`
+- Fetches recipes via `getAllRecipes(userId)`
+- Fetches recent food items via `getRecentFoodItems(userId)`
+
 4. AppState updates, components re-render
 
 **Data Flow:**
