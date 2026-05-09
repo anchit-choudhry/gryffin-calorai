@@ -28,6 +28,8 @@
 - ✅ Components must have **accompanying `.test.ts` files** with >80% coverage target
 - ✅ All async operations include loading/error states in Zustand
 - ✅ **No router library**; App.tsx uses hash-based navigation (`window.location.hash`) with `React.lazy` + `Suspense`
+- ✅ **Never use `import React from "react"`**; use named imports (`import { useState } from "react"`) and `import type` for type-only imports (`import type { FC } from "react"`) — the automatic JSX transform makes the default import unnecessary
+- ✅ **Heavy components must be lazy-loaded** with `React.lazy` + `Suspense`; `BarcodeScanner` (pulls in `@zxing`) is the primary example — wrapping it in `<Suspense>` keeps it out of the initial bundle
 
 **Naming Conventions:**
 
@@ -43,6 +45,7 @@
 - **Folders:** `src/{pages,components,hooks,state,db,types}`
 - **Pages:** Dashboard, Recipes, Progress (in `src/pages/`) — lazy-loaded via `React.lazy` + `Suspense`
 - **Navigation:** Hash-based (`window.location.hash`); no router library; `PageLoading` used as Suspense fallback
+- **Chunking:** `vite.config.ts` uses `build.rollupOptions.output.manualChunks` (function form, required by Rolldown/Vite 8) to split vendors — `vendor-react`, `vendor-charts`, `vendor-barcode`, `vendor-db`, `vendor-icons`, `vendor-state`
 - **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body measurements.
 - **DB:** Dexie.js tables with compound indices; currently at **schema version 7**
 - **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`, `userId`, `isFavorite`, `mealType`
@@ -122,15 +125,14 @@ pnpm build            # Production build
 ## Known Constraints & Roadmap
 
 **Implemented (v0.0.1–v0.0.4):**
-
 - Database (Dexie v7), food logging with macros, recipe manager, water tracker, body measurements
 - Voice food logging (Web Speech API) with fuzzy matching, barcode scanner interface
 - Progress charts, weekly summary, streak tracking (`computeStreaks`)
 - Dark mode, ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
+- Code-split vendor chunks (react, charts, barcode, db, icons, state); `BarcodeScanner` lazy-loaded to defer `@zxing` until needed
 - 11 GitHub Actions workflows, OWASP/Security skills, 11+ test files with coverage
 
 **Still Pending / Placeholders:**
-
 - Barcode → food lookup API integration (scanning works; lookup not implemented)
 - Component test coverage >80% (ongoing)
 - Macro breakdown display for recipes
@@ -139,7 +141,6 @@ pnpm build            # Production build
 **Technical Debt:** No optimistic updates, recipe descriptions need sanitization, WCAG 2.1 full compliance pending
 
 **v0.0.5 Roadmap:**
-
 - [ ] Barcode food-lookup API integration
 - [ ] 100% component and integration test coverage
 - [ ] Macro nutrient breakdown display for recipes
@@ -147,5 +148,5 @@ pnpm build            # Production build
 
 ---
 
-**Last Updated:** May 5, 2026  
+**Last Updated:** May 9, 2026  
 **Maintainer:** Anchit Choudhry

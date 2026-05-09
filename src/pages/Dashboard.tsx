@@ -1,8 +1,8 @@
 // src/pages/Dashboard.tsx
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import FoodLogger from "../components/FoodLogger";
-import BarcodeScanner from "../components/BarcodeScanner";
+import PageLoading from "../components/PageLoading";
 import VoiceFoodLogger from "../components/VoiceFoodLogger";
 import WeeklySummary from "../components/WeeklySummary";
 import WaterTracker from "../components/WaterTracker";
@@ -10,6 +10,8 @@ import StreakCard from "../components/StreakCard";
 import { useAppState } from "../state/AppState";
 import { DEFAULT_MEAL_TYPE, todayISO } from "../types";
 import type { FoodItem } from "../db/dbService";
+
+const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 
 const Dashboard = () => {
   const {
@@ -250,7 +252,9 @@ const Dashboard = () => {
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
-            <BarcodeScanner onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })} />
+            <Suspense fallback={<PageLoading message="Loading scanner..." />}>
+              <BarcodeScanner onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })} />
+            </Suspense>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Voice Log</h3>

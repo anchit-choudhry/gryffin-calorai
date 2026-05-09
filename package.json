@@ -1,8 +1,12 @@
 {
   "name": "gryffin-calorai",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.4",
   "type": "module",
+  "engines": {
+    "node": "^24",
+    "pnpm": "^11"
+  },
   "scripts": {
     "dev": "vite",
     "test": "vitest --coverage",
@@ -50,5 +54,5 @@
     "vite-plugin-compression2": "^2.5.3",
     "vitest": "^4.1.5"
   },
-  "packageManager": "pnpm@10.33.3+sha512.a19744364a7e248b92657a4ca5973f9354d21caf982579674b1c539f32c7420c47138ad8b1254df07aba9bc782d9b3029e3db34d5dbff974326eb74dac8ff489"
+  "packageManager": "pnpm@11.0.9+sha512.34ce82e6780233cf9cad8685029a8f81d2e06196c5a9bad98879f7424940c6817c4e4524fb7d38b8553ceed48b9758b8ebaf1abd3600c232c4c8cf7366086f38"
 }

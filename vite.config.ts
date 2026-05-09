@@ -21,6 +21,22 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
 };
 
+// CSP is excluded from dev server headers: @vitejs/plugin-react injects its Fast Refresh
+// preamble as an inline <script type="module">, which script-src 'self' would block,
+// preventing window.__vite_plugin_react_preamble_installed__ from ever being set.
+const { "Content-Security-Policy": _devCsp, ...DEV_HEADERS } = SECURITY_HEADERS;
+
+const VENDOR_CHUNKS: [string, string][] = [
+  ["node_modules/react-dom", "vendor-react"],
+  ["node_modules/react/", "vendor-react"],
+  ["node_modules/chart.js", "vendor-charts"],
+  ["node_modules/react-chartjs-2", "vendor-charts"],
+  ["node_modules/@zxing", "vendor-barcode"],
+  ["node_modules/dexie", "vendor-db"],
+  ["node_modules/react-icons", "vendor-icons"],
+  ["node_modules/zustand", "vendor-state"],
+];
+
 export default defineConfig({
   base: `/${packageJson.name}/`,
   plugins: [
@@ -29,7 +45,23 @@ export default defineConfig({
     viteCompression({
       algorithms: ["gzip", "brotliCompress"],
     }),
+    {
+      name: "strip-csp-meta-dev",
+      apply: "serve",
+      transformIndexHtml: (html: string) =>
+        html.replace(/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i, ""),
+    },
   ],
-  server: { headers: SECURITY_HEADERS },
+  server: { headers: DEV_HEADERS },
   preview: { headers: SECURITY_HEADERS },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (!id.includes("node_modules/")) return;
+          return VENDOR_CHUNKS.find(([path]) => id.includes(path))?.[1];
+        },
+      },
+    },
+  },
 });
