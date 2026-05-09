@@ -32,15 +32,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Enable corepack
+        run: corepack enable pnpm
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: "pnpm"
-      - name: Enable corepack and set pnpm version to latest stable
-        run: |
-          corepack enable pnpm
-          corepack use pnpm@latest
+      - name: Set pnpm version to latest
+        run: corepack use pnpm@latest
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --production --ignore-scripts --no-optional
       - name: Build
