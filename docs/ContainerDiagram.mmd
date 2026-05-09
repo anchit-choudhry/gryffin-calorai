@@ -1,11 +1,31 @@
-C4Context
-  title C4 Container Diagram for Gryffin Calorai Application
-  Person(user, "User", "A person who tracks their caloric intake and recipes.")
+C4Container
+  title C4 Container Diagram for Gryffin Calorai (v0.0.4)
+  Person(user, "User", "Tracks daily food intake, water, body measurements, recipes, and health progress.")
 
-  System_Boundary(c1, "Gryffin Calorai Application") {
-    Container(spa, "Single Page Application (SPA)", "React, TypeScript", "Handles UI rendering, hash-based routing, and business logic.")
-    ContainerDb(db, "Local Data Store", "IndexedDB (Dexie.js)", "Stores food logs, user profiles, and recipe collections.")
+  System_Boundary(c1, "Gryffin Calorai Application (Browser)") {
+    Container(app, "App Shell", "React 19, TypeScript 6, Vite 8", "Hash-based routing (#dashboard, #recipes, #progress); dark mode toggle (localStorage + prefers-color-scheme); ErrorBoundary wraps Suspense inside main; MOCK_USER_ID; gzip+brotli compression via vite-plugin-compression2.")
+    Container(dashboard, "Dashboard Page", "React (React.lazy + Suspense)", "Daily summary, macro breakdown, weekly summary (WeeklySummary), streak card (StreakCard), water tracker (WaterTracker), food logger (FoodLogger), voice logger (VoiceFoodLogger), barcode scanner (BarcodeScanner, nested Suspense), favorites bar, log history.")
+    Container(recipes, "Recipes Page", "React (React.lazy + Suspense)", "Recipe creation form with dynamic ingredient rows, saved recipes list with delete.")
+    Container(progress, "Progress Page", "React (React.lazy + Suspense)", "7-day meal-type bar chart, 30-day calorie line chart, body measurements form (BodyMeasurements: weight kg/lb, body fat %, waist/chest/hips cm/in), weight chart (shown when >= 2 entries), measurement history table (newest first).")
+    Container(state, "Zustand Store", "Zustand 5", "Single store: dailyLogs, allFoodItems, recipes, favoriteFoods, dailyWaterLogs, bodyMeasurements, user (profile + calorieGoal), isLoading, error. 18 actions including CRUD for food logs, recipes, water logs, body measurements, calorie goal, and favorites.")
+    Container(hooks, "Custom Hooks", "TypeScript", "useFoodForm, useRecipeForm, useWaterForm, useBodyForm, useStreaks, useWeeklySummary, useProgressData, useVoiceCapture (SpeechRecognition with interim/final transcript), useBarcodeScanner (@zxing/browser, lazy-loaded).")
+    Container(types, "Types and Utilities", "TypeScript", "Branded IDs: UserId, FoodItemId, RecipeId, WaterLogId, BodyMeasurementId, ISODate. Type guards and sanitizers: sanitizeBarcodeInput (max 100 chars), sanitizeVoiceTranscript (max 200 chars). fuzzyMatchFoodName (Levenshtein, up to 3 matches). computeStreaks (current + longest). Unit converters: kgToLb, lbToKg, cmToIn, inToCm. Constants: DAILY_WATER_GOAL_ML=2000, MEAL_TYPES, DEFAULT_MEAL_TYPE.")
+    ContainerDb(db, "GryffinCaloraiDB", "IndexedDB via Dexie 4 (schema v7)", "Tables: users (v1), foodItems with isFavorite+mealType (v1/v4/v5), recipes (v1), waterLogs (v6, [userId+dateLogged]), bodyMeasurements (v7, [userId+measuredAt]). All mutations include userId ownership checks. clearDatabase() blocked in production.")
   }
 
-  Rel(user, spa, "Uses", "HTTPS")
-  Rel(spa, db, "Reads/Writes", "Dexie.js API")
+  System_Ext(securityHeaders, "HTTP Security Headers", "Three-layer delivery: vite.config.ts preview server, public/_headers (Cloudflare/Netlify), index.html meta CSP. CSP excluded from dev server to allow Vite Fast Refresh inline script.")
+  System_Ext(speechApi, "Web Speech API", "Browser SpeechRecognition / webkitSpeechRecognition for hands-free food entry via useVoiceCapture. Transcript sanitized before reaching store.")
+  System_Ext(cameraApi, "Camera / MediaDevices API", "Browser getUserMedia + @zxing/browser (lazy-loaded, deferred vendor-barcode chunk) for barcode scanning. Nutritional data API lookup not yet integrated.")
+  Rel(user, app, "Opens app", "HTTPS")
+  Rel(app, dashboard, "Renders on #dashboard", "React.lazy + Suspense")
+  Rel(app, recipes, "Renders on #recipes", "React.lazy + Suspense")
+  Rel(app, progress, "Renders on #progress", "React.lazy + Suspense")
+  Rel(dashboard, hooks, "Uses", "")
+  Rel(recipes, hooks, "Uses", "")
+  Rel(progress, hooks, "Uses", "")
+  Rel(hooks, state, "Reads / dispatches actions", "Zustand subscribe")
+  Rel(hooks, types, "Uses branded types and utilities", "")
+  Rel(state, db, "Reads/writes via DB service", "Dexie.js API")
+  Rel(hooks, speechApi, "Streams transcript", "useVoiceCapture")
+  Rel(hooks, cameraApi, "Streams camera frames", "useBarcodeScanner (@zxing, nested Suspense)")
+  Rel(app, securityHeaders, "Served with", "CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy")

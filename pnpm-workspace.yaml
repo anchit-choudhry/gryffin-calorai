@@ -11,7 +11,7 @@ minimumReleaseAge: 4320
 
 # Ownership-change / provenance downgrade protection.
 # "no-downgrade" fails the install if a package's trust level drops vs. any
-# earlier version — the clearest signal that an account was hijacked and a
+# earlier version - the clearest signal that an account was hijacked and a
 # new, less-trusted publisher pushed a malicious release.
 # trustPolicyIgnoreAfter: ~1,460,000 min ≈ 1,000 days, which covers packages
 # published before npm Provenance went GA (Oct 2023); without this exemption
@@ -19,7 +19,7 @@ minimumReleaseAge: 4320
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 1460000
 
-# Build-script allowlist — no packages in this project need postinstall
+# Build-script allowlist - no packages in this project need postinstall
 # scripts, so the list stays empty. strictDepBuilds: true (pnpm v11 default)
 # means any new dep that tries to run a build script will hard-fail until
 # you add it here after manual review.

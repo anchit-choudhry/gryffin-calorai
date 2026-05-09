@@ -184,7 +184,7 @@ export const initializeDB = async () => {
     await db.open();
   } catch (error) {
     if (error instanceof Error && error.message.includes("primary key")) {
-      // Schema conflict — only auto-recover in non-production to avoid silent data loss.
+      // Schema conflict - only auto-recover in non-production to avoid silent data loss.
       if (import.meta.env.MODE === "production") {
         throw new Error(
           "Database schema conflict detected. Manual migration required to avoid data loss.",

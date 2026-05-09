@@ -8,7 +8,7 @@ import packageJson from "./package.json";
 // Never allow user-controlled values in HTML style attributes.
 //
 // connect-src: when the barcode food-lookup API is integrated, add only its specific origin
-// here (e.g. https://world.openfoodfacts.org) — do NOT expand to '*'.
+// here (e.g. https://world.openfoodfacts.org) - do NOT expand to '*'.
 const SECURITY_HEADERS: Record<string, string> = {
   // frame-ancestors is intentionally omitted from the <meta> CSP in index.html because
   // browsers ignore it there (W3C spec). It is enforced only via this HTTP header.

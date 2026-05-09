@@ -35,7 +35,7 @@ const StreakCard = () => {
       {currentStreak > 0 && (
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
           {currentStreak === 1
-            ? "Great start — log tomorrow to build your streak!"
+            ? "Great start - log tomorrow to build your streak!"
             : `${currentStreak} days in a row. Keep it going!`}
         </p>
       )}

@@ -84,7 +84,7 @@ function getResource(resourceId, currentUser):
 
 ### Cross-Site Scripting (XSS)
 
-Every input controllable by the user—whether directly or indirectly—must be sanitized against XSS.
+Every input controllable by the user-whether directly or indirectly-must be sanitized against XSS.
 
 #### Input Sources to Protect
 
@@ -489,7 +489,7 @@ SQL injection occurs when user input is incorporated into SQL queries without pr
 
 #### Prevention Methods
 
-**1. Parameterized Queries (Prepared Statements)** — PRIMARY DEFENSE
+**1. Parameterized Queries (Prepared Statements)** - PRIMARY DEFENSE
 
 ```sql
 -- VULNERABLE
@@ -515,9 +515,9 @@ execute(query, [userId])
 #### Injection Points to Watch
 
 - WHERE clauses
-- ORDER BY clauses (often overlooked—can't use parameters, must whitelist)
+- ORDER BY clauses (often overlooked-can't use parameters, must whitelist)
 - LIMIT/OFFSET values
-- Table and column names (can't parameterize—must whitelist)
+- Table and column names (can't parameterize-must whitelist)
 - INSERT values
 - UPDATE SET values
 - IN clauses with dynamic lists
@@ -751,16 +751,16 @@ jwt.verify(token, secret, { algorithms: ["HS256"] }, (err, decoded) => {
 Accepting unfiltered request bodies can lead to privilege escalation.
 
 ```javascript
-// VULNERABLE — user can set { role: "admin" } in request body
+// VULNERABLE - user can set { role: "admin" } in request body
 User.update(req.body);
 
-// SECURE — whitelist allowed fields
+// SECURE - whitelist allowed fields
 const allowed = ["name", "email", "avatar"];
 const updates = pick(req.body, allowed);
 User.update(updates);
 ```
 
-This applies to any ORM/framework — always explicitly define which fields a request can modify.
+This applies to any ORM/framework - always explicitly define which fields a request can modify.
 
 ### GraphQL
 
@@ -784,13 +784,13 @@ const server = new ApolloServer({
 
 When generating code, always:
 
-1. **Validate all input server-side** — Never trust client-side validation alone
-2. **Use parameterized queries** — Never concatenate user input into queries
-3. **Encode output contextually** — HTML, JS, URL, CSS contexts need different encoding
-4. **Apply authentication checks** — On every endpoint, not just at routing
-5. **Apply authorization checks** — Verify the user can access the specific resource
+1. **Validate all input server-side** - Never trust client-side validation alone
+2. **Use parameterized queries** - Never concatenate user input into queries
+3. **Encode output contextually** - HTML, JS, URL, CSS contexts need different encoding
+4. **Apply authentication checks** - On every endpoint, not just at routing
+5. **Apply authorization checks** - Verify the user can access the specific resource
 6. **Use secure defaults**
-7. **Handle errors securely** — Don't leak stack traces or internal details to users
-8. **Keep dependencies updated** — Use tools to track vulnerable dependencies
+7. **Handle errors securely** - Don't leak stack traces or internal details to users
+8. **Keep dependencies updated** - Use tools to track vulnerable dependencies
 
 When unsure, choose the more restrictive/secure option and document the security consideration in comments.

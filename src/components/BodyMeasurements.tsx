@@ -220,17 +220,17 @@ const BodyMeasurements = () => {
                 <tr key={m.id} className="border-b dark:border-gray-700 last:border-0">
                   <td className="py-2 pr-4 font-medium dark:text-gray-200">{m.measuredAt}</td>
                   <td className="py-2 pr-4">
-                    {m.weight !== undefined ? displayWeight(m.weight) : "—"}
+                    {m.weight !== undefined ? displayWeight(m.weight) : "-"}
                   </td>
-                  <td className="py-2 pr-4">{m.bodyFat !== undefined ? `${m.bodyFat}%` : "—"}</td>
+                  <td className="py-2 pr-4">{m.bodyFat !== undefined ? `${m.bodyFat}%` : "-"}</td>
                   <td className="py-2 pr-4">
-                    {m.waist !== undefined ? displayLength(m.waist) : "—"}
-                  </td>
-                  <td className="py-2 pr-4">
-                    {m.chest !== undefined ? displayLength(m.chest) : "—"}
+                    {m.waist !== undefined ? displayLength(m.waist) : "-"}
                   </td>
                   <td className="py-2 pr-4">
-                    {m.hips !== undefined ? displayLength(m.hips) : "—"}
+                    {m.chest !== undefined ? displayLength(m.chest) : "-"}
+                  </td>
+                  <td className="py-2 pr-4">
+                    {m.hips !== undefined ? displayLength(m.hips) : "-"}
                   </td>
                   <td className="py-2">
                     <button
