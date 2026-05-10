@@ -11,9 +11,13 @@
 
 ## 1. Executive Summary
 
-Gryffin Calorai is a privacy-first calorie tracking application that runs entirely in the browser using IndexedDB for local data persistence. No backend server is used. Users log daily food intake with macronutrients and meal types, track water intake, record body measurements, and visualize calorie trends over time. All data remains on the user's device.
+Gryffin Calorai is a privacy-first calorie tracking application that runs entirely in the browser
+using IndexedDB for local data persistence. No backend server is used. Users log daily food intake
+with macronutrients and meal types, track water intake, record body measurements, and visualize
+calorie trends over time. All data remains on the user's device.
 
-**Core Value Proposition:** Offline-first health tracking with zero server dependency and zero data exposure.
+**Core Value Proposition:** Offline-first health tracking with zero server dependency and zero data
+exposure.
 
 **Cumulative Feature Set (v0.0.1 - v0.0.4):**
 
@@ -207,7 +211,8 @@ User interaction
 | `vendor-icons`   | `react-icons`                 |
 | `vendor-state`   | `zustand`                     |
 
-All three page components and `BarcodeScanner` are `React.lazy`-loaded. `BarcodeScanner` has its own nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
+All three page components and `BarcodeScanner` are `React.lazy`-loaded. `BarcodeScanner` has its own
+nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
 
 ---
 
@@ -246,7 +251,8 @@ interface UserProfile {
 }
 ```
 
-Single user per session; no authentication. `updateUserProfile` enforces `profile.id === requestingUserId` before writing.
+Single user per session; no authentication. `updateUserProfile` enforces
+`profile.id === requestingUserId` before writing.
 
 ---
 
@@ -272,7 +278,8 @@ interface FoodItem {
 }
 ```
 
-`deleteFoodItem`, `toggleFavoriteFoodItem`, and `updateFoodItem` all verify `item.userId === userId` before mutating; silently no-op if mismatch.
+`deleteFoodItem`, `toggleFavoriteFoodItem`, and `updateFoodItem` all verify `item.userId === userId`
+before mutating; silently no-op if mismatch.
 
 `getRecentFoodItems` deduplicates by name (most recent item per distinct name).
 
@@ -302,7 +309,8 @@ interface Recipe {
 
 `deleteRecipe` verifies `recipe.userId === userId` before deleting.
 
-**Known debt:** `totalCalories` is hardcoded as `ingredients.length * 100`. Ingredient `quantity` and `serving` fields are stored but ignored in calorie math.
+**Known debt:** `totalCalories` is hardcoded as `ingredients.length * 100`. Ingredient `quantity`
+and `serving` fields are stored but ignored in calorie math.
 
 ---
 
@@ -322,7 +330,8 @@ interface WaterLog {
 }
 ```
 
-`addWaterLog(amount)` in AppState constructs the full `WaterLog` object (with `loggedAt: new Date().toISOString()`) before passing to DB.
+`addWaterLog(amount)` in AppState constructs the full `WaterLog` object (with
+`loggedAt: new Date().toISOString()`) before passing to DB.
 
 `deleteWaterLog` verifies `log.userId === userId` before deleting.
 
@@ -347,7 +356,8 @@ interface BodyMeasurement {
 }
 ```
 
-All fields except `userId` and `measuredAt` are optional. `getAllBodyMeasurements` returns records sorted by `measuredAt` ascending. History table displays in reverse order (newest first).
+All fields except `userId` and `measuredAt` are optional. `getAllBodyMeasurements` returns records
+sorted by `measuredAt` ascending. History table displays in reverse order (newest first).
 
 `deleteBodyMeasurement` verifies `m.userId === userId` before deleting.
 
@@ -405,34 +415,43 @@ Each branded type has a constructor function (raw cast) and a type guard (runtim
 
 ### Feature 1: Food Logging
 
-**Evidence:** `src/components/FoodLogger.tsx`, `src/hooks/useFoodForm.ts`, `src/db/dbService.ts:addFoodItemLog`, `src/state/AppState.ts:addFoodLog`
+**Evidence:** `src/components/FoodLogger.tsx`, `src/hooks/useFoodForm.ts`,
+`src/db/dbService.ts:addFoodItemLog`, `src/state/AppState.ts:addFoodLog`
 
 **OBS-FOOD-001 - Storage**
-The system shall store food log entries in the `foodItems` table with userId, date, calories, macros, meal type, and favorite flag.
+The system shall store food log entries in the `foodItems` table with userId, date, calories,
+macros, meal type, and favorite flag.
 
 **OBS-FOOD-002 - Validation**
-When the user submits the FoodLogger form with any field out of range (name: 1-100 chars; calories: 0-10000; servingSize: 1-100; protein/carbs/fat: 0-500g), the system shall display an error message and block the DB write.
+When the user submits the FoodLogger form with any field out of range (name: 1-100 chars; calories:
+0-10000; servingSize: 1-100; protein/carbs/fat: 0-500g), the system shall display an error message
+and block the DB write.
 
 **OBS-FOOD-003 - Loading gate**
 While `isLoading` is true in the form hook, the system shall disable the submit button.
 
 **OBS-FOOD-004 - Success feedback**
-When a food item is successfully logged, the system shall display a success message referencing the food name.
+When a food item is successfully logged, the system shall display a success message referencing the
+food name.
 
 **OBS-FOOD-005 - Daily refresh**
-When `addFoodLog()` or `deleteFoodLog()` completes, the system shall call `refreshDailyLogs()` to re-query today's entries from IndexedDB.
+When `addFoodLog()` or `deleteFoodLog()` completes, the system shall call `refreshDailyLogs()` to
+re-query today's entries from IndexedDB.
 
 **OBS-FOOD-006 - Delete ownership**
 When the user deletes a food log, `deleteFoodItem` shall silently no-op if `item.userId !== userId`.
 
 **OBS-FOOD-007 - Edit**
-When the user edits an existing log entry, `updateFoodItem` shall update only the fields provided in `Partial<Omit<FoodItem,"id"|"userId">>` and verify ownership before writing.
+When the user edits an existing log entry, `updateFoodItem` shall update only the fields provided in
+`Partial<Omit<FoodItem,"id"|"userId">>` and verify ownership before writing.
 
 **OBS-FOOD-008 - Favorites**
-When the user toggles favorite on an entry, `toggleFavoriteFoodItem` shall verify ownership, update `isFavorite`, then refresh both `favoriteFoods` and `allFoodItems` in AppState.
+When the user toggles favorite on an entry, `toggleFavoriteFoodItem` shall verify ownership, update
+`isFavorite`, then refresh both `favoriteFoods` and `allFoodItems` in AppState.
 
 **OBS-FOOD-009 - Daily totals**
-The system shall compute daily totals (total calories, protein, carbs, fat) in memory by summing `dailyLogs`; no aggregation occurs at write time.
+The system shall compute daily totals (total calories, protein, carbs, fat) in memory by summing
+`dailyLogs`; no aggregation occurs at write time.
 
 ---
 
@@ -447,10 +466,12 @@ The system shall assign `calorieGoal = 2000` kcal to newly created users (set in
 `updateCalorieGoal` shall silently no-op if `!Number.isFinite(goal) || goal < 1 || goal > 99999`.
 
 **OBS-GOAL-003 - Progress bar**
-The system shall display progress as `(totalCalories / calorieGoal) * 100`; the bar is capped at 100% for display.
+The system shall display progress as `(totalCalories / calorieGoal) * 100`; the bar is capped at
+100% for display.
 
 **OBS-GOAL-004 - Ownership**
-`updateUserProfile` shall throw `"Unauthorized: cannot modify another user's profile"` if `profile.id !== requestingUserId`.
+`updateUserProfile` shall throw `"Unauthorized: cannot modify another user's profile"` if
+`profile.id !== requestingUserId`.
 
 ---
 
@@ -459,13 +480,15 @@ The system shall display progress as `(totalCalories / calorieGoal) * 100`; the 
 **Evidence:** `src/db/dbService.ts`, `src/hooks/useRecipeForm.ts`, `src/pages/Recipes.tsx`
 
 **OBS-RECIPE-001 - Creation**
-When the user saves a recipe with a name and at least one ingredient, the system shall persist it to the `recipes` table and refresh the recipe list.
+When the user saves a recipe with a name and at least one ingredient, the system shall persist it to
+the `recipes` table and refresh the recipe list.
 
 **OBS-RECIPE-002 - Calorie calculation (current)**
 The system shall compute `totalCalories` as `ingredients.length * 100`. This is a known inaccuracy.
 
 **OBS-RECIPE-003 - Ingredient selector**
-When the user selects a food item from the ingredient dropdown, the system shall populate the row from `allFoodItems` in AppState.
+When the user selects a food item from the ingredient dropdown, the system shall populate the row
+from `allFoodItems` in AppState.
 
 **OBS-RECIPE-004 - Delete ownership**
 When the user deletes a recipe, `deleteRecipe` shall silently no-op if `recipe.userId !== userId`.
@@ -477,13 +500,16 @@ When the user deletes a recipe, `deleteRecipe` shall silently no-op if `recipe.u
 **Evidence:** `src/pages/Progress.tsx`, `src/hooks/useProgressData.ts`
 
 **OBS-PROGRESS-001 - 7-day chart**
-The Progress page shall render a grouped bar chart of daily calorie totals for the last 7 days, with bars color-coded by meal type (Breakfast, Lunch, Snacks, Dinner).
+The Progress page shall render a grouped bar chart of daily calorie totals for the last 7 days, with
+bars color-coded by meal type (Breakfast, Lunch, Snacks, Dinner).
 
 **OBS-PROGRESS-002 - 30-day chart**
-The Progress page shall render a line chart of daily calorie totals for the last 30 days, with a dashed reference line at `user.calorieGoal`.
+The Progress page shall render a line chart of daily calorie totals for the last 30 days, with a
+dashed reference line at `user.calorieGoal`.
 
 **OBS-PROGRESS-003 - Data aggregation**
-`useProgressData` shall fetch all user logs via `getAllFoodLogs(userId)`, group by date, and sum calories per day. Days with no logs shall default to 0.
+`useProgressData` shall fetch all user logs via `getAllFoodLogs(userId)`, group by date, and sum
+calories per day. Days with no logs shall default to 0.
 
 ---
 
@@ -492,64 +518,81 @@ The Progress page shall render a line chart of daily calorie totals for the last
 **Evidence:** `src/components/WeeklySummary.tsx`, `src/hooks/useWeeklySummary.ts`
 
 **OBS-WEEKLY-001 - Metrics**
-The WeeklySummary component shall display: 7-day average daily calories, number of days on target (within calorie goal), and consistency percentage.
+The WeeklySummary component shall display: 7-day average daily calories, number of days on target (
+within calorie goal), and consistency percentage.
 
 **OBS-WEEKLY-002 - Data source**
-The `useWeeklySummary` hook shall derive all metrics from the last 7 days of `allFoodItems` in AppState without additional DB queries.
+The `useWeeklySummary` hook shall derive all metrics from the last 7 days of `allFoodItems` in
+AppState without additional DB queries.
 
 ---
 
 ### Feature 6: Barcode Scanner
 
-**Evidence:** `src/components/BarcodeScanner.tsx`, `src/hooks/useBarcodeScanner.ts`, `src/types/index.ts:sanitizeBarcodeInput`
+**Evidence:** `src/components/BarcodeScanner.tsx`, `src/hooks/useBarcodeScanner.ts`,
+`src/types/index.ts:sanitizeBarcodeInput`
 
 **OBS-BARCODE-001 - Camera access**
-Where the user grants camera permission, the system shall activate the device camera and attempt barcode decoding via `@zxing/browser`.
+Where the user grants camera permission, the system shall activate the device camera and attempt
+barcode decoding via `@zxing/browser`.
 
 **OBS-BARCODE-002 - Lazy loading**
-The system shall lazy-load `BarcodeScanner` via a nested `<Suspense>` boundary, keeping `vendor-barcode` (`@zxing`) out of the initial JS bundle.
+The system shall lazy-load `BarcodeScanner` via a nested `<Suspense>` boundary, keeping
+`vendor-barcode` (`@zxing`) out of the initial JS bundle.
 
 **OBS-BARCODE-003 - Sanitization**
-The system shall pass all raw barcode scan strings through `sanitizeBarcodeInput()` (strips non-printable ASCII; max 100 chars) before any further processing.
+The system shall pass all raw barcode scan strings through `sanitizeBarcodeInput()` (strips
+non-printable ASCII; max 100 chars) before any further processing.
 
 **OBS-BARCODE-004 - Lookup not implemented**
-The barcode-to-food-lookup API is not implemented. Camera scanning is functional; the barcode string is not yet used to fetch nutritional data.
+The barcode-to-food-lookup API is not implemented. Camera scanning is functional; the barcode string
+is not yet used to fetch nutritional data.
 
 ---
 
 ### Feature 7: Voice Food Logging
 
-**Evidence:** `src/components/VoiceFoodLogger.tsx`, `src/hooks/useVoiceCapture.ts`, `src/types/index.ts:sanitizeVoiceTranscript,fuzzyMatchFoodName`
+**Evidence:** `src/components/VoiceFoodLogger.tsx`, `src/hooks/useVoiceCapture.ts`,
+`src/types/index.ts:sanitizeVoiceTranscript,fuzzyMatchFoodName`
 
 **OBS-VOICE-001 - Capture**
-When the user activates the mic button, the system shall start a `SpeechRecognition` (or `webkitSpeechRecognition`) session and display the live transcript.
+When the user activates the mic button, the system shall start a `SpeechRecognition` (or
+`webkitSpeechRecognition`) session and display the live transcript.
 
 **OBS-VOICE-002 - Sanitization**
-The system shall pass all transcripts through `sanitizeVoiceTranscript()` (strips chars code < 0x20 or = 0x7F, collapses whitespace, max 200 chars) before use.
+The system shall pass all transcripts through `sanitizeVoiceTranscript()` (strips chars code < 0x20
+or = 0x7F, collapses whitespace, max 200 chars) before use.
 
 **OBS-VOICE-003 - Fuzzy match**
-When a sanitized transcript is available, the system shall call `fuzzyMatchFoodName(query, corpus, limit=3)` against `allFoodItems` and `favoriteFoods` using Levenshtein distance with threshold `max(2, floor(queryLength/4))`.
+When a sanitized transcript is available, the system shall call
+`fuzzyMatchFoodName(query, corpus, limit=3)` against `allFoodItems` and `favoriteFoods` using
+Levenshtein distance with threshold `max(2, floor(queryLength/4))`.
 
 **OBS-VOICE-004 - Pre-fill confirmation**
-When a match is found, the system shall pre-populate `FoodLogger` inline (same pattern as the barcode flow) for user confirmation before logging.
+When a match is found, the system shall pre-populate `FoodLogger` inline (same pattern as the
+barcode flow) for user confirmation before logging.
 
 **OBS-VOICE-005 - Browser compatibility guard**
-Where `SpeechRecognition` is unavailable (e.g., Firefox), the system shall display a graceful fallback message rather than throwing an error.
+Where `SpeechRecognition` is unavailable (e.g., Firefox), the system shall display a graceful
+fallback message rather than throwing an error.
 
 ---
 
 ### Feature 8: Water Tracking
 
-**Evidence:** `src/components/WaterTracker.tsx`, `src/hooks/useWaterForm.ts`, `src/db/dbService.ts:waterLogs`
+**Evidence:** `src/components/WaterTracker.tsx`, `src/hooks/useWaterForm.ts`,
+`src/db/dbService.ts:waterLogs`
 
 **OBS-WATER-001 - Storage**
-The system shall store water log entries in the `waterLogs` table with `userId`, `amount` (ml), `dateLogged`, and `loggedAt` (ISO timestamp for intra-day ordering).
+The system shall store water log entries in the `waterLogs` table with `userId`, `amount` (ml),
+`dateLogged`, and `loggedAt` (ISO timestamp for intra-day ordering).
 
 **OBS-WATER-002 - Daily goal**
 The WaterTracker shall display today's total water intake against `DAILY_WATER_GOAL_ML = 2000 ml`.
 
 **OBS-WATER-003 - Quick-add**
-The WaterTracker shall provide quick-add buttons for predefined amounts, submitting a water log without requiring manual text entry.
+The WaterTracker shall provide quick-add buttons for predefined amounts, submitting a water log
+without requiring manual text entry.
 
 **OBS-WATER-004 - Delete ownership**
 When the user deletes a water log, `deleteWaterLog` shall silently no-op if `log.userId !== userId`.
@@ -558,19 +601,26 @@ When the user deletes a water log, `deleteWaterLog` shall silently no-op if `log
 
 ### Feature 9: Body Measurements
 
-**Evidence:** `src/components/BodyMeasurements.tsx`, `src/hooks/useBodyForm.ts`, `src/db/dbService.ts:bodyMeasurements`
+**Evidence:** `src/components/BodyMeasurements.tsx`, `src/hooks/useBodyForm.ts`,
+`src/db/dbService.ts:bodyMeasurements`
 
 **OBS-BODY-001 - Storage**
-The system shall store body measurements in `bodyMeasurements` with fields: `weight` (kg), `bodyFat` (%), `waist` (cm), `chest` (cm), `hips` (cm). All measurement fields are optional; only `userId` and `measuredAt` are required.
+The system shall store body measurements in `bodyMeasurements` with fields: `weight` (kg),
+`bodyFat` (%), `waist` (cm), `chest` (cm), `hips` (cm). All measurement fields are optional; only
+`userId` and `measuredAt` are required.
 
 **OBS-BODY-002 - Unit display**
-The system shall convert displayed weight via `kgToLb()` when the user selects "lb", and length measurements via `cmToIn()` when the user selects "in". Unit preference is local component state and does not create a new DB record.
+The system shall convert displayed weight via `kgToLb()` when the user selects "lb", and length
+measurements via `cmToIn()` when the user selects "in". Unit preference is local component state and
+does not create a new DB record.
 
 **OBS-BODY-003 - Weight chart**
-The BodyMeasurements component shall render a weight line chart using Chart.js (purple: `rgb(168, 85, 247)`) only when there are 2 or more measurements with a `weight` value.
+The BodyMeasurements component shall render a weight line chart using Chart.js (purple:
+`rgb(168, 85, 247)`) only when there are 2 or more measurements with a `weight` value.
 
 **OBS-BODY-004 - History table**
-The component shall display all body measurements in reverse chronological order (newest first) with columns: Date, Weight, Body Fat, Waist, Chest, Hips, Delete.
+The component shall display all body measurements in reverse chronological order (newest first) with
+columns: Date, Weight, Body Fat, Waist, Chest, Hips, Delete.
 
 **OBS-BODY-005 - Delete ownership**
 `deleteBodyMeasurement` shall silently no-op if `m.userId !== userId`.
@@ -579,7 +629,8 @@ The component shall display all body measurements in reverse chronological order
 
 ### Feature 10: Streak Tracking
 
-**Evidence:** `src/components/StreakCard.tsx`, `src/hooks/useStreaks.ts`, `src/types/index.ts:computeStreaks`
+**Evidence:** `src/components/StreakCard.tsx`, `src/hooks/useStreaks.ts`,
+`src/types/index.ts:computeStreaks`
 
 **OBS-STREAK-001 - Computation**
 `computeStreaks(uniqueDates)` shall:
@@ -603,13 +654,16 @@ While `isLoading` is true from `useStreaks`, the StreakCard shall render an anim
 **Evidence:** `src/App.tsx`
 
 **OBS-DARK-001 - Init**
-On app load, dark mode state is initialized from `localStorage.getItem("darkMode")` via `JSON.parse` with try/catch fallback to `window.matchMedia("(prefers-color-scheme: dark)").matches`.
+On app load, dark mode state is initialized from `localStorage.getItem("darkMode")` via `JSON.parse`
+with try/catch fallback to `window.matchMedia("(prefers-color-scheme: dark)").matches`.
 
 **OBS-DARK-002 - Toggle**
-When the user clicks the toggle button, the system shall add or remove the `dark` class on `document.documentElement` and call `localStorage.setItem("darkMode", JSON.stringify(isDark))`.
+When the user clicks the toggle button, the system shall add or remove the `dark` class on
+`document.documentElement` and call `localStorage.setItem("darkMode", JSON.stringify(isDark))`.
 
 **OBS-DARK-003 - Layout effect**
-A `useLayoutEffect` watches `darkMode` state and applies the `dark` class synchronously before paint to prevent flash of wrong theme.
+A `useLayoutEffect` watches `darkMode` state and applies the `dark` class synchronously before paint
+to prevent flash of wrong theme.
 
 ---
 
@@ -618,16 +672,19 @@ A `useLayoutEffect` watches `darkMode` state and applies the `dark` class synchr
 **Evidence:** `src/components/ErrorBoundary.tsx`, `src/main.tsx`, `src/App.tsx`
 
 **OBS-ERROR-001 - Placement**
-The `ErrorBoundary` wraps the `<Suspense>` boundary inside `<main>`, not the entire app - navigation remains functional if a page throws.
+The `ErrorBoundary` wraps the `<Suspense>` boundary inside `<main>`, not the entire app - navigation
+remains functional if a page throws.
 
 **OBS-ERROR-002 - Fallback UI**
-When a React component throws during render, the ErrorBoundary shall display: the error message, a unique error ID, and a "Reload Page" button.
+When a React component throws during render, the ErrorBoundary shall display: the error message, a
+unique error ID, and a "Reload Page" button.
 
 **OBS-ERROR-003 - Reload**
 When the user clicks "Reload Page", the system shall call `window.location.reload()`.
 
 **OBS-ERROR-004 - Scope**
-The ErrorBoundary catches only synchronous React render errors; async errors, event handler errors, and unhandled promise rejections are not caught.
+The ErrorBoundary catches only synchronous React render errors; async errors, event handler errors,
+and unhandled promise rejections are not caught.
 
 ---
 
@@ -636,13 +693,16 @@ The ErrorBoundary catches only synchronous React render errors; async errors, ev
 **Evidence:** `src/App.tsx`
 
 **OBS-NAV-001 - Hash routing**
-The system shall read `window.location.hash` on mount and on every `hashchange` event to determine the active page.
+The system shall read `window.location.hash` on mount and on every `hashchange` event to determine
+the active page.
 
 **OBS-NAV-002 - Routes**
-`#dashboard` (default) renders `<Dashboard>`, `#recipes` renders `<Recipes>`, `#progress` renders `<Progress>`. Any unknown hash defaults to Dashboard.
+`#dashboard` (default) renders `<Dashboard>`, `#recipes` renders `<Recipes>`, `#progress` renders
+`<Progress>`. Any unknown hash defaults to Dashboard.
 
 **OBS-NAV-003 - No router library**
-Navigation is implemented entirely in `App.tsx` via `window.location.hash` and an event listener; no router library is used.
+Navigation is implemented entirely in `App.tsx` via `window.location.hash` and an event listener; no
+router library is used.
 
 ---
 
@@ -817,8 +877,10 @@ vi.mock("../db/dbService", () => ({ getOrCreateUser: vi.fn(async () => ({...})),
 ### Scenario 7: Dark Mode Persistence
 
 1. User clicks dark mode toggle
-2. `toggleDarkMode()`: calls `document.documentElement.classList.add("dark")` and `localStorage.setItem("darkMode", "true")`
-3. On next page load: `JSON.parse(localStorage.getItem("darkMode"))` restores `true`; `useLayoutEffect` applies the class before first paint
+2. `toggleDarkMode()`: calls `document.documentElement.classList.add("dark")` and
+   `localStorage.setItem("darkMode", "true")`
+3. On next page load: `JSON.parse(localStorage.getItem("darkMode"))` restores `true`;
+   `useLayoutEffect` applies the class before first paint
 
 ---
 
@@ -973,9 +1035,12 @@ pnpm build  # -> dist/ (index.html + assets/ gzip + brotli compressed)
 
 The app deploys at `/${packageJson.name}/` (sub-path; configured in `vite.config.ts` `base`).
 
-**Static hosting security headers** are provided via `public/_headers` (copied to `dist/` on build), covering Cloudflare Pages and Netlify automatically. For other hosts, replicate the file's header directives.
+**Static hosting security headers** are provided via `public/_headers` (copied to `dist/` on build),
+covering Cloudflare Pages and Netlify automatically. For other hosts, replicate the file's header
+directives.
 
-**Dev server:** CSP is intentionally excluded from dev headers because `@vitejs/plugin-react` injects an inline `<script type="module">` for Fast Refresh that `script-src 'self'` would block.
+**Dev server:** CSP is intentionally excluded from dev headers because `@vitejs/plugin-react`
+injects an inline `<script type="module">` for Fast Refresh that `script-src 'self'` would block.
 
 ### Deployment Checklist
 
@@ -1033,15 +1098,23 @@ From `release-notes/0.0.4.md`:
 
 ## 12. Uncertainties and Questions
 
-- **Recipe calories:** Should `totalCalories` be computed from `sum(ingredient.calories * quantity)` or remain simplified? Ingredient `quantity` and `serving` fields are stored but unused.
-- **Calorie goal UI:** Are there min/max range constraints shown to the user, or is the [1, 99999] validation silent?
-- **Food log editing UI:** `updateFoodLog` action exists in AppState. Is an edit trigger wired up in the Dashboard log history, or only available via hooks?
-- **Barcode API choice:** The CSP comment names `https://world.openfoodfacts.org` as the candidate API. Has this been confirmed?
-- **PWA architecture:** Service worker requires a build-time decision on caching strategy. Is it in scope for v0.0.5?
-- **`getRecentFoodItems` deduplication:** Deduplication by name (most recent per name) - is this the intended behavior for `allFoodItems` used as the ingredient selector corpus?
+- **Recipe calories:** Should `totalCalories` be computed from `sum(ingredient.calories * quantity)`
+  or remain simplified? Ingredient `quantity` and `serving` fields are stored but unused.
+- **Calorie goal UI:** Are there min/max range constraints shown to the user, or is the [1, 99999]
+  validation silent?
+- **Food log editing UI:** `updateFoodLog` action exists in AppState. Is an edit trigger wired up in
+  the Dashboard log history, or only available via hooks?
+- **Barcode API choice:** The CSP comment names `https://world.openfoodfacts.org` as the candidate
+  API. Has this been confirmed?
+- **PWA architecture:** Service worker requires a build-time decision on caching strategy. Is it in
+  scope for v0.0.5?
+- **`getRecentFoodItems` deduplication:** Deduplication by name (most recent per name) - is this the
+  intended behavior for `allFoodItems` used as the ingredient selector corpus?
 
 ---
 
 **Document Generated:** May 9, 2026
 **Analysis Method:** Reverse-engineering from release-notes/ and src/ folder
-**Source References:** release-notes/0.0.1.md through 0.0.4.md, src/types/index.ts, src/db/dbService.ts, src/state/AppState.ts, src/App.tsx, src/components/BodyMeasurements.tsx, src/components/StreakCard.tsx, vite.config.ts, public/_headers
+**Source References:** release-notes/0.0.1.md through 0.0.4.md, src/types/index.ts,
+src/db/dbService.ts, src/state/AppState.ts, src/App.tsx, src/components/BodyMeasurements.tsx,
+src/components/StreakCard.tsx, vite.config.ts, public/_headers

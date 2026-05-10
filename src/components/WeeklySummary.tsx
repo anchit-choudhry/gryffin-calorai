@@ -1,46 +1,43 @@
+import { useProgressData } from "../hooks/useProgressData";
 import { useWeeklySummary } from "../hooks/useWeeklySummary";
 
 const WeeklySummary = () => {
-  const { averageCalories, daysOnTarget, consistency, calorieGoal, isLoading } = useWeeklySummary();
+  const { averageCalories, daysOnTarget, consistency, calorieGoal } = useWeeklySummary();
+  const { isLoading } = useProgressData(7);
 
   if (isLoading) {
-    return <div className="dark:text-gray-400">Loading weekly summary...</div>;
+    return <div className="animate-pulse bg-paper-muted h-24" />;
   }
 
-  const getConsistencyColor = () => {
-    if (consistency >= 70)
-      return "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300";
-    if (consistency >= 40)
-      return "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300";
-    return "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300";
-  };
+  const consistencyColor =
+    consistency >= 70 ? "text-ink" : consistency >= 40 ? "text-ink-soft" : "text-persimmon";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-center">
-        <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-          7-Day Average
-        </p>
-        <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mt-2">
+    <div className="grid grid-cols-3 divide-x divide-rule">
+      <div className="px-4 py-3 text-center">
+        <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-ink-soft">7-Day Avg</p>
+        <p className="font-display text-2xl tabular-nums mt-2 text-ink">
           {averageCalories.toLocaleString()}
         </p>
-        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+        <p className="font-mono text-[10px] text-ink-soft mt-1">
           vs {calorieGoal.toLocaleString()} goal
         </p>
       </div>
 
-      <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-center">
-        <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-          Days on Target
-        </p>
-        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-2">{daysOnTarget}/7</p>
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">days within goal</p>
+      <div className="px-4 py-3 text-center">
+        <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-ink-soft">On Target</p>
+        <p className="font-display text-2xl tabular-nums mt-2 text-ink">{daysOnTarget}/7</p>
+        <p className="font-mono text-[10px] text-ink-soft mt-1">days within goal</p>
       </div>
 
-      <div className={`p-4 rounded-lg border text-center ${getConsistencyColor()}`}>
-        <p className="text-xs font-medium uppercase tracking-wide">Consistency</p>
-        <p className="text-2xl font-bold mt-2">{consistency}%</p>
-        <p className="text-xs mt-1">adherence rate</p>
+      <div className="px-4 py-3 text-center">
+        <p className="font-mono uppercase tracking-[0.2em] text-[10px] text-ink-soft">
+          Consistency
+        </p>
+        <p className={`font-display text-2xl tabular-nums mt-2 ${consistencyColor}`}>
+          {consistency}%
+        </p>
+        <p className="font-mono text-[10px] text-ink-soft mt-1">adherence rate</p>
       </div>
     </div>
   );

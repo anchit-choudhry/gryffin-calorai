@@ -219,20 +219,15 @@ export const getOrCreateUser = async (
   email: string,
 ): Promise<UserProfile> => {
   const user = await users.get(userId);
-  if (user) {
-    const updatedUser = { ...user, lastLogin: new Date().toISOString() };
-    await users.put(updatedUser);
-    return updatedUser;
-  }
-  const newUser: UserProfile = {
+  const updatedUser: UserProfile = {
     id: userId,
-    username,
-    email,
+    username: user?.username ?? username,
+    email: user?.email ?? email,
     lastLogin: new Date().toISOString(),
-    calorieGoal: 2000,
+    calorieGoal: user?.calorieGoal ?? 2000,
   };
-  await users.add(newUser);
-  return newUser;
+  await users.put(updatedUser);
+  return updatedUser;
 };
 
 export const getDailyFoodLogs = async (userId: UserId, date: ISODate): Promise<FoodItem[]> => {

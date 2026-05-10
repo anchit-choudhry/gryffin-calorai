@@ -11,10 +11,15 @@ export function computeWeeklySummary(data: number[], calorieGoal: number) {
   return { averageCalories, daysOnTarget, consistency };
 }
 
-export function useWeeklySummary() {
-  const { data, isLoading } = useProgressData(7);
-  const user = useAppState((s) => s.user);
-  const goal = user?.calorieGoal ?? 2000;
+export function useWeeklySummary(): {
+  averageCalories: number;
+  daysOnTarget: number;
+  consistency: number;
+  calorieGoal: number;
+} {
+  const { data } = useProgressData(7);
+  const init = useAppState((s) => s.init);
+  const goal = init.status === "ready" ? init.user.calorieGoal : 2000;
 
-  return { ...computeWeeklySummary(data, goal), calorieGoal: goal, isLoading };
+  return { ...computeWeeklySummary(data, goal), calorieGoal: goal };
 }

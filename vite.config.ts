@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+import path from "path";
+import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import viteCompression from "vite-plugin-compression2";
@@ -29,16 +30,31 @@ const { "Content-Security-Policy": _devCsp, ...DEV_HEADERS } = SECURITY_HEADERS;
 const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/react-dom", "vendor-react"],
   ["node_modules/react/", "vendor-react"],
-  ["node_modules/chart.js", "vendor-charts"],
-  ["node_modules/react-chartjs-2", "vendor-charts"],
+  ["node_modules/recharts", "vendor-charts"],
+  ["node_modules/d3-", "vendor-charts"],
+  ["node_modules/victory-", "vendor-charts"],
   ["node_modules/@zxing", "vendor-barcode"],
   ["node_modules/dexie", "vendor-db"],
-  ["node_modules/react-icons", "vendor-icons"],
+  ["node_modules/lucide-react", "vendor-icons"],
+  ["node_modules/sonner", "vendor-ui"],
+  ["node_modules/radix-ui", "vendor-ui"],
+  ["node_modules/class-variance-authority", "vendor-ui"],
+  ["node_modules/clsx", "vendor-ui"],
+  ["node_modules/tailwind-merge", "vendor-ui"],
+  ["node_modules/motion", "vendor-motion"],
   ["node_modules/zustand", "vendor-state"],
+  ["node_modules/react-hook-form", "vendor-form"],
+  ["node_modules/@hookform", "vendor-form"],
+  ["node_modules/zod", "vendor-form"],
 ];
 
 export default defineConfig({
   base: `/${packageJson.name}/`,
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),

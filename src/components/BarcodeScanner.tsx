@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import { useBarcodeScanner } from "../hooks/useBarcodeScanner";
+import { sanitizeBarcodeInput } from "../types";
 
 interface BarcodeScannerProps {
   onBarcodeDetected?: (barcode: string) => void;
@@ -7,6 +10,7 @@ interface BarcodeScannerProps {
 const BarcodeScanner = ({ onBarcodeDetected }: BarcodeScannerProps) => {
   const { videoRef, startScanning, stopScanning, isScanning, scanResult, error } =
     useBarcodeScanner();
+  const [manualInput, setManualInput] = useState("");
 
   const handleStartScanning = async () => {
     await startScanning();
@@ -18,35 +22,34 @@ const BarcodeScanner = ({ onBarcodeDetected }: BarcodeScannerProps) => {
     }
   };
 
-  const handleScanAgain = async () => {
-    await handleStartScanning();
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = sanitizeBarcodeInput(manualInput);
+    if (!clean) {
+      toast.error("Invalid barcode. Use printable ASCII characters only (max 100).");
+      return;
+    }
+    onBarcodeDetected?.(clean);
+    setManualInput("");
   };
 
   return (
-    <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800 space-y-4">
-      <h3 className="text-xl font-semibold border-b dark:border-gray-700 pb-2 text-gray-700 dark:text-gray-200">
-        Barcode Scanner
-      </h3>
-
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-        </div>
-      )}
+    <div className="space-y-4">
+      {error && <p className="font-mono text-[11px] text-persimmon">{error}</p>}
 
       {isScanning && (
         <div className="space-y-3">
           <video
             ref={videoRef}
-            className="w-full h-64 bg-black rounded-lg object-cover border border-gray-300 dark:border-gray-600"
+            className="w-full h-48 bg-ink border border-rule object-cover"
             style={{ transform: "scaleX(-1)" }}
           />
-          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-            Point camera at barcode...
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft text-center">
+            Point camera at barcode
           </p>
           <button
             onClick={stopScanning}
-            className="w-full py-2 px-4 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition shadow-sm"
+            className="w-full py-2.5 border border-rule font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors"
           >
             Stop Scanning
           </button>
@@ -55,22 +58,22 @@ const BarcodeScanner = ({ onBarcodeDetected }: BarcodeScannerProps) => {
 
       {scanResult && !isScanning && (
         <div className="space-y-3">
-          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Barcode detected:</p>
-            <p className="font-mono text-lg text-green-700 dark:text-green-300 break-all">
-              {scanResult}
+          <div className="border border-rule p-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mb-1">
+              Detected
             </p>
+            <p className="font-mono text-base text-persimmon break-all">{scanResult}</p>
           </div>
           <div className="flex gap-2">
             <button
               onClick={handleUseBarcode}
-              className="flex-1 py-2 px-4 bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 transition shadow-sm font-medium"
+              className="flex-1 py-2.5 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-[0.2em] hover:opacity-90 transition-opacity"
             >
               Use This
             </button>
             <button
-              onClick={handleScanAgain}
-              className="flex-1 py-2 px-4 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition shadow-sm font-medium"
+              onClick={handleStartScanning}
+              className="flex-1 py-2.5 border border-rule font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors"
             >
               Scan Again
             </button>
@@ -80,17 +83,41 @@ const BarcodeScanner = ({ onBarcodeDetected }: BarcodeScannerProps) => {
 
       {!isScanning && !scanResult && (
         <div className="space-y-3">
-          <div className="w-full h-48 bg-gray-100 dark:bg-gray-700 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-            <span className="text-gray-500 dark:text-gray-400 text-sm">
+          <div className="w-full h-40 bg-paper-muted border border-rule flex items-center justify-center">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
               Click to activate camera
             </span>
           </div>
           <button
             onClick={handleStartScanning}
-            className="w-full py-2 px-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition shadow-sm font-medium"
+            className="w-full py-2.5 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-[0.2em] hover:opacity-90 transition-opacity"
           >
             Scan Barcode
           </button>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-rule" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft whitespace-nowrap">
+              or enter manually
+            </span>
+            <div className="flex-1 border-t border-rule" />
+          </div>
+          <form onSubmit={handleManualSubmit} className="flex gap-2 items-end">
+            <input
+              type="text"
+              value={manualInput}
+              onChange={(e) => setManualInput(e.target.value)}
+              placeholder="Enter barcode number"
+              aria-label="Manual barcode entry"
+              className="flex-1 border-b border-rule bg-transparent font-mono text-sm text-ink focus:outline-none focus:border-persimmon pb-1 pt-1 placeholder:text-ink-soft/50 transition-colors"
+            />
+            <button
+              type="submit"
+              disabled={!manualInput.trim()}
+              className="pb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Use
+            </button>
+          </form>
         </div>
       )}
     </div>

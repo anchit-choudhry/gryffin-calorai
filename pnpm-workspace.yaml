@@ -19,6 +19,12 @@ minimumReleaseAge: 4320
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 1460000
 
+# Dependency resolution overrides
+# Forces packages depending on reselect@5.1.1 to use 5.1.0 instead
+overrides:
+  react-redux: "9.1.0"
+  reselect: "5.1.0"
+
 # Build-script allowlist - no packages in this project need postinstall
 # scripts, so the list stays empty. strictDepBuilds: true (pnpm v11 default)
 # means any new dep that tries to run a build script will hard-fail until

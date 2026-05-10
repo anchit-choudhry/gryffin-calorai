@@ -46,7 +46,7 @@ describe("AppState", () => {
   it("should initialize with correct default state", () => {
     const state = useAppState.getState();
     expect(state.dailyLogs).toEqual([]);
-    expect(state.isLoading).toBe(true);
+    expect(state.init.status).toBe("idle");
     expect(state.error).toBeNull();
   });
 
@@ -65,11 +65,11 @@ describe("AppState", () => {
   });
 
   it("should track loading state", () => {
-    useAppState.setState({ isLoading: false });
-    expect(useAppState.getState().isLoading).toBe(false);
+    useAppState.setState({ init: { status: "loading" } });
+    expect(useAppState.getState().init.status).toBe("loading");
 
-    useAppState.setState({ isLoading: true });
-    expect(useAppState.getState().isLoading).toBe(true);
+    useAppState.setState({ init: { status: "idle" } });
+    expect(useAppState.getState().init.status).toBe("idle");
   });
 
   it("should track error state", () => {

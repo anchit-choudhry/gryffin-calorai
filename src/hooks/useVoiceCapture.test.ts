@@ -9,8 +9,11 @@ beforeAll(() => {
     onresult = null;
     onerror = null;
     onend = null;
+
     start() {}
+
     stop() {}
+
     abort() {}
   };
 });

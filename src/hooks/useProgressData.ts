@@ -10,7 +10,12 @@ interface MealTypeData {
   Dinner: number[];
 }
 
-export function useProgressData(days: 7 | 30 = 7) {
+export function useProgressData(days: 7 | 30 = 7): {
+  labels: string[];
+  data: number[];
+  mealTypeData: MealTypeData | null;
+  isLoading: boolean;
+} {
   const { userId } = useAppState();
   const [labels, setLabels] = useState<string[]>([]);
   const [data, setData] = useState<number[]>([]);
@@ -53,7 +58,7 @@ export function useProgressData(days: 7 | 30 = 7) {
         for (let i = days - 1; i >= 0; i--) {
           const d = new Date(today);
           d.setDate(today.getDate() - i);
-          const iso = ISODate(d.toISOString().split("T")[0]);
+          const iso = ISODate(d.toISOString().split("T")[0]!);
           isoKeys.push(iso);
           dateLabels.push(iso.substring(5)); // MM-DD display
           calorieTotals.push(totalsMap.get(iso) ?? 0);

@@ -3,8 +3,10 @@
 ## Project Identity & Goal
 
 **Project Name:** Gryffin Calorai  
-**Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and visualizing calorie progress.  
-**Context:** v0.0.4 (May 2026), client-side only, no backend dependency. Health-focused personal tool.
+**Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
+visualizing calorie progress.  
+**Context:** v0.0.7 (May 2026), client-side only, no backend dependency. Health-focused personal
+tool.
 
 ---
 
@@ -15,21 +17,35 @@
 - Frontend: React 19 + Vite 8 + TypeScript 6 (strict mode)
 - State: Zustand 5 (single store)
 - Database: IndexedDB via Dexie.js 4 (no backend)
-- Styling: Tailwind CSS 4 (dark mode: class-based)
+- Styling: Tailwind CSS 4 (dark mode: class-based) + shadcn/ui primitives (Radix UI)
+- Forms: react-hook-form 7 + zod (imported via `zod/v3`) + @hookform/resolvers
 - Testing: Vitest 4 + jsdom + fake-indexeddb
-- Charts: Chart.js 4 + react-chartjs-2
+- Charts: Recharts 2
+- Animation: motion 12 (`motion/react`)
+- Toast: sonner (via `<Toaster />` in App.tsx)
+- Icons: lucide-react
 
 **Strict Rules:**
 
 - ✅ Always use **Tailwind only** for styling; no inline styles or CSS modules
-- ✅ Use **branded TypeScript types** for IDs (UserId, FoodItemId, RecipeId, WaterLogId, BodyMeasurementId, ISODate) to prevent mix-ups
-- ✅ All state goes in **Zustand store** (`src/state/AppState.ts`); no local component state except forms
+- ✅ Use **branded TypeScript types** for IDs (UserId, FoodItemId, RecipeId, WaterLogId,
+  BodyMeasurementId, ISODate) to prevent mix-ups
+- ✅ All state goes in **Zustand store** (`src/state/AppState.ts`); no local component state except
+  forms
 - ✅ **IndexedDB queries must use indices**; never scan full tables (`[userId+dateLogged]` pattern)
 - ✅ Components must have **accompanying `.test.ts` files** with >80% coverage target
 - ✅ All async operations include loading/error states in Zustand
-- ✅ **No router library**; App.tsx uses hash-based navigation (`window.location.hash`) with `React.lazy` + `Suspense`
-- ✅ **Never use `import React from "react"`**; use named imports (`import { useState } from "react"`) and `import type` for type-only imports (`import type { FC } from "react"`) - the automatic JSX transform makes the default import unnecessary
-- ✅ **Heavy components must be lazy-loaded** with `React.lazy` + `Suspense`; `BarcodeScanner` (pulls in `@zxing`) is the primary example - wrapping it in `<Suspense>` keeps it out of the initial bundle
+- ✅ **No router library**; App.tsx uses hash-based navigation (`window.location.hash`) with
+  `React.lazy` + `Suspense`
+- ✅ **Never use `import React from "react"`**; use named imports (
+  `import { useState } from "react"`) and `import type` for type-only imports (
+  `import type { FC } from "react"`) - the automatic JSX transform makes the default import
+  unnecessary
+- ✅ **Heavy components must be lazy-loaded** with `React.lazy` + `Suspense`; `BarcodeScanner` (pulls
+  in `@zxing`) is the primary example - wrapping it in `<Suspense>` keeps it out of the initial
+  bundle
+- ✅ **Never add `eslint-disable`, `@ts-ignore`, or `@ts-expect-error` comments**; fix the underlying
+  type or lint issue properly instead
 
 **Naming Conventions:**
 
@@ -41,14 +57,22 @@
 
 **Architecture:**
 
-- **Entry:** `index.html` → `src/main.tsx` (ErrorBoundary wrapper) → `src/App.tsx` (hash-based navigation + Suspense)
+- **Entry:** `index.html` → `src/main.tsx` (ErrorBoundary wrapper) → `src/App.tsx` (hash-based
+  navigation + Suspense)
 - **Folders:** `src/{pages,components,hooks,state,db,types}`
-- **Pages:** Dashboard, Recipes, Progress (in `src/pages/`) - lazy-loaded via `React.lazy` + `Suspense`
-- **Navigation:** Hash-based (`window.location.hash`); no router library; `PageLoading` used as Suspense fallback
-- **Chunking:** `vite.config.ts` uses `build.rollupOptions.output.manualChunks` (function form, required by Rolldown/Vite 8) to split vendors - `vendor-react`, `vendor-charts`, `vendor-barcode`, `vendor-db`, `vendor-icons`, `vendor-state`
-- **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body measurements.
+- **Pages:** Dashboard, Recipes, Progress (in `src/pages/`) - lazy-loaded via `React.lazy` +
+  `Suspense`
+- **Navigation:** Hash-based (`window.location.hash`); no router library; `PageLoading` used as
+  Suspense fallback
+- **Chunking:** `vite.config.ts` uses `build.rollupOptions.output.manualChunks` (function form,
+  required by Rolldown/Vite 8) to split vendors - `vendor-react`, `vendor-charts` (recharts + d3),
+  `vendor-barcode`, `vendor-db`, `vendor-icons`, `vendor-state`, `vendor-form` (rhf + zod),
+  `vendor-motion`, `vendor-ui` (shadcn/Radix)
+- **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body
+  measurements.
 - **DB:** Dexie.js tables with compound indices; currently at **schema version 7**
-- **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`, `userId`, `isFavorite`, `mealType`
+- **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`,
+  `userId`, `isFavorite`, `mealType`
 - **MealType:** `"Breakfast" | "Lunch" | "Snacks" | "Dinner"` (defined in `src/types/index.ts`)
 
 ---
@@ -89,8 +113,10 @@
 
 For architecture details, see @@specifications/gryffin-calorai-specifications.md  
 For React patterns & best practices, see @@docs/REACT_STANDARDS_REVIEW.md  
-For security guidelines, see @@docs/SECURITY_AUDIT.md and @@.claude/skills/owasp-security-audit/SKILL.md  
-For release history & changes, see @@release-notes/0.0.4.md (current), @@release-notes/0.0.3.md, and @@release-notes/0.0.2.md  
+For security guidelines, see @@docs/SECURITY_AUDIT.md and
+@@.claude/skills/owasp-security-audit/SKILL.md  
+For release history & changes, see @@release-notes/0.0.8.md (current), @@release-notes/0.0.4.md,
+@@release-notes/0.0.3.md, and @@release-notes/0.0.2.md  
 For quick dev commands, see @@README.md
 
 ---
@@ -125,29 +151,42 @@ pnpm build            # Production build
 
 ## Known Constraints & Roadmap
 
-**Implemented (v0.0.1–v0.0.4):**
+**Implemented (v0.0.1–v0.0.7):**
+
 - Database (Dexie v7), food logging with macros, recipe manager, water tracker, body measurements
-- Voice food logging (Web Speech API) with fuzzy matching, barcode scanner interface
-- Progress charts, weekly summary, streak tracking (`computeStreaks`)
-- Dark mode, ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
-- Code-split vendor chunks (react, charts, barcode, db, icons, state); `BarcodeScanner` lazy-loaded to defer `@zxing` until needed
-- 11 GitHub Actions workflows, OWASP/Security skills, 11+ test files with coverage
+- Voice food logging (Web Speech API) with fuzzy matching, barcode scanner + manual barcode entry
+- Progress charts (Recharts), weekly summary, streak tracking (`computeStreaks`)
+- Dark mode (class-based), ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
+- Code-split vendor chunks (react, charts, barcode, db, icons, state, form, motion, ui)
+- shadcn/ui Dialog, Tabs, Form, Input, Button, Card, Tooltip primitives; all overlays use Dialog
+  with focus trap + Esc close
+- react-hook-form 7 + zod v3 validation on all four form hooks; field-level errors via
+  `<FormMessage />`
+- motion 12 layout animations on log list with stagger; sonner toasts; lucide-react icons
+- Editorial design system (oklch color palette, @fontsource-variable typography, responsive grid
+  layout)
+- Refactored Dashboard with 5-section layout (Hero, Week, Pantry, Add to Log, Today's Log)
+- 11 GitHub Actions workflows, OWASP/Security skills, 12+ test files with coverage
 
 **Still Pending / Placeholders:**
-- Barcode → food lookup API integration (scanning works; lookup not implemented)
+
+- Barcode → food lookup API integration (scanning + manual entry work; lookup not implemented)
 - Component test coverage >80% (ongoing)
 - Macro breakdown display for recipes
 - Multi-user auth, PWA / offline sync, advanced filtering & search, data export/import
 
-**Technical Debt:** No optimistic updates, recipe descriptions need sanitization, WCAG 2.1 full compliance pending
+**Technical Debt:** No optimistic updates, recipe descriptions need sanitization, WCAG 2.1 full
+compliance pending
 
-**v0.0.5 Roadmap:**
-- [ ] Barcode food-lookup API integration
-- [ ] 100% component and integration test coverage
-- [ ] Macro nutrient breakdown display for recipes
-- [ ] Advanced filtering and search
+**v0.0.8 Roadmap:**
+
+- [ ] Step Tracking (Feature 5 - follows useWaterForm pattern; `StepLog` entity, `StepTracker`
+  component)
+- [ ] Macro nutrient breakdown display for recipes (on recipe card + log entry)
+- [ ] Component test coverage >80% (targeting all Dashboard sub-components)
+- [ ] Advanced filtering and search (date range, meal type filters)
 
 ---
 
-**Last Updated:** May 9, 2026  
+**Last Updated:** May 10, 2026  
 **Maintainer:** Anchit Choudhry

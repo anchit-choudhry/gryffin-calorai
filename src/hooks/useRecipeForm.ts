@@ -1,169 +1,87 @@
 import { useState } from "react";
-import { type FoodItem, saveRecipe } from "../db/dbService";
-import type { FoodItemId, UserId } from "../types";
-import { FoodItemId as makeFoodItemId } from "../types";
+import { useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { saveRecipe } from "../db/dbService";
+import { FoodItemId, type UserId } from "../types";
+import { RecipeFormSchema, type RecipeFormValues } from "../forms/schemas";
 
-interface FormIngredient {
-  id: string;
-  foodItemId: FoodItemId;
-  foodItemName: string;
-  calories: number;
-  quantity: number;
-  serving: number;
-}
+type UseRecipeFormReturn = {
+  form: ReturnType<typeof useForm<RecipeFormValues>>;
+  fields: ReturnType<typeof useFieldArray<RecipeFormValues, "ingredients">>["fields"];
+  append: ReturnType<typeof useFieldArray<RecipeFormValues, "ingredients">>["append"];
+  remove: ReturnType<typeof useFieldArray<RecipeFormValues, "ingredients">>["remove"];
+  isLoading: boolean;
+  saveRecipeForm: () => Promise<boolean>;
+};
 
-export function useRecipeForm(userId: UserId | null, allFoodItems: FoodItem[]) {
-  const [recipeName, setRecipeName] = useState("");
-  const [description, setDescription] = useState("");
-  const [ingredients, setIngredients] = useState<FormIngredient[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
   const [isLoading, setIsLoading] = useState(false);
 
-  const addIngredient = () => {
-    setIngredients([
-      ...ingredients,
-      {
-        id: crypto.randomUUID(),
-        foodItemId: makeFoodItemId(0),
-        foodItemName: "",
-        calories: 0,
-        quantity: 1,
-        serving: 1,
-      },
-    ]);
-  };
+  const form = useForm<RecipeFormValues>({
+    resolver: zodResolver(RecipeFormSchema),
+    defaultValues: { recipeName: "", description: "", ingredients: [] },
+  });
 
-  const removeIngredient = (id: string) => {
-    setIngredients(ingredients.filter((ing) => ing.id !== id));
-  };
-
-  const updateIngredient = (
-    id: string,
-    field: keyof Omit<FormIngredient, "id">,
-    value: number | string,
-  ) => {
-    setIngredients(
-      ingredients.map((ing) => {
-        if (ing.id !== id) return ing;
-        let coerced = typeof value === "number" ? value : value;
-        if ((field === "quantity" || field === "serving") && typeof coerced === "number") {
-          coerced = Math.min(999, Math.max(1, coerced));
-        }
-        return { ...ing, [field]: coerced };
-      }),
-    );
-  };
-
-  const selectIngredientFoodItem = (ingredientId: string, foodItem: FoodItem) => {
-    setIngredients(
-      ingredients.map((ing) =>
-        ing.id === ingredientId
-          ? {
-              ...ing,
-              foodItemId: foodItem.id!,
-              foodItemName: foodItem.name,
-              calories: foodItem.calories,
-            }
-          : ing,
-      ),
-    );
-  };
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "ingredients",
+  });
 
   const saveRecipeForm = async (): Promise<boolean> => {
-    if (
-      !recipeName ||
-      !description ||
-      ingredients.length === 0 ||
-      recipeName.trim().length < 1 ||
-      recipeName.trim().length > 100 ||
-      description.trim().length < 1 ||
-      description.trim().length > 500
-    ) {
-      setMessage(
-        "Recipe name (1-100 chars) and description (1-500 chars) are required, plus at least one ingredient.",
-      );
-      return false;
-    }
-
-    if (ingredients.some((ing) => ing.foodItemId === makeFoodItemId(0))) {
-      setMessage("All ingredients must be linked to a food item.");
-      return false;
-    }
-
-    const INGREDIENT_MAX = 999;
-    if (
-      ingredients.some(
-        (ing) =>
-          ing.quantity < 1 ||
-          ing.quantity > INGREDIENT_MAX ||
-          ing.serving < 1 ||
-          ing.serving > INGREDIENT_MAX,
-      )
-    ) {
-      setMessage("Ingredient quantity and serving must be between 1 and 999.");
-      return false;
-    }
-
     if (!userId) {
-      setMessage("User not initialized. Please refresh the page.");
+      toast.error("User not initialized. Please refresh the page.");
       return false;
     }
 
-    setIsLoading(true);
-    setMessage(null);
+    return new Promise<boolean>((resolve) => {
+      form.handleSubmit(
+        async (data) => {
+          setIsLoading(true);
+          try {
+            const totalCalories = data.ingredients.reduce(
+              (acc, ing) => acc + ing.calories * ing.quantity * ing.serving,
+              0,
+            );
 
-    try {
-      const totalCalories = ingredients.reduce(
-        (acc, ing) => acc + ing.calories * ing.quantity * ing.serving,
-        0,
-      );
+            await saveRecipe({
+              name: data.recipeName,
+              description: data.description,
+              ingredients: data.ingredients.map(({ foodItemId, quantity, serving }) => ({
+                foodItemId: FoodItemId(foodItemId),
+                quantity,
+                serving,
+              })),
+              totalCalories,
+              createdBy: userId,
+              dateCreated: new Date().toISOString(),
+              userId,
+            });
 
-      await saveRecipe({
-        name: recipeName,
-        description,
-        ingredients: ingredients.map(({ foodItemId, quantity, serving }) => ({
-          foodItemId,
-          quantity,
-          serving,
-        })),
-        totalCalories,
-        createdBy: userId,
-        dateCreated: new Date().toISOString(),
-        userId,
-      });
-
-      setMessage(`Recipe "${recipeName}" saved successfully!`);
-      resetForm();
-      return true;
-    } catch (error) {
-      console.error("Error saving recipe:", error);
-      setMessage("Failed to save recipe. Check console for details.");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
+            toast.success(`Recipe "${data.recipeName}" saved successfully!`);
+            form.reset();
+            resolve(true);
+          } catch (error) {
+            console.error("Error saving recipe:", error);
+            toast.error("Failed to save recipe. Check console for details.");
+            resolve(false);
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        () => {
+          const errors = form.formState.errors;
+          const firstMsg =
+            errors.recipeName?.message ??
+            errors.description?.message ??
+            errors.ingredients?.root?.message ??
+            "Please fix the errors above.";
+          toast.error(firstMsg);
+          resolve(false);
+        },
+      )();
+    });
   };
 
-  const resetForm = () => {
-    setRecipeName("");
-    setDescription("");
-    setIngredients([]);
-  };
-
-  return {
-    recipeName,
-    setRecipeName,
-    description,
-    setDescription,
-    ingredients,
-    addIngredient,
-    removeIngredient,
-    updateIngredient,
-    selectIngredientFoodItem,
-    allFoodItems,
-    message,
-    isLoading,
-    saveRecipeForm,
-    resetForm,
-  };
+  return { form, fields, append, remove, isLoading, saveRecipeForm };
 }

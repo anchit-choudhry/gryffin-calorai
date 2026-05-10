@@ -3,7 +3,11 @@ import { useAppState } from "../state/AppState";
 import { getAllFoodLogs } from "../db/dbService";
 import { computeStreaks } from "../types";
 
-export function useStreaks() {
+export function useStreaks(): {
+  currentStreak: number;
+  longestStreak: number;
+  isLoading: boolean;
+} {
   const { userId } = useAppState();
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -16,7 +20,7 @@ export function useStreaks() {
     getAllFoodLogs(userId)
       .then((logs) => {
         if (cancelled) return;
-        const uniqueDates = [...new Set(logs.map((l) => l.dateLogged as string))];
+        const uniqueDates = [...new Set(logs.map((l) => l.dateLogged))];
         const { currentStreak: cur, longestStreak: longest } = computeStreaks(uniqueDates);
         setCurrentStreak(cur);
         setLongestStreak(longest);

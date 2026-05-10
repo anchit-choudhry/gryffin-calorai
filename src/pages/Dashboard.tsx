@@ -1,6 +1,5 @@
-// src/pages/Dashboard.tsx
-import { lazy, Suspense, useState } from "react";
-import { FiEdit2 } from "react-icons/fi";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import FoodLogger from "../components/FoodLogger";
 import PageLoading from "../components/PageLoading";
 import VoiceFoodLogger from "../components/VoiceFoodLogger";
@@ -8,334 +7,212 @@ import WeeklySummary from "../components/WeeklySummary";
 import WaterTracker from "../components/WaterTracker";
 import StreakCard from "../components/StreakCard";
 import { useAppState } from "../state/AppState";
-import { DEFAULT_MEAL_TYPE, todayISO } from "../types";
+import { todayISO } from "../types";
 import type { FoodItem } from "../db/dbService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DashboardHero from "../components/dashboard/DashboardHero";
+import SectionHeader from "../components/dashboard/SectionHeader";
+import EditorialFrame from "../components/dashboard/EditorialFrame";
+import LogEntry from "../components/dashboard/LogEntry";
+import { pageVariants, sectionVariants } from "../lib/motionVariants";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 
 const Dashboard = () => {
-  const {
-    dailyLogs,
-    isLoading,
-    error,
-    deleteFoodLog,
-    user,
-    updateCalorieGoal,
-    favoriteFoods,
-    toggleFavorite,
-    addFoodLog,
-    userId,
-  } = useAppState();
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState(user?.calorieGoal ?? 2000);
+  const { init, dailyLogs, deleteFoodLog, favoriteFoods, toggleFavorite, addFoodLog, userId } =
+    useAppState();
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
   const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
   const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
 
-  const totalCalories = dailyLogs.reduce((sum, log) => sum + log.calories, 0);
-  const totalProtein = dailyLogs.reduce((sum, log) => sum + (log.protein ?? 0), 0);
-  const totalCarbs = dailyLogs.reduce((sum, log) => sum + (log.carbs ?? 0), 0);
-  const totalFat = dailyLogs.reduce((sum, log) => sum + (log.fat ?? 0), 0);
-  const calorieGoal = user?.calorieGoal ?? 2000;
+  const shouldReduceMotion = useReducedMotion();
+
+  const { totalCalories, totalProtein, totalCarbs, totalFat } = useMemo(
+    () => ({
+      totalCalories: dailyLogs.reduce((sum, log) => sum + log.calories, 0),
+      totalProtein: dailyLogs.reduce((sum, log) => sum + (log.protein ?? 0), 0),
+      totalCarbs: dailyLogs.reduce((sum, log) => sum + (log.carbs ?? 0), 0),
+      totalFat: dailyLogs.reduce((sum, log) => sum + (log.fat ?? 0), 0),
+    }),
+    [dailyLogs],
+  );
+
+  const closeEditLog = useCallback(() => setEditingLog(null), []);
+  const closeBarcodeFood = useCallback(() => setBarcodeFood(null), []);
+  const closeVoiceFood = useCallback(() => setVoiceFood(null), []);
+
+  const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
+  const hasFavorites = favoriteFoods.length > 0;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      {/* Summary Card */}
-      <div className="p-6 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-900/50 rounded-xl shadow-md mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200">
-              Today's Total Intake
-            </h2>
-            {editingGoal ? (
-              <div className="flex items-center space-x-2 mt-2">
-                <input
-                  type="number"
-                  value={goalInput}
-                  onChange={(e) => setGoalInput(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="w-24 border dark:border-gray-600 p-1 rounded text-sm dark:bg-gray-700 dark:text-white"
-                  min="1"
-                  max="99999"
-                />
+    <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
+      {/* Edit Log Dialog */}
+      <Dialog open={!!editingLog} onOpenChange={(open) => !open && closeEditLog()}>
+        <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl text-ink">Edit Meal Entry</DialogTitle>
+          </DialogHeader>
+          {editingLog && (
+            <FoodLogger initialFood={editingLog} onCancel={closeEditLog} onSuccess={closeEditLog} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Barcode Food Dialog */}
+      <Dialog open={!!barcodeFood} onOpenChange={(open) => !open && closeBarcodeFood()}>
+        <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl text-ink">
+              Barcode: {barcodeFood?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {barcodeFood && (
+            <FoodLogger prefillName={barcodeFood.name} onSuccess={closeBarcodeFood} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Voice Food Dialog */}
+      <Dialog open={!!voiceFood} onOpenChange={(open) => !open && closeVoiceFood()}>
+        <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl text-ink">
+              Voice Match: {voiceFood?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {voiceFood && (
+            <FoodLogger
+              prefillName={voiceFood.name}
+              onCancel={closeVoiceFood}
+              onSuccess={closeVoiceFood}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <motion.main
+        className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
+        variants={shouldReduceMotion ? undefined : pageVariants}
+        initial={shouldReduceMotion ? undefined : "hidden"}
+        animate={shouldReduceMotion ? undefined : "show"}
+      >
+        {/* Section A — Masthead / Hero */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6" {...sv}>
+          <DashboardHero
+            totalCalories={totalCalories}
+            totals={{ protein: totalProtein, carbs: totalCarbs, fat: totalFat }}
+          />
+        </motion.section>
+
+        {/* Section B — Week in Review */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" kicker="01" title="The Week in Review" />
+          <div className="col-span-12 lg:col-span-6 border border-rule p-6">
+            <WeeklySummary />
+          </div>
+          <div className="col-span-6 lg:col-span-3 border border-rule p-5">
+            <StreakCard />
+          </div>
+          <div className="col-span-6 lg:col-span-3 border border-rule p-5">
+            <WaterTracker />
+          </div>
+        </motion.section>
+
+        {/* Section C — From the Pantry */}
+        {hasFavorites && (
+          <motion.section className="col-span-12" {...sv}>
+            <SectionHeader kicker="02" title="From the Pantry" />
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
+              {favoriteFoods.map((fav) => (
                 <button
+                  key={fav.id}
                   onClick={async () => {
-                    await updateCalorieGoal(goalInput);
-                    setEditingGoal(false);
+                    if (userId) {
+                      await addFoodLog({
+                        userId,
+                        name: fav.name,
+                        calories: fav.calories,
+                        servingSize: fav.servingSize,
+                        protein: fav.protein,
+                        carbs: fav.carbs,
+                        fat: fav.fat,
+                        dateLogged: todayISO(),
+                        isFavorite: false,
+                        mealType: fav.mealType,
+                      });
+                    }
                   }}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                  className="shrink-0 border border-ink rounded-full px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-ink hover:bg-ink hover:text-paper transition-colors snap-start"
                 >
-                  Save
+                  {fav.name} · {fav.calories} kcal
                 </button>
-                <button
-                  onClick={() => setEditingGoal(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mt-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
-                onClick={() => {
-                  setGoalInput(calorieGoal);
-                  setEditingGoal(true);
-                }}
-              >
-                <FiEdit2 className="w-3.5 h-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
-                Goal: {calorieGoal.toLocaleString()} kcal
-              </button>
-            )}
-          </div>
-          <h2 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-            {totalCalories.toLocaleString()} kcal
-          </h2>
-        </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
 
-        {/* Progress Bar */}
-        {!editingGoal && (
-          <>
-            <div>
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                <span>
-                  {Math.min(100, Math.round((totalCalories / calorieGoal) * 100))}% of daily goal
-                </span>
-                <span>
-                  {Math.max(0, calorieGoal - totalCalories).toLocaleString()} kcal remaining
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                <div
-                  className={`h-2.5 rounded-full transition-all ${
-                    totalCalories >= calorieGoal
-                      ? "bg-red-500"
-                      : totalCalories >= calorieGoal * 0.8
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                  }`}
-                  style={{ width: `${Math.min(100, (totalCalories / calorieGoal) * 100)}%` }}
+        {/* Section D — Add to Today's Log */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader
+            className="col-span-12"
+            kicker={hasFavorites ? "03" : "02"}
+            title="Add to Today's Log"
+          />
+          <div className="col-span-12 lg:col-span-6">
+            <EditorialFrame label="01 · Write">
+              <FoodLogger />
+            </EditorialFrame>
+          </div>
+          <div className="col-span-12 md:col-span-6 lg:col-span-3">
+            <EditorialFrame label="02 · Scan">
+              <Suspense fallback={<PageLoading message="Loading scanner..." />}>
+                <BarcodeScanner
+                  onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })}
                 />
-              </div>
-            </div>
-
-            {/* Macro Breakdown */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t dark:border-gray-700">
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-center">
-                <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-                  Protein
-                </p>
-                <p className="text-xl font-bold text-blue-700 dark:text-blue-300 mt-1">
-                  {totalProtein}g
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-center">
-                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-                  Carbs
-                </p>
-                <p className="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">
-                  {totalCarbs}g
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center">
-                <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">
-                  Fat
-                </p>
-                <p className="text-xl font-bold text-red-700 dark:text-red-300 mt-1">{totalFat}g</p>
-              </div>
-              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-center">
-                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">
-                  Calories
-                </p>
-                <p className="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">
-                  {totalCalories.toLocaleString()}
-                </p>
-                <p className="text-xs text-indigo-500 dark:text-indigo-400">kcal</p>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Weekly Summary */}
-      <WeeklySummary />
-
-      {/* Water & Streaks */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <StreakCard />
-        <WaterTracker />
-      </div>
-
-      {/* Favorites Bar */}
-      {favoriteFoods.length > 0 && !editingLog && (
-        <div className="p-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-3 dark:text-gray-200">Quick Add Favorites</h3>
-          <div className="flex flex-wrap gap-2">
-            {favoriteFoods.map((fav) => (
-              <button
-                key={fav.id}
-                onClick={async () => {
-                  if (userId) {
-                    await addFoodLog({
-                      userId,
-                      name: fav.name,
-                      calories: fav.calories,
-                      servingSize: fav.servingSize,
-                      protein: fav.protein,
-                      carbs: fav.carbs,
-                      fat: fav.fat,
-                      dateLogged: todayISO(),
-                      isFavorite: false,
-                      mealType: fav.mealType,
-                    });
-                  }
-                }}
-                className="px-3 py-2 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-sm font-medium transition-colors"
-              >
-                {fav.name} · {fav.calories} kcal
-              </button>
-            ))}
+              </Suspense>
+            </EditorialFrame>
           </div>
-        </div>
-      )}
+          <div className="col-span-12 md:col-span-6 lg:col-span-3">
+            <EditorialFrame label="03 · Speak">
+              <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
+            </EditorialFrame>
+          </div>
+        </motion.section>
 
-      {/* Core Functionalities Grid */}
-      {editingLog ? (
-        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4 dark:text-gray-200">
-            Editing: {editingLog.name}
-          </h3>
-          <FoodLogger
-            initialFood={editingLog}
-            onCancel={() => setEditingLog(null)}
-            onSuccess={() => setEditingLog(null)}
+        {/* Section E — Today's Log */}
+        <motion.section className="col-span-12" {...sv}>
+          <SectionHeader
+            kicker={hasFavorites ? "04" : "03"}
+            title="Today's Log"
+            subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
           />
-        </div>
-      ) : barcodeFood ? (
-        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg shadow-md">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold dark:text-gray-200">
-              Barcode Scan: {barcodeFood.name}
-            </h3>
-            <button
-              onClick={() => setBarcodeFood(null)}
-              className="text-sm text-amber-600 dark:text-amber-400 hover:underline"
-            >
-              Cancel
-            </button>
-          </div>
-          <FoodLogger prefillName={barcodeFood.name} onSuccess={() => setBarcodeFood(null)} />
-        </div>
-      ) : voiceFood ? (
-        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg shadow-md">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold dark:text-gray-200">
-              Voice Match: {voiceFood.name}
-            </h3>
-            <button
-              onClick={() => setVoiceFood(null)}
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              Cancel
-            </button>
-          </div>
-          <FoodLogger
-            prefillName={voiceFood.name}
-            onCancel={() => setVoiceFood(null)}
-            onSuccess={() => setVoiceFood(null)}
-          />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div>
-            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Log Food</h3>
-            <FoodLogger />
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Scan Barcode</h3>
-            <Suspense fallback={<PageLoading message="Loading scanner..." />}>
-              <BarcodeScanner onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })} />
-            </Suspense>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-3 dark:text-gray-200">Voice Log</h3>
-            <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
-          </div>
-        </div>
-      )}
-
-      {/* Log History */}
-      <div className="pt-4">
-        <h3 className="text-2xl font-semibold mb-4 dark:text-gray-200">
-          Today's Log ({dailyLogs.length} Items)
-        </h3>
-        {isLoading ? (
-          <p className="dark:text-gray-400">Loading today's logs...</p>
-        ) : error ? (
-          <p className="text-red-500 dark:text-red-400">{error}</p>
-        ) : (
-          <div className="space-y-3">
-            {dailyLogs.length > 0 ? (
-              dailyLogs.map((log, index) => (
-                <div
-                  key={log.id ?? index}
-                  className="flex justify-between items-start p-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-md shadow-sm"
-                >
-                  <div>
-                    <p className="font-medium dark:text-gray-200">{log.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {log.servingSize} serving{log.servingSize !== 1 ? "s" : ""} · {log.dateLogged}
-                    </p>
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                        {log.mealType ?? DEFAULT_MEAL_TYPE}
-                      </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                        P {log.protein ?? 0}g
-                      </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                        C {log.carbs ?? 0}g
-                      </span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        F {log.fat ?? 0}g
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 flex-shrink-0">
-                    <p className="text-lg font-bold text-green-700 dark:text-green-400">
-                      {log.calories.toLocaleString()} kcal
-                    </p>
-                    <button
-                      onClick={() => log.id && toggleFavorite(log.id, !log.isFavorite)}
-                      className="text-yellow-400 hover:text-yellow-600 dark:text-yellow-300 dark:hover:text-yellow-500 text-lg p-1 rounded transition"
-                      aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
-                    >
-                      {log.isFavorite ? "★" : "☆"}
-                    </button>
-                    <button
-                      onClick={() => setEditingLog(log)}
-                      className="text-blue-400 hover:text-blue-600 dark:text-blue-300 dark:hover:text-blue-500 text-sm p-1 rounded transition"
-                      aria-label={`Edit ${log.name}`}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      onClick={() => log.id && deleteFoodLog(log.id)}
-                      className="text-red-400 hover:text-red-600 dark:text-red-300 dark:hover:text-red-500 text-sm p-1 rounded transition"
-                      aria-label={`Delete ${log.name}`}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 italic">
-                No food items logged for today yet.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+          {init.status === "loading" ? (
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mt-6">
+              Loading...
+            </p>
+          ) : init.status === "error" ? (
+            <p className="text-destructive mt-6 font-mono text-sm">{init.message}</p>
+          ) : dailyLogs.length > 0 ? (
+            <ul className="divide-y divide-rule border-y border-rule mt-4">
+              <AnimatePresence initial={false}>
+                {dailyLogs.map((log) => (
+                  <LogEntry
+                    key={log.id!}
+                    log={log}
+                    onEdit={setEditingLog}
+                    onDelete={deleteFoodLog}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                ))}
+              </AnimatePresence>
+            </ul>
+          ) : (
+            <p className="font-display italic text-ink-soft text-lg mt-6">
+              Nothing logged yet today.
+            </p>
+          )}
+        </motion.section>
+      </motion.main>
     </div>
   );
 };

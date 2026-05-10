@@ -5,6 +5,9 @@ import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import PageLoading from "./components/PageLoading";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
+import { normalizeHash, type ValidHash } from "./lib/utils";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
@@ -25,7 +28,7 @@ function App() {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
   });
-  const [currentPath, setCurrentPath] = useState(window.location.hash || "#dashboard");
+  const [currentPath, setCurrentPath] = useState<ValidHash>(normalizeHash(window.location.hash));
 
   useLayoutEffect(() => {
     if (darkMode) {
@@ -43,7 +46,7 @@ function App() {
     setupApp();
 
     const handleHashChange = () => {
-      setCurrentPath(window.location.hash || "#dashboard");
+      setCurrentPath(normalizeHash(window.location.hash));
     };
 
     window.addEventListener("hashchange", handleHashChange);
@@ -75,58 +78,63 @@ function App() {
     }
   };
 
+  const navLink = (hash: string, label: string) => {
+    const isActive = currentPath === hash;
+    return (
+      <a
+        href={hash}
+        className={`font-mono text-[11px] uppercase tracking-[0.2em] transition-colors ${
+          isActive ? "text-persimmon" : "text-ink-soft hover:text-ink"
+        }`}
+      >
+        {label}
+      </a>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-      <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div
-              className="flex items-center space-x-3 cursor-pointer"
-              onClick={() => (window.location.hash = "#dashboard")}
-            >
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">C</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                Gryffin Calorai
-              </span>
-            </div>
-            <div className="flex items-center space-x-6">
-              <a
-                href="#dashboard"
-                className={`text-sm font-medium transition-colors ${currentPath === "#dashboard" || currentPath === "" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"}`}
-              >
-                Dashboard
-              </a>
-              <a
-                href="#recipes"
-                className={`text-sm font-medium transition-colors ${currentPath === "#recipes" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"}`}
-              >
-                Recipes
-              </a>
-              <a
-                href="#progress"
-                className={`text-sm font-medium transition-colors ${currentPath === "#progress" ? "text-indigo-600 dark:text-indigo-400" : "text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"}`}
-              >
-                Progress
-              </a>
+    <TooltipProvider>
+      <div className="min-h-screen bg-paper transition-colors duration-300">
+        <nav className="bg-paper border-b border-rule sticky top-0 z-50">
+          <div className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14">
+            <div className="flex justify-between h-14 items-center">
               <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="flex items-center gap-3 cursor-pointer"
+                onClick={() => (window.location.hash = "#dashboard")}
               >
-                {darkMode ? "☀️" : "🌙"}
+                <div className="w-7 h-7 bg-persimmon flex items-center justify-center shrink-0">
+                  <span className="font-display text-paper text-sm font-semibold leading-none">
+                    G
+                  </span>
+                </div>
+                <span className="font-display text-lg text-ink tracking-tight leading-none">
+                  Gryffin Calorai
+                </span>
               </button>
+              <div className="flex items-center gap-7">
+                {navLink("#dashboard", "Dashboard")}
+                {navLink("#recipes", "Recipes")}
+                {navLink("#progress", "Progress")}
+                <button
+                  onClick={toggleDarkMode}
+                  className="border border-rule px-2.5 py-1 font-mono text-[11px] text-ink-soft hover:text-ink hover:border-ink transition-colors"
+                  aria-label="Toggle dark mode"
+                >
+                  {darkMode ? "Light" : "Dark"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </nav>
+        </nav>
 
-      <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        <ErrorBoundary>
-          <Suspense fallback={<PageLoading />}>{renderPage()}</Suspense>
-        </ErrorBoundary>
-      </main>
-    </div>
+        <main>
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoading />}>{renderPage()}</Suspense>
+          </ErrorBoundary>
+        </main>
+      </div>
+      <Toaster richColors />
+    </TooltipProvider>
   );
 }
 

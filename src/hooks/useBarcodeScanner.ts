@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { sanitizeBarcodeInput } from "../types";
 
-export const useBarcodeScanner = () => {
+export const useBarcodeScanner = (): {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  startScanning: () => Promise<unknown>;
+  stopScanning: () => void;
+  isScanning: boolean;
+  scanResult: string | null;
+  error: string | null;
+} => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const scanningRef = useRef<boolean>(false);
@@ -38,7 +45,7 @@ export const useBarcodeScanner = () => {
                 stopScanning();
               }
             }
-            if (err && !(err as Error).message.includes("NotFoundException")) {
+            if (err && !(err instanceof Error && err.message.includes("NotFoundException"))) {
               if (scanningRef.current) {
                 setError("Scanner encountered an error. Please try again.");
               }

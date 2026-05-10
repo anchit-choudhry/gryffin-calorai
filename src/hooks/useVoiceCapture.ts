@@ -23,8 +23,11 @@ interface VoiceRecognitionInstance {
   onresult: ((event: VoiceSpeechEvent) => void) | null;
   onerror: ((event: VoiceErrorEvent) => void) | null;
   onend: (() => void) | null;
+
   start(): void;
+
   stop(): void;
+
   abort(): void;
 }
 
@@ -40,7 +43,14 @@ const getRecognitionCtor = (): VoiceRecognitionCtor | null =>
   (window as { webkitSpeechRecognition?: VoiceRecognitionCtor }).webkitSpeechRecognition ??
   null;
 
-export const useVoiceCapture = () => {
+export const useVoiceCapture = (): {
+  isSupported: boolean;
+  isListening: boolean;
+  transcript: string | null;
+  error: string | null;
+  startListening: () => void;
+  stopListening: () => void;
+} => {
   const recognitionRef = useRef<VoiceRecognitionInstance | null>(null);
   const listeningRef = useRef<boolean>(false);
   const [isSupported] = useState<boolean>(() => getRecognitionCtor() !== null);

@@ -8,7 +8,9 @@ license: Complete terms in file LICENSE
 
 ## Overview
 
-This guide provides comprehensive secure coding practices for web applications. As an AI assistant, your role is to approach code from a **bug hunter's perspective** and make applications **as secure as possible** without breaking functionality.
+This guide provides comprehensive secure coding practices for web applications. As an AI assistant,
+your role is to approach code from a **bug hunter's perspective** and make applications **as secure
+as possible** without breaking functionality.
 
 **Key Principles:**
 
@@ -22,7 +24,8 @@ This guide provides comprehensive secure coding practices for web applications. 
 
 ## Access Control Issues
 
-Access control vulnerabilities occur when users can access resources or perform actions beyond their intended permissions.
+Access control vulnerabilities occur when users can access resources or perform actions beyond their
+intended permissions.
 
 ### Core Requirements
 
@@ -51,15 +54,18 @@ For **every data point and action** that requires authentication:
 - [ ] Check organization membership for multi-tenant apps
 - [ ] Validate role permissions for role-based actions
 - [ ] Re-validate permissions after any privilege change
-- [ ] Check parent resource ownership (e.g., if accessing a comment, verify user owns the parent post)
+- [ ] Check parent resource ownership (e.g., if accessing a comment, verify user owns the parent
+  post)
 
 ### Common Pitfalls to Avoid
 
-- **IDOR (Insecure Direct Object Reference)**: Always verify the requesting user has permission to access the requested resource ID
+- **IDOR (Insecure Direct Object Reference)**: Always verify the requesting user has permission to
+  access the requested resource ID
 - **Privilege Escalation**: Validate role changes server-side; never trust role info from client
 - **Horizontal Access**: User A accessing User B's resources with the same privilege level
 - **Vertical Access**: Regular user accessing admin functionality
-- **Mass Assignment**: Filter which fields users can update; don't blindly accept all request body fields
+- **Mass Assignment**: Filter which fields users can update; don't blindly accept all request body
+  fields
 
 ### Implementation Pattern
 
@@ -204,9 +210,11 @@ Every state-changing endpoint must be protected against CSRF attacks.
 
 #### Edge Cases and Common Mistakes
 
-- **Token presence check**: CSRF validation must NOT depend on whether the token is present, always require it
+- **Token presence check**: CSRF validation must NOT depend on whether the token is present, always
+  require it
 - **Token per form**: Consider unique tokens per form for sensitive operations
-- **JSON APIs**: Don't assume JSON content-type prevents CSRF; validate Origin/Referer headers AND use tokens
+- **JSON APIs**: Don't assume JSON content-type prevents CSRF; validate Origin/Referer headers AND
+  use tokens
 - **CORS misconfiguration**: Overly permissive CORS can bypass SameSite cookies
 - **Subdomains**: CSRF tokens should be scoped because subdomain takeover can lead to CSRF
 - **Flash/PDF uploads**: Legacy browser plugins could bypass SameSite
@@ -343,7 +351,8 @@ Any endpoint accepting a URL for redirection must be protected against open redi
 
 ### Server-Side Request Forgery (SSRF)
 
-Any functionality where the server makes requests to URLs provided or influenced by users must be protected.
+Any functionality where the server makes requests to URLs provided or influenced by users must be
+protected.
 
 #### Potential Vulnerable Features
 
@@ -609,7 +618,8 @@ settings.XmlResolver = null;
 
 ### Path Traversal
 
-Path traversal vulnerabilities occur when user input controls file paths, allowing access to files outside intended directories.
+Path traversal vulnerabilities occur when user input controls file paths, allowing access to files
+outside intended directories.
 
 #### Vulnerable Patterns
 
@@ -793,4 +803,5 @@ When generating code, always:
 7. **Handle errors securely** - Don't leak stack traces or internal details to users
 8. **Keep dependencies updated** - Use tools to track vulnerable dependencies
 
-When unsure, choose the more restrictive/secure option and document the security consideration in comments.
+When unsure, choose the more restrictive/secure option and document the security consideration in
+comments.

@@ -97,12 +97,12 @@ describe("fuzzyMatchFoodName", () => {
 
   it("returns exact match first", () => {
     const results = fuzzyMatchFoodName("apple", corpus);
-    expect(results[0].name).toBe("Apple");
+    expect(results[0]!.name).toBe("Apple");
   });
 
   it("is case-insensitive", () => {
     const results = fuzzyMatchFoodName("APPLE", corpus);
-    expect(results[0].name).toBe("Apple");
+    expect(results[0]!.name).toBe("Apple");
   });
 
   it("matches substrings", () => {

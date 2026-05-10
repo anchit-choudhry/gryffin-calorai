@@ -43,7 +43,8 @@ When reviewing code, check for these issues:
 
 ### Access Control
 
-- [ ] Check for framework-level auth middleware (e.g., Next.js middleware.ts, proxy.ts, Express middleware) before flagging missing per-route auth
+- [ ] Check for framework-level auth middleware (e.g., Next.js middleware.ts, proxy.ts, Express
+  middleware) before flagging missing per-route auth
 - [ ] Authorization checked on every request
 - [ ] Using object references user cannot manipulate
 - [ ] Deny by default policy
@@ -206,9 +207,13 @@ When building or reviewing AI agent systems, check for:
 
 ## Language-Specific Security Quirks
 
-> **Important:** The examples below are illustrative starting points, not exhaustive. When reviewing code, think like a senior security researcher: consider the language's memory model, type system, standard library pitfalls, ecosystem-specific attack vectors, and historical CVE patterns. Each language has deeper quirks beyond what's listed here.
+> **Important:** The examples below are illustrative starting points, not exhaustive. When reviewing
+> code, think like a senior security researcher: consider the language's memory model, type system,
+> standard library pitfalls, ecosystem-specific attack vectors, and historical CVE patterns. Each
+> language has deeper quirks beyond what's listed here.
 
-Different languages have unique security pitfalls. Here are the top 20 languages with key security considerations. **Go deeper for the specific language you're working in:**
+Different languages have unique security pitfalls. Here are the top 20 languages with key security
+considerations. **Go deeper for the specific language you're working in:**
 
 ---
 
@@ -265,7 +270,8 @@ ObjectMapper mapper = new ObjectMapper();
 mapper.readValue(json, SafeClass.class);
 ```
 
-**Watch for:** `ObjectInputStream`, `Runtime.exec()`, XML parsers without XXE protection, JNDI lookups
+**Watch for:** `ObjectInputStream`, `Runtime.exec()`, XML parsers without XXE protection, JNDI
+lookups
 
 ---
 
@@ -302,7 +308,8 @@ include($_GET['page'] . '.php');
 $allowed = ['home', 'about']; include(in_array($page, $allowed) ? "$page.php" : 'home.php');
 ```
 
-**Watch for:** `==` vs `===`, `include/require`, `unserialize()`, `preg_replace` with `/e`, `extract()`
+**Watch for:** `==` vs `===`, `include/require`, `unserialize()`, `preg_replace` with `/e`,
+`extract()`
 
 ---
 
@@ -361,7 +368,8 @@ let y = x + 1; // Wraps to 0 in release!
 let y = x.checked_add(1).unwrap_or(255);
 ```
 
-**Watch for:** `unsafe` blocks, FFI calls, integer overflow in release builds, `.unwrap()` on untrusted input
+**Watch for:** `unsafe` blocks, FFI calls, integer overflow in release builds, `.unwrap()` on
+untrusted input
 
 ---
 
@@ -419,7 +427,8 @@ printf(userInput);
 printf("%s", userInput);
 ```
 
-**Watch for:** `strcpy`, `sprintf`, `gets`, pointer arithmetic, manual memory management, integer overflow
+**Watch for:** `strcpy`, `sprintf`, `gets`, pointer arithmetic, manual memory management, integer
+overflow
 
 ---
 
@@ -493,7 +502,8 @@ eval "$user_command"
 # SAFE: Never eval user input
 ```
 
-**Watch for:** Unquoted variables, `eval`, backticks, `$(...)` with user input, missing `set -euo pipefail`
+**Watch for:** Unquoted variables, `eval`, backticks, `$(...)` with user input, missing
+`set -euo pipefail`
 
 ---
 
@@ -559,7 +569,8 @@ Get-Content $userPath
 # SAFE: Validate path is within allowed directory
 ```
 
-**Watch for:** `Invoke-Expression`, `& $userVar`, `Start-Process` with user args, `-ExecutionPolicy Bypass`
+**Watch for:** `Invoke-Expression`, `& $userVar`, `Start-Process` with user args,
+`-ExecutionPolicy Bypass`
 
 ---
 
@@ -575,7 +586,8 @@ Get-Content $userPath
 -- Use prepared statements in ALL cases
 ```
 
-**Watch for:** Dynamic SQL, `EXECUTE IMMEDIATE`, stored procedures with dynamic queries, privilege grants
+**Watch for:** Dynamic SQL, `EXECUTE IMMEDIATE`, stored procedures with dynamic queries, privilege
+grants
 
 ---
 
@@ -594,7 +606,8 @@ When reviewing any language, think like a senior security researcher:
 9. **Runtime Behavior:** Debug vs release differences (Rust overflow, C++ assertions).
 10. **Error Handling:** How does the language fail? Silently? With stack traces? Fail-open?
 
-**For any language not listed:** Research its specific CWE patterns, CVE history, and known footguns. The examples above are entry points, not complete coverage.
+**For any language not listed:** Research its specific CWE patterns, CVE history, and known
+footguns. The examples above are entry points, not complete coverage.
 
 ## When to Apply This Skill
 

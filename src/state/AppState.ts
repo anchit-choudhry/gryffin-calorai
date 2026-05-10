@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { mapDbError } from "../lib/utils";
 import {
   addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
@@ -20,21 +21,26 @@ import {
   toggleFavoriteFoodItem,
   updateFoodItem,
   updateUserProfile,
-  type UserProfile,
   type WaterLog,
 } from "../db/dbService";
-import type { BodyMeasurementId, FoodItemId, RecipeId, UserId, WaterLogId } from "../types";
+import type {
+  AppInitState,
+  BodyMeasurementId,
+  FoodItemId,
+  RecipeId,
+  UserId,
+  WaterLogId,
+} from "../types";
 import { todayISO } from "../types";
 
 interface AppState {
-  user: UserProfile | null;
+  init: AppInitState;
   dailyLogs: FoodItem[];
   allFoodItems: FoodItem[];
   recipes: Recipe[];
   favoriteFoods: FoodItem[];
   dailyWaterLogs: WaterLog[];
   bodyMeasurements: BodyMeasurement[];
-  isLoading: boolean;
   error: string | null;
   userId: UserId | null;
   fetchInitialData: (userId: UserId) => Promise<void>;
@@ -60,22 +66,20 @@ interface AppState {
 }
 
 export const useAppState = create<AppState>((set, get) => ({
-  user: null,
+  init: { status: "idle" },
   dailyLogs: [],
   allFoodItems: [],
   recipes: [],
   favoriteFoods: [],
   dailyWaterLogs: [],
   bodyMeasurements: [],
-  isLoading: true,
   error: null,
   userId: null,
 
   fetchInitialData: async (userId: UserId) => {
-    set({ isLoading: true, error: null, userId });
+    set({ init: { status: "loading" }, userId });
     try {
       const profile = await getOrCreateUser(userId, "Guest", "guest@example.com");
-      set({ user: profile });
 
       const logs = await getDailyFoodLogs(userId, todayISO());
       const recipeList = await getAllRecipes(userId);
@@ -84,18 +88,18 @@ export const useAppState = create<AppState>((set, get) => ({
       const waterLogsToday = await getDailyWaterLogs(userId, todayISO());
       const measurements = await getAllBodyMeasurements(userId);
       set({
+        init: { status: "ready", user: profile },
         dailyLogs: logs,
         recipes: recipeList,
         allFoodItems: recentItems,
         favoriteFoods: favorites,
         dailyWaterLogs: waterLogsToday,
         bodyMeasurements: measurements,
-        isLoading: false,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to load app data";
+      const message = mapDbError(error, "Failed to load app data");
       console.error("Error fetching initial app data:", error);
-      set({ error: message, isLoading: false });
+      set({ init: { status: "error", message } });
     }
   },
 
@@ -104,7 +108,7 @@ export const useAppState = create<AppState>((set, get) => ({
       const logs = await getDailyFoodLogs(userId, todayISO());
       set({ dailyLogs: logs, error: null });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to refresh logs";
+      const message = mapDbError(error, "Failed to refresh logs");
       console.error("Error refreshing daily logs:", error);
       set({ error: message });
     }
@@ -120,10 +124,10 @@ export const useAppState = create<AppState>((set, get) => ({
 
     try {
       set({ error: null });
-      await addFoodItemLog(food);
+      await addFoodItemLog({ ...food, userId: state.userId });
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to add food log";
+      const message = mapDbError(error, "Failed to add food log");
       console.error("Error adding food log:", error);
       set({ error: message });
       throw error;
@@ -137,7 +141,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await deleteFoodItem(id, state.userId);
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete log";
+      const message = mapDbError(error, "Failed to delete log");
       console.error("Error deleting food log:", error);
       set({ error: message });
     }
@@ -146,13 +150,13 @@ export const useAppState = create<AppState>((set, get) => ({
   updateCalorieGoal: async (goal: number) => {
     if (!Number.isFinite(goal) || goal < 1 || goal > 99999) return;
     const state = get();
-    if (!state.user || !state.userId) return;
+    if (state.init.status !== "ready" || !state.userId) return;
     try {
-      const updatedUser = { ...state.user, calorieGoal: goal };
+      const updatedUser = { ...state.init.user, calorieGoal: goal };
       await updateUserProfile(updatedUser, state.userId);
-      set({ user: updatedUser });
+      set({ init: { status: "ready", user: updatedUser } });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update goal";
+      const message = mapDbError(error, "Failed to update goal");
       console.error("Error updating calorie goal:", error);
       set({ error: message });
     }
@@ -163,7 +167,7 @@ export const useAppState = create<AppState>((set, get) => ({
       const recipeList = await getAllRecipes(userId);
       set({ recipes: recipeList });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to fetch recipes";
+      const message = mapDbError(error, "Failed to fetch recipes");
       console.error("Error fetching recipes:", error);
       set({ error: message });
     }
@@ -176,7 +180,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await deleteRecipeFromDB(id, state.userId);
       await state.fetchRecipes(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete recipe";
+      const message = mapDbError(error, "Failed to delete recipe");
       console.error("Error deleting recipe:", error);
       set({ error: message });
     }
@@ -187,7 +191,7 @@ export const useAppState = create<AppState>((set, get) => ({
       const items = await getRecentFoodItems(userId);
       set({ allFoodItems: items });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to fetch food items";
+      const message = mapDbError(error, "Failed to fetch food items");
       console.error("Error fetching food items:", error);
       set({ error: message });
     }
@@ -198,7 +202,7 @@ export const useAppState = create<AppState>((set, get) => ({
       const favorites = await getFavoriteFoodItems(userId);
       set({ favoriteFoods: favorites });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to fetch favorites";
+      const message = mapDbError(error, "Failed to fetch favorites");
       console.error("Error fetching favorites:", error);
       set({ error: message });
     }
@@ -212,7 +216,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchFavorites(state.userId);
       await state.fetchAllFoodItems(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to toggle favorite";
+      const message = mapDbError(error, "Failed to toggle favorite");
       console.error("Error toggling favorite:", error);
       set({ error: message });
     }
@@ -225,7 +229,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await updateFoodItem(id, updates, state.userId);
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update food log";
+      const message = mapDbError(error, "Failed to update food log");
       console.error("Error updating food log:", error);
       set({ error: message });
     }
@@ -234,9 +238,11 @@ export const useAppState = create<AppState>((set, get) => ({
   fetchDailyWaterLogs: async (userId: UserId) => {
     try {
       const logs = await getDailyWaterLogs(userId, todayISO());
-      set({ dailyWaterLogs: logs });
+      set({ dailyWaterLogs: logs, error: null });
     } catch (error) {
+      const message = mapDbError(error, "Failed to fetch water logs");
       console.error("Error fetching water logs:", error);
+      set({ error: message });
     }
   },
 
@@ -253,7 +259,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await addWaterLogToDB(log);
       await state.fetchDailyWaterLogs(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to add water log";
+      const message = mapDbError(error, "Failed to add water log");
       console.error("Error adding water log:", error);
       set({ error: message });
     }
@@ -266,7 +272,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await deleteWaterLogFromDB(id, state.userId);
       await state.fetchDailyWaterLogs(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete water log";
+      const message = mapDbError(error, "Failed to delete water log");
       console.error("Error deleting water log:", error);
       set({ error: message });
     }
@@ -275,9 +281,11 @@ export const useAppState = create<AppState>((set, get) => ({
   fetchBodyMeasurements: async (userId: UserId) => {
     try {
       const measurements = await getAllBodyMeasurements(userId);
-      set({ bodyMeasurements: measurements });
+      set({ bodyMeasurements: measurements, error: null });
     } catch (error) {
+      const message = mapDbError(error, "Failed to fetch body measurements");
       console.error("Error fetching body measurements:", error);
+      set({ error: message });
     }
   },
 
@@ -288,7 +296,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await addBodyMeasurementToDB({ ...m, userId: state.userId });
       await state.fetchBodyMeasurements(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to add measurement";
+      const message = mapDbError(error, "Failed to add measurement");
       console.error("Error adding body measurement:", error);
       set({ error: message });
     }
@@ -301,7 +309,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await deleteBodyMeasurementFromDB(id, state.userId);
       await state.fetchBodyMeasurements(state.userId);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete measurement";
+      const message = mapDbError(error, "Failed to delete measurement");
       console.error("Error deleting body measurement:", error);
       set({ error: message });
     }

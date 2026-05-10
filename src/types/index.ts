@@ -1,3 +1,5 @@
+import type { UserProfile } from "../db/dbService";
+
 // Domain-specific branded types to prevent ID mix-ups at compile time
 type Brand<T, B extends string> = T & { readonly __brand: B };
 
@@ -23,21 +25,34 @@ export type RecipeId = Brand<number, "RecipeId">;
 export type ISODate = Brand<string, "ISODate">;
 
 // Constructor functions with branding
-export const UserId = (id: string): UserId => id as UserId;
+export const UserId = (id: string): UserId => {
+  if (!isUserId(id)) throw new Error(`Invalid UserId`);
+  return id as UserId;
+};
 export const FoodItemId = (id: number): FoodItemId => id as FoodItemId;
 export const RecipeId = (id: number): RecipeId => id as RecipeId;
-export const ISODate = (date: string): ISODate => date as ISODate;
+export const ISODate = (date: string): ISODate => {
+  if (!isISODate(date)) throw new Error(`Invalid ISO date: "${date}"`);
+  return date as ISODate;
+};
 
 // Helper to get ISO date for today
-export const todayISO = (): ISODate => ISODate(new Date().toISOString().split("T")[0]);
+export const todayISO = (): ISODate => ISODate(new Date().toISOString().split("T")[0]!);
 
 // Type guards
 export function isFoodItemId(value: unknown): value is FoodItemId {
   return typeof value === "number" && value > 0;
 }
 
+const PRINTABLE_ASCII_ID_RE = /^[\x20-\x7E]+$/;
+
 export function isUserId(value: unknown): value is UserId {
-  return typeof value === "string" && value.length > 0;
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 128 &&
+    PRINTABLE_ASCII_ID_RE.test(value)
+  );
 }
 
 export function isRecipeId(value: unknown): value is RecipeId {
@@ -45,7 +60,21 @@ export function isRecipeId(value: unknown): value is RecipeId {
 }
 
 export function isISODate(value: unknown): value is ISODate {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (typeof value !== "string") return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00`);
+  return !isNaN(d.getTime()) && d.toISOString().startsWith(value);
+}
+
+export const WEIGHT_UNITS = ["kg", "lb"] as const;
+export const LENGTH_UNITS = ["cm", "in"] as const;
+
+export function isWeightUnit(v: string): v is WeightUnit {
+  return (WEIGHT_UNITS as readonly string[]).includes(v);
+}
+
+export function isLengthUnit(v: string): v is LengthUnit {
+  return (LENGTH_UNITS as readonly string[]).includes(v);
 }
 
 const MAX_BARCODE_LENGTH = 100;
@@ -78,16 +107,16 @@ function levenshtein(a: string, b: string): number {
   if (n === 0) return m;
   const dp: number[] = Array.from({ length: n + 1 }, (_, i) => i);
   for (let i = 1; i <= m; i++) {
-    let prev = dp[0];
+    let prev = dp[0]!;
     dp[0] = i;
     for (let j = 1; j <= n; j++) {
-      const temp = dp[j];
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[j] = Math.min(dp[j - 1] + 1, dp[j] + 1, prev + cost);
+      const temp = dp[j]!;
+      const cost = a[i - 1]! === b[j - 1]! ? 0 : 1;
+      dp[j] = Math.min(dp[j - 1]! + 1, dp[j]! + 1, prev + cost);
       prev = temp;
     }
   }
-  return dp[n];
+  return dp[n]!;
 }
 
 export function fuzzyMatchFoodName<T extends { name: string }>(
@@ -96,6 +125,7 @@ export function fuzzyMatchFoodName<T extends { name: string }>(
   limit = 3,
 ): T[] {
   if (!query || corpus.length === 0) return [];
+  if (query.length > MAX_TRANSCRIPT_LENGTH) return [];
   const q = query.toLowerCase();
   const threshold = Math.max(2, Math.floor(q.length / 4));
 
@@ -142,12 +172,12 @@ export function computeStreaks(uniqueDates: readonly string[]): {
   if (uniqueDates.length === 0) return { currentStreak: 0, longestStreak: 0 };
 
   const dateSet = new Set(uniqueDates);
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0]!;
 
   const shiftDay = (date: string, n: number): string => {
     const d = new Date(`${date}T00:00:00`);
     d.setDate(d.getDate() + n);
-    return d.toISOString().split("T")[0];
+    return d.toISOString().split("T")[0]!;
   };
 
   // Walk back from today (or yesterday if today has no log)
@@ -164,7 +194,7 @@ export function computeStreaks(uniqueDates: readonly string[]): {
   let longest = sorted.length > 0 ? 1 : 0;
   let run = 1;
   for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i] === shiftDay(sorted[i - 1], 1)) {
+    if (sorted[i] === shiftDay(sorted[i - 1]!, 1)) {
       longest = Math.max(longest, ++run);
     } else {
       run = 1;
@@ -173,3 +203,27 @@ export function computeStreaks(uniqueDates: readonly string[]): {
 
   return { currentStreak, longestStreak: longest };
 }
+
+// Utility types for type-safe patterns
+export type NonEmptyArray<T> = [T, ...T[]];
+
+export type DeepReadonly<T> = {
+  readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
+
+export type AsyncResult<T> =
+  | { status: "idle" }
+  | { status: "pending" }
+  | { status: "resolved"; data: T }
+  | { status: "rejected"; error: string };
+
+export function assertDefined<T>(val: T | null | undefined, msg: string): asserts val is T {
+  if (val == null) throw new Error(msg);
+}
+
+// App initialization state machine - prevents impossible state combinations
+export type AppInitState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; user: UserProfile }
+  | { status: "error"; message: string };

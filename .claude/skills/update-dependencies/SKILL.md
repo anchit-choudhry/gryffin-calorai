@@ -16,11 +16,13 @@ project remains clean and buildable.
 
 1. **Check for Updates**: Run `pnpm outdated` to see which packages have newer versions available.
 2. **User Review**: Present the list of outdated packages to the user.
-3. **Selection**: Use the `ask_user` tool to confirm which packages the user wants to upgrade and which to skip.
+3. **Selection**: Use the `ask_user` tool to confirm which packages the user wants to upgrade and
+   which to skip.
 4. **Apply Updates**: Run `pnpm update <package1> <package2> ...` for the selected packages.
 5. **Prune Dependencies**: Run `pnpm prune` to remove unreferenced packages.
 6. **Deduplicate Dependencies**: Run `pnpm dedupe` to optimize the dependency tree.
-7. **Lint and Fix**: Run `pnpm lint:fix` to address any new linting issues introduced by the updates.
+7. **Lint and Fix**: Run `pnpm lint:fix` to address any new linting issues introduced by the
+   updates.
 8. **Format Code**: Run `pnpm format` to ensure consistent code styling.
 9. **Run Tests**: Execute `pnpm test` to verify functionality after updates.
 10. **Verify Build**: Run `pnpm build` to confirm that the updates haven't broken the build process.

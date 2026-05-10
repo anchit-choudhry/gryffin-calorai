@@ -1,4 +1,5 @@
-import { FiMic, FiMicOff } from "react-icons/fi";
+import { useMemo } from "react";
+import { Mic, MicOff } from "lucide-react";
 import { useVoiceCapture } from "../hooks/useVoiceCapture";
 import { useAppState } from "../state/AppState";
 import { fuzzyMatchFoodName } from "../types";
@@ -13,36 +14,36 @@ const VoiceFoodLogger = ({ onTranscriptMatched }: VoiceFoodLoggerProps) => {
     useVoiceCapture();
   const { allFoodItems, favoriteFoods } = useAppState();
 
-  const corpus: readonly FoodItem[] = [
-    ...favoriteFoods,
-    ...allFoodItems.filter((item) => !favoriteFoods.some((fav) => fav.name === item.name)),
-  ];
+  const corpus: readonly FoodItem[] = useMemo(
+    () => [
+      ...favoriteFoods,
+      ...allFoodItems.filter((item) => !favoriteFoods.some((fav) => fav.name === item.name)),
+    ],
+    [favoriteFoods, allFoodItems],
+  );
 
-  const candidates = transcript ? fuzzyMatchFoodName(transcript, corpus, 3) : [];
+  const candidates = useMemo(
+    () => (transcript ? fuzzyMatchFoodName(transcript, corpus, 3) : []),
+    [transcript, corpus],
+  );
 
   return (
-    <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md bg-white dark:bg-gray-800 space-y-4">
-      <h3 className="text-xl font-semibold border-b dark:border-gray-700 pb-2 text-gray-700 dark:text-gray-200">
-        Voice Logger
-      </h3>
-
-      {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-        </div>
-      )}
+    <div className="space-y-4">
+      {error && <p className="font-mono text-[11px] text-persimmon">{error}</p>}
 
       {isListening && (
         <div className="space-y-3">
-          <div className="w-full h-32 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg flex flex-col items-center justify-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-500 dark:bg-indigo-400 flex items-center justify-center animate-pulse">
-              <FiMic className="text-white text-lg" />
+          <div className="w-full h-32 border border-persimmon bg-persimmon-soft flex flex-col items-center justify-center gap-3">
+            <div className="flex items-center justify-center animate-pulse">
+              <Mic className="text-persimmon size-6" />
             </div>
-            <p className="text-sm text-indigo-600 dark:text-indigo-300">Listening...</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon">
+              Listening
+            </p>
           </div>
           <button
             onClick={stopListening}
-            className="w-full py-2 px-4 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition shadow-sm"
+            className="w-full py-2.5 border border-rule font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors"
           >
             Stop Listening
           </button>
@@ -51,42 +52,45 @@ const VoiceFoodLogger = ({ onTranscriptMatched }: VoiceFoodLoggerProps) => {
 
       {transcript && !isListening && (
         <div className="space-y-3">
-          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">You said:</p>
-            <p className="text-base text-indigo-700 dark:text-indigo-300 italic">
-              &ldquo;{transcript}&rdquo;
+          <div className="border-l-2 border-persimmon pl-4 py-1">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mb-1">
+              You said
             </p>
+            <p className="font-display italic text-lg text-ink">&ldquo;{transcript}&rdquo;</p>
           </div>
 
           {candidates.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Matched foods:</p>
-              {candidates.map((item) => (
-                <button
-                  key={item.id ?? item.name}
-                  onClick={() => onTranscriptMatched?.(item.name)}
-                  className="w-full flex justify-between items-center px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition text-left"
-                >
-                  <span className="font-medium text-green-800 dark:text-green-300">
-                    {item.name}
-                  </span>
-                  <span className="text-sm text-green-600 dark:text-green-400">
-                    {item.calories} kcal
-                  </span>
-                </button>
-              ))}
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mb-2">
+                Matched foods
+              </p>
+              <ul className="divide-y divide-rule border-y border-rule">
+                {candidates.map((item) => (
+                  <li key={item.id ?? item.name}>
+                    <button
+                      onClick={() => onTranscriptMatched?.(item.name)}
+                      className="w-full flex justify-between items-baseline px-0 py-2.5 hover:text-persimmon transition-colors text-left group"
+                    >
+                      <span className="font-display text-base text-ink group-hover:text-persimmon transition-colors">
+                        {item.name}
+                      </span>
+                      <span className="font-mono text-[11px] tabular-nums text-ink-soft">
+                        {item.calories} kcal
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : (
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                No matching foods found. Try again or log manually.
-              </p>
-            </div>
+            <p className="font-mono text-[11px] text-ink-soft">
+              No matching foods found. Try again or log manually.
+            </p>
           )}
 
           <button
             onClick={startListening}
-            className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition shadow-sm font-medium"
+            className="w-full py-2.5 border border-rule font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors"
           >
             Try Again
           </button>
@@ -95,17 +99,17 @@ const VoiceFoodLogger = ({ onTranscriptMatched }: VoiceFoodLoggerProps) => {
 
       {!isListening && !transcript && (
         <div className="space-y-3">
-          <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 gap-2">
-            <FiMicOff className="text-gray-400 dark:text-gray-500 text-2xl" />
-            <span className="text-gray-500 dark:text-gray-400 text-sm">
-              {isSupported ? "Click to start listening" : "Voice recognition not supported"}
+          <div className="w-full h-32 bg-paper-muted border border-rule flex flex-col items-center justify-center gap-2">
+            <MicOff className="text-ink-soft size-5" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              {isSupported ? "Click to start listening" : "Not supported in this browser"}
             </span>
           </div>
           <button
             onClick={startListening}
             disabled={!isSupported}
             title={!isSupported ? "Voice recognition is not supported in this browser." : undefined}
-            className="w-full py-2 px-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-[0.2em] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Speak Food
           </button>

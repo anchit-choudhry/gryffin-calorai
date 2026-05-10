@@ -58,7 +58,7 @@ describe("dbService", () => {
     const logs = await getDailyFoodLogs(UserId("1"), todayISO());
 
     expect(logs).toHaveLength(1);
-    expect(logs[0].name).toBe("Apple");
+    expect(logs[0]!.name).toBe("Apple");
 
     const names = logs.map((log) => log.name);
     expect(names).toEqual(["Apple"]);
@@ -137,7 +137,7 @@ describe("dbService", () => {
     const userId = UserId("4");
     const today = todayISO();
     const yesterday = ISODate(
-      new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0],
+      new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0]!,
     );
 
     await foodItems.add({
@@ -221,6 +221,21 @@ describe("dbService", () => {
 
     const retrieved = await getOrCreateUser(userId, "TestUser", "test@example.com");
     expect(retrieved.calorieGoal).toBe(2500);
+  });
+
+  it("should handle concurrent getOrCreateUser calls without throwing", async () => {
+    const userId = UserId("concurrent-user");
+    // Call getOrCreateUser twice in parallel
+    const results = await Promise.all([
+      getOrCreateUser(userId, "Parallel1", "p1@example.com"),
+      getOrCreateUser(userId, "Parallel2", "p2@example.com"),
+    ]);
+
+    expect(results[0].id).toBe(userId);
+    expect(results[1].id).toBe(userId);
+
+    const count = await db.table("users").where("id").equals(userId).count();
+    expect(count).toBe(1);
   });
 
   it("should toggle favorite on a food item", async () => {
@@ -390,7 +405,7 @@ describe("dbService", () => {
 
       const logs = await getDailyWaterLogs(userId, today);
       expect(logs).toHaveLength(1);
-      expect(logs[0].amount).toBe(300);
+      expect(logs[0]!.amount).toBe(300);
     });
 
     it("should delete a water log", async () => {
@@ -443,9 +458,9 @@ describe("dbService", () => {
 
       const measurements = await getAllBodyMeasurements(userId);
       expect(measurements).toHaveLength(1);
-      expect(measurements[0].waist).toBe(85);
-      expect(measurements[0].chest).toBe(100);
-      expect(measurements[0].bodyFat).toBeUndefined();
+      expect(measurements[0]!.waist).toBe(85);
+      expect(measurements[0]!.chest).toBe(100);
+      expect(measurements[0]!.bodyFat).toBeUndefined();
     });
 
     it("should delete a body measurement", async () => {
