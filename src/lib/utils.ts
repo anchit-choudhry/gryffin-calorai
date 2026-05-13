@@ -1,9 +1,27 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Dexie } from "dexie";
+import type { FoodItem } from "../db/dbService";
+import { MEAL_TYPES, type MealType } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export const EDITORIAL_INPUT_CLS =
+  "border-0 border-b border-rule rounded-none bg-transparent font-mono text-sm text-ink " +
+  "focus-visible:ring-0 focus-visible:border-persimmon placeholder:text-ink-soft/50 py-1 h-auto";
+
+export interface GroupedMealLog {
+  meal: MealType;
+  items: FoodItem[];
+}
+
+export function groupLogsByMeal(logs: FoodItem[]): GroupedMealLog[] {
+  return MEAL_TYPES.map((meal) => ({
+    meal,
+    items: logs.filter((log) => log.mealType === meal),
+  })).filter((group) => group.items.length > 0);
 }
 
 const VALID_HASHES = new Set(["#dashboard", "#recipes", "#progress"] as const);

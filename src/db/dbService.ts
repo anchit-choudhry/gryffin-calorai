@@ -6,13 +6,17 @@ import type {
   ISODate,
   MealType,
   RecipeId,
+  StepLogId,
+  UserAchievementId,
   UserId,
   WaterLogId,
-} from "../types";
+} from "@/types";
 import {
   BodyMeasurementId as makeBodyMeasurementId,
   FoodItemId as makeFoodItemId,
   RecipeId as makeRecipeId,
+  StepLogId as makeStepLogId,
+  UserAchievementId as makeUserAchievementId,
   WaterLogId as makeWaterLogId,
 } from "../types";
 
@@ -71,6 +75,21 @@ export interface BodyMeasurement {
   waist?: number; // cm
   chest?: number; // cm
   hips?: number; // cm
+}
+
+export interface UserAchievement {
+  id?: UserAchievementId;
+  userId: UserId;
+  achievementId: string;
+  unlockedAt: string; // ISO timestamp
+}
+
+export interface StepLog {
+  id?: StepLogId;
+  userId: UserId;
+  steps: number;
+  dateLogged: ISODate;
+  loggedAt: string; // ISO timestamp for intra-day ordering
 }
 
 // 1. Initialize Dexie Database
@@ -172,12 +191,37 @@ db.version(7).stores({
   bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
 });
 
+// 8. Version 8: add userAchievements table
+db.version(8).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+});
+
+// 9. Version 9: add stepLogs table
+db.version(9).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
 export const recipes: Table<Recipe> = db.table("recipes");
 export const waterLogs: Table<WaterLog> = db.table("waterLogs");
 export const bodyMeasurements: Table<BodyMeasurement> = db.table("bodyMeasurements");
+export const userAchievements: Table<UserAchievement> = db.table("userAchievements");
+export const stepLogs: Table<StepLog> = db.table("stepLogs");
 
 export const initializeDB = async () => {
   try {
@@ -324,6 +368,10 @@ export const getDailyWaterLogs = async (userId: UserId, date: ISODate): Promise<
   return waterLogs.where("[userId+dateLogged]").equals([userId, date]).toArray();
 };
 
+export const getAllWaterLogs = async (userId: UserId): Promise<WaterLog[]> => {
+  return waterLogs.where("userId").equals(userId).toArray();
+};
+
 export const deleteWaterLog = async (id: WaterLogId, userId: UserId): Promise<void> => {
   const log = await waterLogs.get(id);
   if (!log || log.userId !== userId) return;
@@ -348,4 +396,41 @@ export const deleteBodyMeasurement = async (
   const m = await bodyMeasurements.get(id);
   if (!m || m.userId !== userId) return;
   await bodyMeasurements.delete(id);
+};
+
+// --- User Achievement CRUD ---
+
+export const addUserAchievement = async (a: UserAchievement): Promise<UserAchievementId> => {
+  const id = await userAchievements.add(a);
+  return makeUserAchievementId(id);
+};
+
+export const getUnlockedAchievements = async (userId: UserId): Promise<UserAchievement[]> => {
+  return userAchievements.where("userId").equals(userId).toArray();
+};
+
+export const getUnlockedAchievementIds = async (userId: UserId): Promise<Set<string>> => {
+  const rows = await userAchievements.where("userId").equals(userId).toArray();
+  return new Set(rows.map((r) => r.achievementId));
+};
+
+// --- Step Log CRUD ---
+
+export const addStepLog = async (log: StepLog): Promise<StepLogId> => {
+  const id = await stepLogs.add(log);
+  return makeStepLogId(id);
+};
+
+export const getDailyStepLogs = async (userId: UserId, date: ISODate): Promise<StepLog[]> => {
+  return stepLogs.where("[userId+dateLogged]").equals([userId, date]).toArray();
+};
+
+export const getAllStepLogs = async (userId: UserId): Promise<StepLog[]> => {
+  return stepLogs.where("userId").equals(userId).toArray();
+};
+
+export const deleteStepLog = async (id: StepLogId, userId: UserId): Promise<void> => {
+  const log = await stepLogs.get(id);
+  if (!log || log.userId !== userId) return;
+  await stepLogs.delete(id);
 };

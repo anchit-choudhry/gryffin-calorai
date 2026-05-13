@@ -5,15 +5,27 @@ type Brand<T, B extends string> = T & { readonly __brand: B };
 
 export type WaterLogId = Brand<number, "WaterLogId">;
 export type BodyMeasurementId = Brand<number, "BodyMeasurementId">;
+export type UserAchievementId = Brand<number, "UserAchievementId">;
+export type StepLogId = Brand<number, "StepLogId">;
 
 export const WaterLogId = (id: number): WaterLogId => id as WaterLogId;
 export const BodyMeasurementId = (id: number): BodyMeasurementId => id as BodyMeasurementId;
+export const UserAchievementId = (id: number): UserAchievementId => id as UserAchievementId;
+export const StepLogId = (id: number): StepLogId => id as StepLogId;
 
 export function isWaterLogId(value: unknown): value is WaterLogId {
   return typeof value === "number" && value > 0;
 }
 
 export function isBodyMeasurementId(value: unknown): value is BodyMeasurementId {
+  return typeof value === "number" && value > 0;
+}
+
+export function isUserAchievementId(value: unknown): value is UserAchievementId {
+  return typeof value === "number" && value > 0;
+}
+
+export function isStepLogId(value: unknown): value is StepLogId {
   return typeof value === "number" && value > 0;
 }
 
@@ -156,6 +168,7 @@ export const MEAL_TYPES: readonly MealType[] = ["Breakfast", "Lunch", "Snacks", 
 export const DEFAULT_MEAL_TYPE: MealType = "Breakfast";
 
 export const DAILY_WATER_GOAL_ML = 2000;
+export const DAILY_STEP_GOAL = 10000;
 
 export type WeightUnit = "kg" | "lb";
 export type LengthUnit = "cm" | "in";

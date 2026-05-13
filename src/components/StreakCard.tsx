@@ -28,11 +28,18 @@ const StreakCard = () => {
           {currentStreak >= 7 ? "🔥" : currentStreak >= 3 ? "⚡" : "📅"}
         </div>
       </div>
-      {currentStreak > 0 && (
+      {currentStreak > 0 ? (
         <p className="font-mono text-[10px] text-ink-soft mt-3">
           {currentStreak === 1
             ? "Great start - log tomorrow to build your streak!"
             : `${currentStreak} days in a row. Keep it going!`}
+        </p>
+      ) : (
+        <p className="font-mono text-[10px] text-ink-soft mt-3">
+          <span className="mr-1" aria-hidden="true">
+            📅
+          </span>
+          Start logging today to build your streak!
         </p>
       )}
     </div>

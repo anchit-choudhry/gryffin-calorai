@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { useAppState } from "../state/AppState";
 import { useBodyForm } from "../hooks/useBodyForm";
-import { cmToIn, isLengthUnit, isWeightUnit, kgToLb } from "../types";
+import { cmToIn, isLengthUnit, isWeightUnit, kgToLb } from "@/types";
 import {
   Dialog,
   DialogContent,
@@ -27,9 +27,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const inputCls =
-  "w-full border border-rule rounded p-2 text-sm bg-paper text-ink placeholder-ink-soft";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { EDITORIAL_INPUT_CLS } from "../lib/utils";
 
 const BodyMeasurements = () => {
   const { bodyMeasurements, deleteBodyMeasurement } = useAppState();
@@ -96,9 +96,12 @@ const BodyMeasurements = () => {
         </div>
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogTrigger asChild>
-            <button className="ml-auto px-4 py-1.5 rounded-md bg-persimmon text-paper hover:bg-persimmon/90 text-sm font-medium transition-colors">
+            <Button
+              variant="persimmon"
+              className="ml-auto font-mono text-sm rounded-none h-auto px-4 py-1.5"
+            >
               + Log Measurement
-            </button>
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -121,12 +124,12 @@ const BodyMeasurements = () => {
                       <FormItem>
                         <FormLabel>Weight ({weightUnit}) *</FormLabel>
                         <FormControl>
-                          <input
+                          <Input
                             {...field}
                             type="number"
                             placeholder="e.g. 70"
                             min="1"
-                            className={inputCls}
+                            className={EDITORIAL_INPUT_CLS}
                           />
                         </FormControl>
                         <FormMessage />
@@ -140,13 +143,13 @@ const BodyMeasurements = () => {
                       <FormItem>
                         <FormLabel>Body Fat (%)</FormLabel>
                         <FormControl>
-                          <input
+                          <Input
                             {...field}
                             type="number"
                             placeholder="e.g. 18"
                             min="1"
                             max="99"
-                            className={inputCls}
+                            className={EDITORIAL_INPUT_CLS}
                           />
                         </FormControl>
                         <FormMessage />
@@ -160,12 +163,12 @@ const BodyMeasurements = () => {
                       <FormItem>
                         <FormLabel>Waist ({lengthUnit})</FormLabel>
                         <FormControl>
-                          <input
+                          <Input
                             {...field}
                             type="number"
                             placeholder="e.g. 80"
                             min="1"
-                            className={inputCls}
+                            className={EDITORIAL_INPUT_CLS}
                           />
                         </FormControl>
                         <FormMessage />
@@ -179,12 +182,12 @@ const BodyMeasurements = () => {
                       <FormItem>
                         <FormLabel>Chest ({lengthUnit})</FormLabel>
                         <FormControl>
-                          <input
+                          <Input
                             {...field}
                             type="number"
                             placeholder="e.g. 95"
                             min="1"
-                            className={inputCls}
+                            className={EDITORIAL_INPUT_CLS}
                           />
                         </FormControl>
                         <FormMessage />
@@ -198,12 +201,12 @@ const BodyMeasurements = () => {
                       <FormItem>
                         <FormLabel>Hips ({lengthUnit})</FormLabel>
                         <FormControl>
-                          <input
+                          <Input
                             {...field}
                             type="number"
                             placeholder="e.g. 90"
                             min="1"
-                            className={inputCls}
+                            className={EDITORIAL_INPUT_CLS}
                           />
                         </FormControl>
                         <FormMessage />
@@ -211,13 +214,14 @@ const BodyMeasurements = () => {
                     )}
                   />
                 </div>
-                <button
+                <Button
                   type="submit"
+                  variant="persimmon"
                   disabled={isLoading}
-                  className="px-4 py-2 rounded-md bg-violet-600 text-white hover:bg-violet-700 text-sm font-medium transition-colors disabled:opacity-50"
+                  className="font-mono text-sm rounded-none h-auto w-full px-4 py-2"
                 >
                   {isLoading ? "Saving..." : "Save Measurement"}
-                </button>
+                </Button>
               </form>
             </Form>
           </DialogContent>
@@ -292,13 +296,17 @@ const BodyMeasurements = () => {
                     {m.hips !== undefined ? displayLength(m.hips) : "-"}
                   </td>
                   <td className="py-2">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="text-ink-soft hover:text-destructive transition-colors"
                       onClick={() => m.id && deleteBodyMeasurement(m.id)}
-                      className="text-red-400 hover:text-red-600 text-xs p-0.5 rounded transition"
-                      aria-label={`Delete measurement from ${m.measuredAt}`}
+                      aria-label={`Delete
+                    measurement from
+                    ${m.measuredAt}`}
                     >
                       ✕
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}

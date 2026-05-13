@@ -70,7 +70,7 @@ tool.
   `vendor-motion`, `vendor-ui` (shadcn/Radix)
 - **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body
   measurements.
-- **DB:** Dexie.js tables with compound indices; currently at **schema version 7**
+- **DB:** Dexie.js tables with compound indices; currently at **schema version 9**
 - **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`,
   `userId`, `isFavorite`, `mealType`
 - **MealType:** `"Breakfast" | "Lunch" | "Snacks" | "Dinner"` (defined in `src/types/index.ts`)
@@ -123,16 +123,17 @@ For quick dev commands, see @@README.md
 
 ## Critical File Locations
 
-| Category       | File                                                                                          | Key Info                                            |
-|----------------|-----------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| **State**      | `src/state/AppState.ts`                                                                       | Single Zustand store; all mutations here            |
-| **DB**         | `src/db/dbService.ts`                                                                         | Dexie schema v7, CRUD, compound indices             |
-| **Types**      | `src/types/index.ts`                                                                          | Branded types, type guards, sanitizers, fuzzy match |
-| **Pages**      | `src/pages/{Dashboard,Recipes,Progress}.tsx`                                                  | Main views (lazy-loaded)                            |
-| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,BodyMeasurements}.tsx` | UI components; Voice, Water, and Body trackers      |
-| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useBodyForm,useStreaks}.ts`              | Core logic for logging and tracking                 |
-| **Tests**      | `src/**/*.test.{ts,tsx}`                                                                      | Vitest + jsdom + fake-indexeddb + coverage          |
-| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                         | Build (with CSP) & test setup                       |
+| Category       | File                                                                                                                             | Key Info                                             |
+|----------------|----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------|
+| **State**      | `src/state/AppState.ts`                                                                                                          | Single Zustand store; all mutations here             |
+| **DB**         | `src/db/dbService.ts`                                                                                                            | Dexie schema v9, CRUD, compound indices              |
+| **Types**      | `src/types/index.ts`                                                                                                             | Branded types, type guards, sanitizers, fuzzy match  |
+| **Pages**      | `src/pages/{Dashboard,Recipes,Progress}.tsx`                                                                                     | Main views (lazy-loaded)                             |
+| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements}.tsx`                        | UI components; Voice, Water, Step, and Body trackers |
+| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useStepForm,useBodyForm,useStreaks,useProgressData,useWaterHistoryData}.ts` | Core logic for logging, tracking, and chart data     |
+| **Motion**     | `src/lib/motionVariants.ts`                                                                                                      | Shared `pageVariants` + `sectionVariants` for motion |
+| **Tests**      | `src/**/*.test.{ts,tsx}`                                                                                                         | Vitest + jsdom + fake-indexeddb + coverage           |
+| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                                                            | Build (with CSP) & test setup                        |
 
 ---
 
@@ -162,11 +163,21 @@ pnpm build            # Production build
   with focus trap + Esc close
 - react-hook-form 7 + zod v3 validation on all four form hooks; field-level errors via
   `<FormMessage />`
-- motion 12 layout animations on log list with stagger; sonner toasts; lucide-react icons
+- motion 12 layout animations on log list with stagger; shared `pageVariants`/`sectionVariants` in
+  `src/lib/motionVariants.ts`; sonner toasts; lucide-react icons
 - Editorial design system (oklch color palette, @fontsource-variable typography, responsive grid
   layout)
-- Refactored Dashboard with 5-section layout (Hero, Week, Pantry, Add to Log, Today's Log)
+- Refactored Dashboard with 5-section layout (Hero, Week, Pantry, Add to Log, Today's Log);
+  logs grouped by meal type via `groupLogsByMeal()`
+- Progress page with 7 sections: calorie (stacked bars + goal line), macro breakdown (AreaChart),
+  water intake (AreaChart), body measurements (LineChart), meal distribution (PieChart),
+  achievements grid; 7/30-day toggle
+- `src/lib/utils.ts` exports: `cn`, `EDITORIAL_INPUT_CLS`, `groupLogsByMeal`, `normalizeHash`,
+  `mapDbError`
 - 11 GitHub Actions workflows, OWASP/Security skills, 12+ test files with coverage
+- Step tracking (manual); `StepLog` entity, DB v9, `StepTracker` component, `useStepForm` hook
+- Gamification achievement system; `UserAchievement` entity, DB v8, `evaluateAchievements` engine;
+  20 achievements across streak, calorie, hydration, milestone, body, recipe categories
 
 **Still Pending / Placeholders:**
 
@@ -180,13 +191,14 @@ compliance pending
 
 **v0.0.8 Roadmap:**
 
-- [ ] Step Tracking (Feature 5 - follows useWaterForm pattern; `StepLog` entity, `StepTracker`
+- [x] Step Tracking (Feature 5 - follows useWaterForm pattern; `StepLog` entity, `StepTracker`
   component)
+- [x] Gamification achievement system (Feature 8 - `UserAchievement` entity, evaluation engine)
 - [ ] Macro nutrient breakdown display for recipes (on recipe card + log entry)
 - [ ] Component test coverage >80% (targeting all Dashboard sub-components)
 - [ ] Advanced filtering and search (date range, meal type filters)
 
 ---
 
-**Last Updated:** May 10, 2026  
+**Last Updated:** May 12, 2026  
 **Maintainer:** Anchit Choudhry

@@ -5,9 +5,10 @@ import PageLoading from "../components/PageLoading";
 import VoiceFoodLogger from "../components/VoiceFoodLogger";
 import WeeklySummary from "../components/WeeklySummary";
 import WaterTracker from "../components/WaterTracker";
+import StepTracker from "../components/StepTracker";
 import StreakCard from "../components/StreakCard";
 import { useAppState } from "../state/AppState";
-import { todayISO } from "../types";
+import { todayISO } from "@/types";
 import type { FoodItem } from "../db/dbService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DashboardHero from "../components/dashboard/DashboardHero";
@@ -15,12 +16,21 @@ import SectionHeader from "../components/dashboard/SectionHeader";
 import EditorialFrame from "../components/dashboard/EditorialFrame";
 import LogEntry from "../components/dashboard/LogEntry";
 import { pageVariants, sectionVariants } from "../lib/motionVariants";
+import { groupLogsByMeal } from "../lib/utils";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 
 const Dashboard = () => {
-  const { init, dailyLogs, deleteFoodLog, favoriteFoods, toggleFavorite, addFoodLog, userId } =
-    useAppState();
+  const {
+    init,
+    dailyLogs,
+    deleteFoodLog,
+    favoriteFoods,
+    toggleFavorite,
+    addFoodLog,
+    userId,
+    allFoodItems,
+  } = useAppState();
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
   const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
   const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
@@ -37,12 +47,32 @@ const Dashboard = () => {
     [dailyLogs],
   );
 
+  const groupedLogs = useMemo(() => groupLogsByMeal(dailyLogs), [dailyLogs]);
+  const recentFoods = useMemo(() => allFoodItems.slice(0, 8), [allFoodItems]);
+
   const closeEditLog = useCallback(() => setEditingLog(null), []);
   const closeBarcodeFood = useCallback(() => setBarcodeFood(null), []);
   const closeVoiceFood = useCallback(() => setVoiceFood(null), []);
 
   const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
   const hasFavorites = favoriteFoods.length > 0;
+  const hasRecentFoods = recentFoods.length > 0;
+
+  const sectionKicker = useMemo(() => {
+    const kickers: (string | null)[] = [];
+    if (hasRecentFoods) kickers.push(String(kickers.length + 1).padStart(2, "0"));
+    else kickers.push(null);
+    if (hasFavorites) kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
+    else kickers.push(null);
+    kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
+    kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
+    return {
+      recent: kickers[0],
+      pantry: kickers[1],
+      addLog: kickers[2],
+      todayLog: kickers[3],
+    };
+  }, [hasRecentFoods, hasFavorites]);
 
   return (
     <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
@@ -110,18 +140,54 @@ const Dashboard = () => {
           <div className="col-span-12 lg:col-span-6 border border-rule p-6">
             <WeeklySummary />
           </div>
-          <div className="col-span-6 lg:col-span-3 border border-rule p-5">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
             <StreakCard />
           </div>
-          <div className="col-span-6 lg:col-span-3 border border-rule p-5">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
             <WaterTracker />
+          </div>
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
+            <StepTracker />
           </div>
         </motion.section>
 
-        {/* Section C — From the Pantry */}
+        {/* Section C — Recently Logged */}
+        {hasRecentFoods && (
+          <motion.section className="col-span-12" {...sv}>
+            <SectionHeader kicker={sectionKicker.recent!} title="Recently Logged" />
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
+              {recentFoods.map((item) => (
+                <button
+                  key={item.id ?? item.name}
+                  onClick={async () => {
+                    if (userId) {
+                      await addFoodLog({
+                        userId,
+                        name: item.name,
+                        calories: item.calories,
+                        servingSize: item.servingSize,
+                        protein: item.protein,
+                        carbs: item.carbs,
+                        fat: item.fat,
+                        dateLogged: todayISO(),
+                        isFavorite: false,
+                        mealType: item.mealType,
+                      });
+                    }
+                  }}
+                  className="shrink-0 border border-rule rounded-full px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft hover:bg-paper-muted hover:text-ink transition-colors snap-start"
+                >
+                  {item.name} · {item.calories} kcal
+                </button>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
+        {/* Section D — From the Pantry */}
         {hasFavorites && (
           <motion.section className="col-span-12" {...sv}>
-            <SectionHeader kicker="02" title="From the Pantry" />
+            <SectionHeader kicker={sectionKicker.pantry!} title="From the Pantry" />
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
               {favoriteFoods.map((fav) => (
                 <button
@@ -151,11 +217,11 @@ const Dashboard = () => {
           </motion.section>
         )}
 
-        {/* Section D — Add to Today's Log */}
+        {/* Section E — Add to Today's Log */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
           <SectionHeader
             className="col-span-12"
-            kicker={hasFavorites ? "03" : "02"}
+            kicker={sectionKicker.addLog!}
             title="Add to Today's Log"
           />
           <div className="col-span-12 lg:col-span-6">
@@ -179,10 +245,10 @@ const Dashboard = () => {
           </div>
         </motion.section>
 
-        {/* Section E — Today's Log */}
+        {/* Section F — Today's Log */}
         <motion.section className="col-span-12" {...sv}>
           <SectionHeader
-            kicker={hasFavorites ? "04" : "03"}
+            kicker={sectionKicker.todayLog!}
             title="Today's Log"
             subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
           />
@@ -193,19 +259,45 @@ const Dashboard = () => {
           ) : init.status === "error" ? (
             <p className="text-destructive mt-6 font-mono text-sm">{init.message}</p>
           ) : dailyLogs.length > 0 ? (
-            <ul className="divide-y divide-rule border-y border-rule mt-4">
-              <AnimatePresence initial={false}>
-                {dailyLogs.map((log) => (
-                  <LogEntry
-                    key={log.id!}
-                    log={log}
-                    onEdit={setEditingLog}
-                    onDelete={deleteFoodLog}
-                    onToggleFavorite={toggleFavorite}
-                  />
-                ))}
+            <div className="space-y-6 mt-4">
+              <AnimatePresence mode="popLayout" initial={false}>
+                {groupedLogs.map((group) => {
+                  const groupTotal = group.items.reduce((sum, log) => sum + log.calories, 0);
+                  return (
+                    <motion.div
+                      key={group.meal}
+                      layout
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -16 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="flex items-baseline gap-4 mb-3 pb-2 border-b border-rule/50">
+                        <span className="font-mono uppercase text-[11px] tracking-[0.25em] text-ink-soft font-semibold">
+                          {group.meal}
+                        </span>
+                        <span className="ml-auto font-mono text-[10px] text-persimmon tabular-nums">
+                          {groupTotal.toLocaleString()} kcal
+                        </span>
+                      </div>
+                      <ul className="space-y-0 divide-y divide-rule/50">
+                        <AnimatePresence initial={false}>
+                          {group.items.map((log) => (
+                            <LogEntry
+                              key={log.id!}
+                              log={log}
+                              onEdit={setEditingLog}
+                              onDelete={deleteFoodLog}
+                              onToggleFavorite={toggleFavorite}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </ul>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
-            </ul>
+            </div>
           ) : (
             <p className="font-display italic text-ink-soft text-lg mt-6">
               Nothing logged yet today.

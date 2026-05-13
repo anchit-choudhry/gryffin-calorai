@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppState } from "../state/AppState";
 import { getAllFoodLogs } from "../db/dbService";
-import { DEFAULT_MEAL_TYPE, ISODate, MEAL_TYPES, type MealType } from "../types";
+import { DEFAULT_MEAL_TYPE, ISODate, MEAL_TYPES, type MealType } from "@/types";
 
 interface MealTypeData {
   Breakfast: number[];
@@ -10,16 +10,24 @@ interface MealTypeData {
   Dinner: number[];
 }
 
+interface MacroData {
+  protein: number[];
+  carbs: number[];
+  fat: number[];
+}
+
 export function useProgressData(days: 7 | 30 = 7): {
   labels: string[];
   data: number[];
   mealTypeData: MealTypeData | null;
+  macroData: MacroData | null;
   isLoading: boolean;
 } {
   const { userId } = useAppState();
   const [labels, setLabels] = useState<string[]>([]);
   const [data, setData] = useState<number[]>([]);
   const [mealTypeData, setMealTypeData] = useState<MealTypeData | null>(null);
+  const [macroData, setMacroData] = useState<MacroData | null>(null);
   const [isLoading, setIsLoading] = useState(!userId);
 
   useEffect(() => {
@@ -32,13 +40,22 @@ export function useProgressData(days: 7 | 30 = 7): {
 
         // Build nested map: dateLogged -> mealType -> total calories
         const mealMap = new Map<string, Map<MealType, number>>();
+        // Track macros per day: dateLogged -> { protein, carbs, fat }
+        const macroMap = new Map<string, { protein: number; carbs: number; fat: number }>();
+
         for (const log of logs) {
           const mt = log.mealType ?? DEFAULT_MEAL_TYPE;
           if (!mealMap.has(log.dateLogged)) {
             mealMap.set(log.dateLogged, new Map());
+            macroMap.set(log.dateLogged, { protein: 0, carbs: 0, fat: 0 });
           }
           const dayMap = mealMap.get(log.dateLogged)!;
           dayMap.set(mt, (dayMap.get(mt) ?? 0) + log.calories);
+
+          const dayMacro = macroMap.get(log.dateLogged)!;
+          dayMacro.protein += log.protein ?? 0;
+          dayMacro.carbs += log.carbs ?? 0;
+          dayMacro.fat += log.fat ?? 0;
         }
 
         // Build totalsMap from mealMap (sum all meal types per day)
@@ -67,7 +84,7 @@ export function useProgressData(days: 7 | 30 = 7): {
         setLabels(dateLabels);
         setData(calorieTotals);
 
-        // Only build mealTypeData for 7-day view
+        // Only build mealTypeData and macroData for 7-day view
         if (days === 7) {
           const grouped: MealTypeData = {
             Breakfast: [],
@@ -75,15 +92,26 @@ export function useProgressData(days: 7 | 30 = 7): {
             Snacks: [],
             Dinner: [],
           };
+          const macros: MacroData = {
+            protein: [],
+            carbs: [],
+            fat: [],
+          };
           for (const iso of isoKeys) {
             const dayMap = mealMap.get(iso);
+            const dayMacro = macroMap.get(iso);
             for (const mt of MEAL_TYPES) {
               grouped[mt].push(dayMap?.get(mt) ?? 0);
             }
+            macros.protein.push(dayMacro?.protein ?? 0);
+            macros.carbs.push(dayMacro?.carbs ?? 0);
+            macros.fat.push(dayMacro?.fat ?? 0);
           }
           setMealTypeData(grouped);
+          setMacroData(macros);
         } else {
           setMealTypeData(null);
+          setMacroData(null);
         }
 
         setIsLoading(false);
@@ -100,5 +128,5 @@ export function useProgressData(days: 7 | 30 = 7): {
     };
   }, [userId, days]);
 
-  return { labels, data, mealTypeData, isLoading };
+  return { labels, data, mealTypeData, macroData, isLoading };
 }

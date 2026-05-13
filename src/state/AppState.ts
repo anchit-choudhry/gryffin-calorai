@@ -1,26 +1,37 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 import { mapDbError } from "../lib/utils";
 import {
   addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
+  addStepLog as addStepLogToDB,
+  addUserAchievement as addUserAchievementToDB,
   addWaterLog as addWaterLogToDB,
   type BodyMeasurement,
   deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
   deleteRecipe as deleteRecipeFromDB,
+  deleteStepLog as deleteStepLogFromDB,
   deleteWaterLog as deleteWaterLogFromDB,
   type FoodItem,
   getAllBodyMeasurements,
+  getAllFoodLogs,
   getAllRecipes,
+  getAllWaterLogs,
   getDailyFoodLogs,
+  getDailyStepLogs,
   getDailyWaterLogs,
   getFavoriteFoodItems,
   getOrCreateUser,
   getRecentFoodItems,
+  getUnlockedAchievementIds,
+  getUnlockedAchievements,
   type Recipe,
+  type StepLog,
   toggleFavoriteFoodItem,
   updateFoodItem,
   updateUserProfile,
+  type UserAchievement,
   type WaterLog,
 } from "../db/dbService";
 import type {
@@ -28,10 +39,12 @@ import type {
   BodyMeasurementId,
   FoodItemId,
   RecipeId,
+  StepLogId,
   UserId,
   WaterLogId,
-} from "../types";
-import { todayISO } from "../types";
+} from "@/types";
+import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
+import { ACHIEVEMENTS, evaluateAchievements } from "../lib/achievements";
 
 interface AppState {
   init: AppInitState;
@@ -40,11 +53,16 @@ interface AppState {
   recipes: Recipe[];
   favoriteFoods: FoodItem[];
   dailyWaterLogs: WaterLog[];
+  dailyStepLogs: StepLog[];
   bodyMeasurements: BodyMeasurement[];
+  unlockedAchievements: UserAchievement[];
+  waterGoalMl: number;
+  stepGoal: number;
   error: string | null;
   userId: UserId | null;
   fetchInitialData: (userId: UserId) => Promise<void>;
   refreshDailyLogs: (userId: UserId) => Promise<void>;
+  fetchAchievements: (userId: UserId) => Promise<void>;
   addFoodLog: (food: Omit<FoodItem, "id">) => Promise<void>;
   deleteFoodLog: (id: FoodItemId) => Promise<void>;
   updateCalorieGoal: (goal: number) => Promise<void>;
@@ -60,9 +78,15 @@ interface AppState {
   fetchDailyWaterLogs: (userId: UserId) => Promise<void>;
   addWaterLog: (amount: number) => Promise<void>;
   deleteWaterLog: (id: WaterLogId) => Promise<void>;
+  fetchDailyStepLogs: (userId: UserId) => Promise<void>;
+  addStepLog: (steps: number) => Promise<void>;
+  deleteStepLog: (id: StepLogId) => Promise<void>;
   fetchBodyMeasurements: (userId: UserId) => Promise<void>;
   addBodyMeasurement: (m: Omit<BodyMeasurement, "id">) => Promise<void>;
   deleteBodyMeasurement: (id: BodyMeasurementId) => Promise<void>;
+  checkAndUnlockAchievements: () => Promise<void>;
+  setWaterGoalMl: (ml: number) => void;
+  setStepGoal: (steps: number) => void;
 }
 
 export const useAppState = create<AppState>((set, get) => ({
@@ -72,7 +96,25 @@ export const useAppState = create<AppState>((set, get) => ({
   recipes: [],
   favoriteFoods: [],
   dailyWaterLogs: [],
+  dailyStepLogs: [],
   bodyMeasurements: [],
+  unlockedAchievements: [],
+  waterGoalMl: (() => {
+    const stored = localStorage.getItem("waterGoalMl");
+    if (stored) {
+      const n = parseInt(stored, 10);
+      if (Number.isFinite(n) && n >= 250 && n <= 10000) return n;
+    }
+    return DAILY_WATER_GOAL_ML;
+  })(),
+  stepGoal: (() => {
+    const stored = localStorage.getItem("stepGoal");
+    if (stored) {
+      const n = parseInt(stored, 10);
+      if (Number.isFinite(n) && n >= 1000 && n <= 100000) return n;
+    }
+    return DAILY_STEP_GOAL;
+  })(),
   error: null,
   userId: null,
 
@@ -86,7 +128,9 @@ export const useAppState = create<AppState>((set, get) => ({
       const recentItems = await getRecentFoodItems(userId);
       const favorites = await getFavoriteFoodItems(userId);
       const waterLogsToday = await getDailyWaterLogs(userId, todayISO());
+      const stepLogsToday = await getDailyStepLogs(userId, todayISO());
       const measurements = await getAllBodyMeasurements(userId);
+      const achievements = await getUnlockedAchievements(userId);
       set({
         init: { status: "ready", user: profile },
         dailyLogs: logs,
@@ -94,12 +138,25 @@ export const useAppState = create<AppState>((set, get) => ({
         allFoodItems: recentItems,
         favoriteFoods: favorites,
         dailyWaterLogs: waterLogsToday,
+        dailyStepLogs: stepLogsToday,
         bodyMeasurements: measurements,
+        unlockedAchievements: achievements,
       });
     } catch (error) {
       const message = mapDbError(error, "Failed to load app data");
       console.error("Error fetching initial app data:", error);
       set({ init: { status: "error", message } });
+    }
+  },
+
+  fetchAchievements: async (userId: UserId) => {
+    try {
+      const achievements = await getUnlockedAchievements(userId);
+      set({ unlockedAchievements: achievements });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to fetch achievements");
+      console.error("Error fetching achievements:", error);
+      set({ error: message });
     }
   },
 
@@ -126,6 +183,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ error: null });
       await addFoodItemLog({ ...food, userId: state.userId });
       await state.refreshDailyLogs(state.userId);
+      void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add food log");
       console.error("Error adding food log:", error);
@@ -258,6 +316,7 @@ export const useAppState = create<AppState>((set, get) => ({
       };
       await addWaterLogToDB(log);
       await state.fetchDailyWaterLogs(state.userId);
+      void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add water log");
       console.error("Error adding water log:", error);
@@ -274,6 +333,50 @@ export const useAppState = create<AppState>((set, get) => ({
     } catch (error) {
       const message = mapDbError(error, "Failed to delete water log");
       console.error("Error deleting water log:", error);
+      set({ error: message });
+    }
+  },
+
+  fetchDailyStepLogs: async (userId: UserId) => {
+    try {
+      const logs = await getDailyStepLogs(userId, todayISO());
+      set({ dailyStepLogs: logs, error: null });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to fetch step logs");
+      console.error("Error fetching step logs:", error);
+      set({ error: message });
+    }
+  },
+
+  addStepLog: async (steps: number) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const log: StepLog = {
+        userId: state.userId,
+        steps,
+        dateLogged: todayISO(),
+        loggedAt: new Date().toISOString(),
+      };
+      await addStepLogToDB(log);
+      await state.fetchDailyStepLogs(state.userId);
+      void get().checkAndUnlockAchievements();
+    } catch (error) {
+      const message = mapDbError(error, "Failed to add step log");
+      console.error("Error adding step log:", error);
+      set({ error: message });
+    }
+  },
+
+  deleteStepLog: async (id: StepLogId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteStepLogFromDB(id, state.userId);
+      await state.fetchDailyStepLogs(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete step log");
+      console.error("Error deleting step log:", error);
       set({ error: message });
     }
   },
@@ -295,6 +398,7 @@ export const useAppState = create<AppState>((set, get) => ({
     try {
       await addBodyMeasurementToDB({ ...m, userId: state.userId });
       await state.fetchBodyMeasurements(state.userId);
+      void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add measurement");
       console.error("Error adding body measurement:", error);
@@ -313,5 +417,58 @@ export const useAppState = create<AppState>((set, get) => ({
       console.error("Error deleting body measurement:", error);
       set({ error: message });
     }
+  },
+
+  checkAndUnlockAchievements: async () => {
+    const state = get();
+    if (!state.userId || state.init.status !== "ready") return;
+    try {
+      const [allFoodLogs, allWaterLogs, alreadyUnlockedIds] = await Promise.all([
+        getAllFoodLogs(state.userId),
+        getAllWaterLogs(state.userId),
+        getUnlockedAchievementIds(state.userId),
+      ]);
+      const newIds = evaluateAchievements(
+        {
+          allFoodLogs,
+          allWaterLogs,
+          bodyMeasurements: get().bodyMeasurements,
+          recipes: get().recipes,
+          calorieGoal: state.init.user.calorieGoal,
+          waterGoalMl: get().waterGoalMl,
+        },
+        alreadyUnlockedIds,
+      );
+      if (newIds.length === 0) return;
+      await Promise.all(
+        newIds.map((achievementId) =>
+          addUserAchievementToDB({
+            userId: state.userId!,
+            achievementId,
+            unlockedAt: new Date().toISOString(),
+          }),
+        ),
+      );
+      const fresh = await getUnlockedAchievements(state.userId!);
+      set({ unlockedAchievements: fresh });
+      for (const id of newIds) {
+        const def = ACHIEVEMENTS.find((a) => a.id === id);
+        if (def) toast.success(`${def.icon} Achievement Unlocked: ${def.title}`);
+      }
+    } catch (err) {
+      console.error("Achievement check failed:", err);
+    }
+  },
+
+  setWaterGoalMl: (ml: number) => {
+    if (!Number.isFinite(ml) || ml < 250 || ml > 10000) return;
+    localStorage.setItem("waterGoalMl", String(ml));
+    set({ waterGoalMl: ml });
+  },
+
+  setStepGoal: (steps: number) => {
+    if (!Number.isFinite(steps) || steps < 1000 || steps > 100000) return;
+    localStorage.setItem("stepGoal", String(steps));
+    set({ stepGoal: steps });
   },
 }));

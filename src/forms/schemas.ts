@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { LengthUnit, WeightUnit } from "../types";
+import type { LengthUnit, WeightUnit } from "@/types";
 
 // Food form schema
 export const FoodFormSchema = z.object({
@@ -118,3 +118,14 @@ export const WaterSchema = z.object({
 });
 
 export type WaterFormValues = z.infer<typeof WaterSchema>;
+
+// Step intake form schema
+export const StepSchema = z.object({
+  steps: z
+    .number({ invalid_type_error: "Steps must be a number" })
+    .int("Steps must be a whole number")
+    .min(1, "Must be at least 1 step")
+    .max(100000, "Cannot exceed 100,000 steps"),
+});
+
+export type StepFormValues = z.infer<typeof StepSchema>;

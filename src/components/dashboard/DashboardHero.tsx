@@ -1,18 +1,20 @@
-import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { Pencil } from "lucide-react";
-import { useAppState } from "../../state/AppState";
+import { useAppState } from "@/state/AppState.ts";
 import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils.ts";
 
 interface Props {
   totalCalories: number;
   totals: { protein: number; carbs: number; fat: number };
 }
 
-const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
-  const { init, updateCalorieGoal } = useAppState();
+function DashboardHero({ totalCalories, totals }: Props) {
+  const { init, updateCalorieGoal, bodyMeasurements } = useAppState();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(
     init.status === "ready" ? init.user.calorieGoal : 2000,
@@ -37,6 +39,21 @@ const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
   const ratio = Math.min(1, totalCalories / (calorieGoal || 1));
   const isOver = totalCalories > calorieGoal;
   const today = useMemo(() => new Date(), []);
+
+  const greeting = useMemo(() => {
+    const hours = today.getHours();
+    if (hours < 12) return "Good morning";
+    if (hours < 18) return "Good afternoon";
+    return "Good evening";
+  }, [today]);
+
+  const latestWeight = useMemo(() => {
+    if (bodyMeasurements.length === 0) return null;
+    const latest = bodyMeasurements[bodyMeasurements.length - 1];
+    return latest?.weight ?? null;
+  }, [bodyMeasurements]);
+
+  const username = init.status === "ready" ? init.user.username : "";
 
   return (
     <>
@@ -86,8 +103,19 @@ const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
         </div>
       </div>
 
-      {/* Meta column: date label + goal editor */}
+      {/* Meta column: greeting + latest weight + date label + goal editor */}
       <div className="col-span-12 md:col-span-3 flex flex-col justify-end gap-3 pb-2">
+        {username && (
+          <p className="font-mono text-[10px] text-ink-soft">
+            {greeting}, <span className="text-ink font-semibold">{username}</span>
+          </p>
+        )}
+        {latestWeight !== null && (
+          <p className="font-mono text-[10px] text-ink-soft">
+            Last weighed{" "}
+            <span className="text-ink font-semibold">{latestWeight.toFixed(1)} kg</span>
+          </p>
+        )}
         <p className="font-mono uppercase text-[10px] tracking-[0.3em] text-ink-soft">
           {today.toLocaleDateString("en-US", {
             weekday: "long",
@@ -97,37 +125,40 @@ const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
         </p>
         {editingGoal ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <input
+            <Input
               type="number"
               value={goalInput}
               onChange={(e) => setGoalInput(Math.max(1, parseInt(e.target.value) || 0))}
-              className="w-20 border-b border-rule bg-transparent font-mono text-sm text-ink focus:outline-none focus:border-persimmon pb-0.5"
+              className={cn(EDITORIAL_INPUT_CLS, "w-20")}
               min="1"
               max="99999"
               data-testid="goal-edit"
               autoFocus
             />
             <span className="font-mono text-[10px] text-ink-soft">kcal</span>
-            <button
+            <Button
+              variant="ghost"
               onClick={async () => {
                 await updateCalorieGoal(goalInput);
                 setEditingGoal(false);
               }}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon hover:underline"
+              className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon hover:text-persimmon/80 rounded-none h-auto p-0"
             >
               Save
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => setEditingGoal(false)}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink"
+              className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink rounded-none h-auto p-0"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         ) : (
-          <button
+          <Button
             type="button"
-            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors group w-fit"
+            variant="ghost"
+            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors group w-fit rounded-none h-auto p-0"
             onClick={() => {
               setGoalInput(calorieGoal);
               setEditingGoal(true);
@@ -135,7 +166,7 @@ const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
           >
             <Pencil className="size-3 opacity-60 group-hover:opacity-100 transition-opacity" />
             Goal: {calorieGoal.toLocaleString()} kcal
-          </button>
+          </Button>
         )}
       </div>
 
@@ -148,6 +179,8 @@ const DashboardHero: FC<Props> = ({ totalCalories, totals }) => {
       </div>
     </>
   );
-};
+}
+
+DashboardHero.displayName = "DashboardHero";
 
 export default DashboardHero;

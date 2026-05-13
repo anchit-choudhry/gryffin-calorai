@@ -3,8 +3,9 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { saveRecipe } from "../db/dbService";
-import { FoodItemId, type UserId } from "../types";
+import { FoodItemId, type UserId } from "@/types";
 import { RecipeFormSchema, type RecipeFormValues } from "../forms/schemas";
+import { useAppState } from "../state/AppState";
 
 type UseRecipeFormReturn = {
   form: ReturnType<typeof useForm<RecipeFormValues>>;
@@ -17,6 +18,7 @@ type UseRecipeFormReturn = {
 
 export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
   const [isLoading, setIsLoading] = useState(false);
+  const { checkAndUnlockAchievements } = useAppState();
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(RecipeFormSchema),
@@ -60,6 +62,7 @@ export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
 
             toast.success(`Recipe "${data.recipeName}" saved successfully!`);
             form.reset();
+            void checkAndUnlockAchievements();
             resolve(true);
           } catch (error) {
             console.error("Error saving recipe:", error);

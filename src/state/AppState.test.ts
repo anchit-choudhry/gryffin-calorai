@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { useAppState } from "./AppState";
-import { FoodItemId, ISODate, UserId } from "../types";
+import { FoodItemId, ISODate, UserId } from "@/types";
 
 vi.mock("../db/dbService", () => ({
   getOrCreateUser: vi.fn(async (userId) => ({
@@ -31,15 +31,28 @@ vi.mock("../db/dbService", () => ({
   deleteRecipe: vi.fn(async () => undefined),
   getRecentFoodItems: vi.fn(async () => []),
   getAllFoodLogs: vi.fn(async () => []),
+  getAllWaterLogs: vi.fn(async () => []),
   getFavoriteFoodItems: vi.fn(async () => []),
   toggleFavoriteFoodItem: vi.fn(async () => undefined),
   updateFoodItem: vi.fn(async () => undefined),
   getDailyWaterLogs: vi.fn(async () => []),
   addWaterLog: vi.fn(async () => 1),
   deleteWaterLog: vi.fn(async () => undefined),
+  getDailyStepLogs: vi.fn(async () => []),
+  getAllStepLogs: vi.fn(async () => []),
+  addStepLog: vi.fn(async () => 1),
+  deleteStepLog: vi.fn(async () => undefined),
   getAllBodyMeasurements: vi.fn(async () => []),
   addBodyMeasurement: vi.fn(async () => 1),
   deleteBodyMeasurement: vi.fn(async () => undefined),
+  getUnlockedAchievements: vi.fn(async () => []),
+  getUnlockedAchievementIds: vi.fn(async () => new Set<string>()),
+  addUserAchievement: vi.fn(async () => 1),
+}));
+
+vi.mock("../lib/achievements", () => ({
+  evaluateAchievements: vi.fn(() => []),
+  ACHIEVEMENTS: [],
 }));
 
 describe("AppState", () => {
@@ -113,6 +126,11 @@ describe("AppState", () => {
     expect(Array.isArray(state.dailyWaterLogs)).toBe(true);
   });
 
+  it("should initialize with empty dailyStepLogs array", () => {
+    const state = useAppState.getState();
+    expect(Array.isArray(state.dailyStepLogs)).toBe(true);
+  });
+
   it("should initialize with empty bodyMeasurements array", () => {
     const state = useAppState.getState();
     expect(Array.isArray(state.bodyMeasurements)).toBe(true);
@@ -123,6 +141,14 @@ describe("AppState", () => {
     expect(typeof state.fetchDailyWaterLogs).toBe("function");
     expect(typeof state.addWaterLog).toBe("function");
     expect(typeof state.deleteWaterLog).toBe("function");
+  });
+
+  it("should have step log action methods available", () => {
+    const state = useAppState.getState();
+    expect(typeof state.fetchDailyStepLogs).toBe("function");
+    expect(typeof state.addStepLog).toBe("function");
+    expect(typeof state.deleteStepLog).toBe("function");
+    expect(typeof state.setStepGoal).toBe("function");
   });
 
   it("should have body measurement action methods available", () => {

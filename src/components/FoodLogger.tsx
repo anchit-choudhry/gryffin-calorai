@@ -2,7 +2,7 @@
 import { type FC, type FormEvent, useEffect } from "react";
 import type { FoodItem } from "../db/dbService";
 import { useFoodForm } from "../hooks/useFoodForm";
-import { MEAL_TYPES } from "../types";
+import { MEAL_TYPES } from "@/types";
 import {
   Form,
   FormControl,
@@ -11,6 +11,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { EDITORIAL_INPUT_CLS } from "../lib/utils";
 
 interface FoodLoggerProps {
   initialFood?: FoodItem;
@@ -18,9 +21,6 @@ interface FoodLoggerProps {
   onSuccess?: () => void;
   prefillName?: string;
 }
-
-const inputCls =
-  "w-full border-b border-rule bg-transparent font-mono text-sm text-ink focus:outline-none focus:border-persimmon pb-1 pt-1 placeholder:text-ink-soft/50 transition-colors";
 
 const labelCls = "font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft";
 
@@ -54,7 +54,12 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             <FormItem>
               <FormLabel className={labelCls}>Food Name</FormLabel>
               <FormControl>
-                <input {...field} type="text" className={inputCls} placeholder="e.g., Apple" />
+                <Input
+                  {...field}
+                  type="text"
+                  className={EDITORIAL_INPUT_CLS}
+                  placeholder="e.g., Apple"
+                />
               </FormControl>
               <FormMessage className="font-mono text-[10px]" />
             </FormItem>
@@ -70,18 +75,15 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
               <FormControl>
                 <div className="flex gap-1.5 flex-wrap mt-1">
                   {MEAL_TYPES.map((type) => (
-                    <button
+                    <Button
                       key={type}
                       type="button"
+                      variant={field.value === type ? "default" : "outline"}
+                      className="font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-3 py-1.5"
                       onClick={() => field.onChange(type)}
-                      className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-wider transition-colors ${
-                        field.value === type
-                          ? "border-ink bg-ink text-paper"
-                          : "border-rule text-ink-soft hover:border-ink hover:text-ink"
-                      }`}
                     >
                       {type}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </FormControl>
@@ -97,10 +99,10 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             <FormItem>
               <FormLabel className={labelCls}>Calories per Serving</FormLabel>
               <FormControl>
-                <input
+                <Input
                   {...field}
                   type="number"
-                  className={inputCls}
+                  className={EDITORIAL_INPUT_CLS}
                   placeholder="e.g., 95"
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                 />
@@ -117,10 +119,10 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             <FormItem>
               <FormLabel className={labelCls}>Serving Size</FormLabel>
               <FormControl>
-                <input
+                <Input
                   {...field}
                   type="number"
-                  className={inputCls}
+                  className={EDITORIAL_INPUT_CLS}
                   placeholder="e.g., 1"
                   min="1"
                   onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
@@ -139,10 +141,10 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
               <FormItem>
                 <FormLabel className={labelCls}>Protein (g)</FormLabel>
                 <FormControl>
-                  <input
+                  <Input
                     {...field}
                     type="number"
-                    className={inputCls}
+                    className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                   />
@@ -158,10 +160,10 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
               <FormItem>
                 <FormLabel className={labelCls}>Carbs (g)</FormLabel>
                 <FormControl>
-                  <input
+                  <Input
                     {...field}
                     type="number"
-                    className={inputCls}
+                    className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                   />
@@ -177,10 +179,10 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
               <FormItem>
                 <FormLabel className={labelCls}>Fat (g)</FormLabel>
                 <FormControl>
-                  <input
+                  <Input
                     {...field}
                     type="number"
-                    className={inputCls}
+                    className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
                     onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                   />
@@ -192,22 +194,24 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
         </div>
 
         <div className="flex gap-2 pt-1">
-          <button
+          <Button
             type="submit"
+            variant="persimmon"
             disabled={isLoading}
-            className="flex-1 py-2.5 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-[0.2em] hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex-1 font-mono text-[10px] uppercase tracking-[0.2em] rounded-none h-auto py-2.5"
           >
             {isLoading ? "Saving..." : isEditMode ? "Update Food" : "Log Food"}
-          </button>
+          </Button>
           {isEditMode && (
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex-1 py-2.5 border border-rule font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors disabled:opacity-50"
+              className="flex-1 font-mono text-[10px] uppercase tracking-[0.2em] rounded-none h-auto py-2.5 text-ink-soft border-rule"
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </form>
