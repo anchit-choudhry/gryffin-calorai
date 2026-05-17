@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
 import { useWaterForm } from "../hooks/useWaterForm";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,8 @@ import { cn, EDITORIAL_INPUT_CLS } from "../lib/utils";
 const QUICK_AMOUNTS = [250, 500, 750] as const;
 
 const WaterTracker = () => {
-  const { dailyWaterLogs, deleteWaterLog, waterGoalMl, setWaterGoalMl } = useAppState();
+  const { dailyWaterLogs, addWaterLog, deleteWaterLog, waterGoalMl, setWaterGoalMl } =
+    useAppState();
   const { form, isLoading, submitWaterLog } = useWaterForm();
   const [showCustom, setShowCustom] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
@@ -29,7 +31,7 @@ const WaterTracker = () => {
             <Input
               type="number"
               value={goalInput}
-              onChange={(e) => setGoalInput(Math.max(250, parseInt(e.target.value) || 0))}
+              onChange={(e) => setGoalInput(Math.max(250, parseInt(e.target.value, 10) || 0))}
               min="250"
               max="10000"
               className={cn(EDITORIAL_INPUT_CLS, "w-20")}
@@ -70,8 +72,8 @@ const WaterTracker = () => {
         )}
       </div>
 
-      {/* Progress hairline */}
-      <div className="relative w-full h-px bg-rule mb-4">
+      {/* Progress bar */}
+      <div className="relative w-full h-[3px] bg-rule mb-4">
         <div
           className="absolute left-0 top-0 h-full bg-persimmon transition-all"
           style={{ width: `${pct}%` }}
@@ -84,7 +86,10 @@ const WaterTracker = () => {
           <Button
             key={ml}
             variant="outline"
-            onClick={() => submitWaterLog(ml)}
+            onClick={async () => {
+              const ok = await submitWaterLog(ml);
+              if (ok) toast.success(`+${ml} ml logged`);
+            }}
             disabled={isLoading}
             className="font-mono text-[10px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-3 py-1.5"
           >
@@ -114,8 +119,12 @@ const WaterTracker = () => {
           <span className="font-mono text-[10px] text-ink-soft">ml</span>
           <Button
             onClick={async () => {
-              const ok = await submitWaterLog(form.getValues("amount"));
-              if (ok) setShowCustom(false);
+              const amount = form.getValues("amount");
+              const ok = await submitWaterLog(amount);
+              if (ok) {
+                setShowCustom(false);
+                toast.success(`+${amount} ml logged`);
+              }
             }}
             disabled={isLoading}
             className="bg-persimmon text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-3 py-1.5 hover:bg-persimmon/90"
@@ -126,6 +135,9 @@ const WaterTracker = () => {
       )}
 
       {/* Today's log */}
+      {dailyWaterLogs.length === 0 && (
+        <p className="font-mono text-[10px] text-ink-soft/60 mt-2">No entries yet today.</p>
+      )}
       {dailyWaterLogs.length > 0 && (
         <ul className="mt-2 space-y-1 max-h-28 overflow-y-auto divide-y divide-rule">
           {[...dailyWaterLogs].reverse().map((log) => (
@@ -146,7 +158,15 @@ const WaterTracker = () => {
                 variant="ghost"
                 size="icon-xs"
                 className="text-ink-soft hover:text-persimmon transition-colors p-0"
-                onClick={() => log.id && deleteWaterLog(log.id)}
+                onClick={() => {
+                  if (log.id) {
+                    const { amount } = log;
+                    deleteWaterLog(log.id);
+                    toast("Entry removed", {
+                      action: { label: "Undo", onClick: () => addWaterLog(amount) },
+                    });
+                  }
+                }}
                 aria-label={`Remove ${log.amount} ml entry`}
               >
                 ✕

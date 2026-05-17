@@ -182,11 +182,11 @@ export function evaluateAchievements(
 
   // --- Streak ---
   const uniqueFoodDates = [...new Set(allFoodLogs.map((l) => l.dateLogged))];
-  const { currentStreak } = computeStreaks(uniqueFoodDates);
-  check("streak_3", currentStreak >= 3);
-  check("streak_7", currentStreak >= 7);
-  check("streak_14", currentStreak >= 14);
-  check("streak_30", currentStreak >= 30);
+  const { longestStreak: foodLongest } = computeStreaks(uniqueFoodDates);
+  check("streak_3", foodLongest >= 3);
+  check("streak_7", foodLongest >= 7);
+  check("streak_14", foodLongest >= 14);
+  check("streak_30", foodLongest >= 30);
 
   // --- Calorie Goals ---
   const calByDate = new Map<string, { total: number; mealTypes: Set<string> }>();
@@ -210,8 +210,8 @@ export function evaluateAchievements(
   check("full_day", fullDayExists);
 
   const sortedGoalDates = [...goalHitDays].sort();
-  const { currentStreak: goalStreak } = computeStreaks(sortedGoalDates);
-  check("calorie_goal_3_days", goalStreak >= 3);
+  const { longestStreak: goalLongest } = computeStreaks(sortedGoalDates);
+  check("calorie_goal_3_days", goalLongest >= 3);
 
   // --- Hydration ---
   check("water_first", allWaterLogs.length >= 1);
@@ -225,8 +225,8 @@ export function evaluateAchievements(
     .map(([date]) => date);
   check("water_goal_hit", waterGoalDates.length >= 1);
 
-  const { currentStreak: waterStreak } = computeStreaks([...waterGoalDates].sort());
-  check("water_streak_3", waterStreak >= 3);
+  const { longestStreak: waterLongest } = computeStreaks([...waterGoalDates].sort());
+  check("water_streak_3", waterLongest >= 3);
 
   // --- Milestones ---
   check("log_1", allFoodLogs.length >= 1);

@@ -1,8 +1,128 @@
-import { describe, expect, it } from "vitest";
-import { calculateTotalCalories } from "./useFoodForm";
-import { DEFAULT_MEAL_TYPE, MEAL_TYPES } from "../types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { calculateTotalCalories, useFoodForm } from "./useFoodForm";
+import { DEFAULT_MEAL_TYPE, FoodItemId, ISODate, MEAL_TYPES, UserId } from "../types";
+import { toast } from "sonner";
+import * as appState from "../state/AppState";
+
+vi.mock("sonner");
+vi.mock("../state/AppState");
+vi.mock("../types", async () => {
+  const actual = await vi.importActual("../types");
+  return actual;
+});
 
 describe("useFoodForm", () => {
+  const userId = UserId("test-user");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId,
+      init: { status: "ready" as const, user: { id: userId, calorieGoal: 2000 } },
+      dailyLogs: [],
+      allFoodItems: [],
+      recipes: [],
+      favoriteFoods: [],
+      dailyWaterLogs: [],
+      dailyStepLogs: [],
+      bodyMeasurements: [],
+      unlockedAchievements: [],
+      error: null,
+      waterGoalMl: 2000,
+      stepGoal: 10000,
+      fetchInitialData: vi.fn(),
+      refreshDailyLogs: vi.fn(),
+      addFoodLog: vi.fn(),
+      deleteFoodLog: vi.fn(),
+      updateCalorieGoal: vi.fn(),
+      fetchRecipes: vi.fn(),
+      deleteRecipe: vi.fn(),
+      updateRecipe: vi.fn(),
+      fetchAllFoodItems: vi.fn(),
+      fetchFavorites: vi.fn(),
+      toggleFavorite: vi.fn(),
+      updateFoodLog: vi.fn(),
+      addWaterLog: vi.fn(),
+      deleteWaterLog: vi.fn(),
+      fetchWaterLogs: vi.fn(),
+      setWaterGoalMl: vi.fn(),
+      addStepLog: vi.fn(),
+      deleteStepLog: vi.fn(),
+      fetchStepLogs: vi.fn(),
+      setStepGoal: vi.fn(),
+      addBodyMeasurement: vi.fn(),
+      deleteBodyMeasurement: vi.fn(),
+      fetchBodyMeasurements: vi.fn(),
+      checkAndUnlockAchievements: vi.fn(),
+      fetchAchievements: vi.fn(),
+    } as unknown as ReturnType<typeof appState.useAppState>);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should return hook with form, isLoading, isEditMode, submitFoodLog, and resetForm", () => {
+    const { result } = renderHook(() => useFoodForm());
+    expect(result.current.form).toBeDefined();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isEditMode).toBe(false);
+    expect(typeof result.current.submitFoodLog).toBe("function");
+    expect(typeof result.current.resetForm).toBe("function");
+  });
+
+  it("should have correct default values for new food log", () => {
+    const { result } = renderHook(() => useFoodForm());
+    expect(result.current.form.getValues("name")).toBe("");
+    expect(result.current.form.getValues("calories")).toBe(0);
+    expect(result.current.form.getValues("servingSize")).toBe(1);
+    expect(result.current.form.getValues("mealType")).toBe(DEFAULT_MEAL_TYPE);
+  });
+
+  it("should be in edit mode when initial food provided", () => {
+    const initialFood = {
+      id: FoodItemId(1),
+      userId,
+      name: "Apple",
+      calories: 95,
+      servingSize: 1,
+      protein: 0,
+      carbs: 25,
+      fat: 0,
+      dateLogged: ISODate("2026-05-16"),
+      isFavorite: false,
+      mealType: "Breakfast" as const,
+    };
+
+    const { result } = renderHook(() => useFoodForm(initialFood));
+    expect(result.current.isEditMode).toBe(true);
+    expect(result.current.form.getValues("name")).toBe("Apple");
+  });
+
+  it("should handle submit when user not initialized", async () => {
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId: null,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useFoodForm());
+    const success = await result.current.submitFoodLog();
+
+    expect(success).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith("User not initialized. Please refresh the page.");
+  });
+
+  it("should reset form to initial state", () => {
+    const { result } = renderHook(() => useFoodForm());
+
+    result.current.form.setValue("name", "Test");
+    expect(result.current.form.getValues("name")).toBe("Test");
+
+    result.current.resetForm();
+    expect(result.current.form.getValues("name")).toBe("");
+    expect(result.current.form.getValues("calories")).toBe(0);
+  });
+
   describe("meal type defaults", () => {
     it("DEFAULT_MEAL_TYPE should be Breakfast", () => {
       expect(DEFAULT_MEAL_TYPE).toBe("Breakfast");
@@ -36,6 +156,178 @@ describe("useFoodForm", () => {
     it("should handle zero calories", () => {
       const result = calculateTotalCalories(0, 5);
       expect(result).toBe(0);
+    });
+
+    it("should round correctly", () => {
+      const result = calculateTotalCalories(100.4, 1.5);
+      expect(result).toBe(151);
+    });
+  });
+
+  describe("submitFoodLog", () => {
+    it("should successfully add a new food log", async () => {
+      const addFoodLogMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: addFoodLogMock,
+        updateFoodLog: vi.fn(),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const { result } = renderHook(() => useFoodForm());
+
+      await act(async () => {
+        result.current.form.setValue("name", "Apple");
+        result.current.form.setValue("calories", 95);
+        result.current.form.setValue("servingSize", 1);
+        result.current.form.setValue("protein", 0);
+        result.current.form.setValue("carbs", 25);
+        result.current.form.setValue("fat", 0);
+        result.current.form.setValue("mealType", "Breakfast");
+      });
+
+      const success = await result.current.submitFoodLog();
+
+      expect(success).toBe(true);
+      expect(addFoodLogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          name: "Apple",
+          calories: 95,
+          servingSize: 1,
+          protein: 0,
+          carbs: 25,
+          fat: 0,
+          mealType: "Breakfast",
+        }),
+      );
+      expect(toast.success).toHaveBeenCalledWith("Successfully logged Apple! Macros updated.");
+    });
+
+    it("should successfully update an existing food log", async () => {
+      const updateFoodLogMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: vi.fn(),
+        updateFoodLog: updateFoodLogMock,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const existingFood = {
+        id: FoodItemId(1),
+        userId,
+        name: "Apple",
+        calories: 95,
+        servingSize: 1,
+        protein: 0,
+        carbs: 25,
+        fat: 0,
+        dateLogged: ISODate("2026-05-16"),
+        isFavorite: false,
+        mealType: "Breakfast" as const,
+      };
+
+      const { result } = renderHook(() => useFoodForm(existingFood));
+
+      await act(async () => {
+        result.current.form.setValue("calories", 100);
+        result.current.form.setValue("name", "Green Apple");
+      });
+
+      const success = await result.current.submitFoodLog();
+
+      expect(success).toBe(true);
+      expect(updateFoodLogMock).toHaveBeenCalledWith(
+        FoodItemId(1),
+        expect.objectContaining({
+          name: "Green Apple",
+          calories: 100,
+        }),
+      );
+      expect(toast.success).toHaveBeenCalledWith("Updated Green Apple!");
+    });
+
+    it("should handle submission failure gracefully", async () => {
+      const addFoodLogMock = vi.fn().mockRejectedValue(new Error("DB error"));
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: addFoodLogMock,
+        updateFoodLog: vi.fn(),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const { result } = renderHook(() => useFoodForm());
+
+      await act(async () => {
+        result.current.form.setValue("name", "Apple");
+        result.current.form.setValue("calories", 95);
+      });
+
+      const success = await result.current.submitFoodLog();
+
+      expect(success).toBe(false);
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to save food log. Check console for details.",
+      );
+    });
+
+    it("should calculate total calories correctly on submit", async () => {
+      const addFoodLogMock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: addFoodLogMock,
+        updateFoodLog: vi.fn(),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const { result } = renderHook(() => useFoodForm());
+
+      await act(async () => {
+        result.current.form.setValue("name", "Chicken");
+        result.current.form.setValue("calories", 165);
+        result.current.form.setValue("servingSize", 3);
+      });
+
+      await result.current.submitFoodLog();
+
+      expect(addFoodLogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calories: 495, // 165 * 3
+        }),
+      );
+    });
+
+    it("should reset form after successful submission", async () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: vi.fn().mockResolvedValue(undefined),
+        updateFoodLog: vi.fn(),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const { result } = renderHook(() => useFoodForm());
+
+      await act(async () => {
+        result.current.form.setValue("name", "Apple");
+        result.current.form.setValue("calories", 95);
+      });
+
+      await result.current.submitFoodLog();
+
+      await waitFor(() => {
+        expect(result.current.form.getValues("name")).toBe("");
+        expect(result.current.form.getValues("calories")).toBe(0);
+        expect(result.current.form.getValues("mealType")).toBe(DEFAULT_MEAL_TYPE);
+      });
+    });
+
+    it("should handle form validation failure when required field is empty", async () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        userId,
+        addFoodLog: vi.fn(),
+        updateFoodLog: vi.fn(),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+
+      const { result } = renderHook(() => useFoodForm());
+
+      const success = await result.current.submitFoodLog();
+
+      expect(success).toBe(false);
     });
   });
 });

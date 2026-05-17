@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
 import { useStepForm } from "../hooks/useStepForm";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { cn, EDITORIAL_INPUT_CLS } from "../lib/utils";
 const QUICK_STEPS = [2000, 5000, 8000, 10000] as const;
 
 const StepTracker = () => {
-  const { dailyStepLogs, deleteStepLog, stepGoal, setStepGoal } = useAppState();
+  const { dailyStepLogs, addStepLog, deleteStepLog, stepGoal, setStepGoal } = useAppState();
   const { form, isLoading, submitStepLog } = useStepForm();
   const [showCustom, setShowCustom] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
@@ -29,7 +30,7 @@ const StepTracker = () => {
             <Input
               type="number"
               value={goalInput}
-              onChange={(e) => setGoalInput(Math.max(1000, parseInt(e.target.value) || 0))}
+              onChange={(e) => setGoalInput(Math.max(1000, parseInt(e.target.value, 10) || 0))}
               min="1000"
               max="100000"
               className={cn(EDITORIAL_INPUT_CLS, "w-20")}
@@ -43,7 +44,7 @@ const StepTracker = () => {
                 setStepGoal(goalInput);
                 setEditingGoal(false);
               }}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-sky-500 hover:text-sky-500/80 rounded-none h-auto p-0"
+              className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon hover:text-persimmon/80 rounded-none h-auto p-0"
             >
               Save
             </Button>
@@ -62,7 +63,7 @@ const StepTracker = () => {
               setGoalInput(stepGoal);
               setEditingGoal(true);
             }}
-            className="flex items-center gap-1 font-mono text-[10px] tabular-nums text-sky-500 hover:text-ink transition-colors group rounded-none h-auto p-0"
+            className="flex items-center gap-1 font-mono text-[10px] tabular-nums text-ink hover:text-persimmon transition-colors group rounded-none h-auto p-0"
           >
             <Pencil className="size-3 opacity-60 group-hover:opacity-100" />
             {totalSteps.toLocaleString()} / {stepGoal.toLocaleString()} steps
@@ -70,10 +71,10 @@ const StepTracker = () => {
         )}
       </div>
 
-      {/* Progress hairline */}
-      <div className="relative w-full h-px bg-rule mb-4">
+      {/* Progress bar */}
+      <div className="relative w-full h-[3px] bg-rule mb-4">
         <div
-          className="absolute left-0 top-0 h-full bg-sky-500 transition-all"
+          className="absolute left-0 top-0 h-full bg-ink transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -84,7 +85,10 @@ const StepTracker = () => {
           <Button
             key={steps}
             variant="outline"
-            onClick={() => submitStepLog(steps)}
+            onClick={async () => {
+              const ok = await submitStepLog(steps);
+              if (ok) toast.success(`+${steps.toLocaleString()} steps logged`);
+            }}
             disabled={isLoading}
             className="font-mono text-[10px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-3 py-1.5"
           >
@@ -114,11 +118,15 @@ const StepTracker = () => {
           <span className="font-mono text-[10px] text-ink-soft">steps</span>
           <Button
             onClick={async () => {
-              const ok = await submitStepLog(form.getValues("steps"));
-              if (ok) setShowCustom(false);
+              const steps = form.getValues("steps");
+              const ok = await submitStepLog(steps);
+              if (ok) {
+                setShowCustom(false);
+                toast.success(`+${steps.toLocaleString()} steps logged`);
+              }
             }}
             disabled={isLoading}
-            className="bg-sky-500 text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-3 py-1.5 hover:bg-sky-500/90"
+            className="bg-ink text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-3 py-1.5 hover:bg-ink/90"
           >
             Add
           </Button>
@@ -126,6 +134,9 @@ const StepTracker = () => {
       )}
 
       {/* Today's log */}
+      {dailyStepLogs.length === 0 && (
+        <p className="font-mono text-[10px] text-ink-soft/60 mt-2">No entries yet today.</p>
+      )}
       {dailyStepLogs.length > 0 && (
         <ul className="mt-2 space-y-1 max-h-28 overflow-y-auto divide-y divide-rule">
           {[...dailyStepLogs].reverse().map((log) => (
@@ -145,8 +156,16 @@ const StepTracker = () => {
               <Button
                 variant="ghost"
                 size="icon-xs"
-                className="text-ink-soft hover:text-sky-500 transition-colors p-0"
-                onClick={() => log.id && deleteStepLog(log.id)}
+                className="text-ink-soft hover:text-persimmon transition-colors p-0"
+                onClick={() => {
+                  if (log.id) {
+                    const { steps } = log;
+                    deleteStepLog(log.id);
+                    toast("Entry removed", {
+                      action: { label: "Undo", onClick: () => addStepLog(steps) },
+                    });
+                  }
+                }}
                 aria-label={`Remove ${log.steps.toLocaleString()} steps entry`}
               >
                 ✕

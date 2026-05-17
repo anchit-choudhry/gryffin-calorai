@@ -30,6 +30,7 @@ import {
   type StepLog,
   toggleFavoriteFoodItem,
   updateFoodItem,
+  updateRecipe as updateRecipeInDB,
   updateUserProfile,
   type UserAchievement,
   type WaterLog,
@@ -46,7 +47,7 @@ import type {
 import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
 import { ACHIEVEMENTS, evaluateAchievements } from "../lib/achievements";
 
-interface AppState {
+export interface AppState {
   init: AppInitState;
   dailyLogs: FoodItem[];
   allFoodItems: FoodItem[];
@@ -68,6 +69,7 @@ interface AppState {
   updateCalorieGoal: (goal: number) => Promise<void>;
   fetchRecipes: (userId: UserId) => Promise<void>;
   deleteRecipe: (id: RecipeId) => Promise<void>;
+  updateRecipe: (recipe: Recipe) => Promise<void>;
   fetchAllFoodItems: (userId: UserId) => Promise<void>;
   fetchFavorites: (userId: UserId) => Promise<void>;
   toggleFavorite: (id: FoodItemId, isFavorite: boolean) => Promise<void>;
@@ -143,8 +145,8 @@ export const useAppState = create<AppState>((set, get) => ({
         unlockedAchievements: achievements,
       });
     } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching initial app data:", error);
       const message = mapDbError(error, "Failed to load app data");
-      console.error("Error fetching initial app data:", error);
       set({ init: { status: "error", message } });
     }
   },
@@ -155,7 +157,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ unlockedAchievements: achievements });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch achievements");
-      console.error("Error fetching achievements:", error);
+      if (import.meta.env.DEV) console.error("Error fetching achievements:", error);
       set({ error: message });
     }
   },
@@ -166,7 +168,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ dailyLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to refresh logs");
-      console.error("Error refreshing daily logs:", error);
+      if (import.meta.env.DEV) console.error("Error refreshing daily logs:", error);
       set({ error: message });
     }
   },
@@ -186,7 +188,7 @@ export const useAppState = create<AppState>((set, get) => ({
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add food log");
-      console.error("Error adding food log:", error);
+      if (import.meta.env.DEV) console.error("Error adding food log:", error);
       set({ error: message });
       throw error;
     }
@@ -200,7 +202,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to delete log");
-      console.error("Error deleting food log:", error);
+      if (import.meta.env.DEV) console.error("Error deleting food log:", error);
       set({ error: message });
     }
   },
@@ -215,7 +217,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ init: { status: "ready", user: updatedUser } });
     } catch (error) {
       const message = mapDbError(error, "Failed to update goal");
-      console.error("Error updating calorie goal:", error);
+      if (import.meta.env.DEV) console.error("Error updating calorie goal:", error);
       set({ error: message });
     }
   },
@@ -226,7 +228,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ recipes: recipeList });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch recipes");
-      console.error("Error fetching recipes:", error);
+      if (import.meta.env.DEV) console.error("Error fetching recipes:", error);
       set({ error: message });
     }
   },
@@ -239,7 +241,20 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchRecipes(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to delete recipe");
-      console.error("Error deleting recipe:", error);
+      if (import.meta.env.DEV) console.error("Error deleting recipe:", error);
+      set({ error: message });
+    }
+  },
+
+  updateRecipe: async (recipe: Recipe) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await updateRecipeInDB(recipe, state.userId);
+      await state.fetchRecipes(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to update recipe");
+      if (import.meta.env.DEV) console.error("Error updating recipe:", error);
       set({ error: message });
     }
   },
@@ -250,7 +265,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ allFoodItems: items });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch food items");
-      console.error("Error fetching food items:", error);
+      if (import.meta.env.DEV) console.error("Error fetching food items:", error);
       set({ error: message });
     }
   },
@@ -261,7 +276,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ favoriteFoods: favorites });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch favorites");
-      console.error("Error fetching favorites:", error);
+      if (import.meta.env.DEV) console.error("Error fetching favorites:", error);
       set({ error: message });
     }
   },
@@ -275,7 +290,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchAllFoodItems(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to toggle favorite");
-      console.error("Error toggling favorite:", error);
+      if (import.meta.env.DEV) console.error("Error toggling favorite:", error);
       set({ error: message });
     }
   },
@@ -288,7 +303,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.refreshDailyLogs(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to update food log");
-      console.error("Error updating food log:", error);
+      if (import.meta.env.DEV) console.error("Error updating food log:", error);
       set({ error: message });
     }
   },
@@ -299,7 +314,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ dailyWaterLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch water logs");
-      console.error("Error fetching water logs:", error);
+      if (import.meta.env.DEV) console.error("Error fetching water logs:", error);
       set({ error: message });
     }
   },
@@ -319,7 +334,7 @@ export const useAppState = create<AppState>((set, get) => ({
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add water log");
-      console.error("Error adding water log:", error);
+      if (import.meta.env.DEV) console.error("Error adding water log:", error);
       set({ error: message });
     }
   },
@@ -332,7 +347,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchDailyWaterLogs(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to delete water log");
-      console.error("Error deleting water log:", error);
+      if (import.meta.env.DEV) console.error("Error deleting water log:", error);
       set({ error: message });
     }
   },
@@ -343,7 +358,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ dailyStepLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch step logs");
-      console.error("Error fetching step logs:", error);
+      if (import.meta.env.DEV) console.error("Error fetching step logs:", error);
       set({ error: message });
     }
   },
@@ -363,7 +378,7 @@ export const useAppState = create<AppState>((set, get) => ({
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add step log");
-      console.error("Error adding step log:", error);
+      if (import.meta.env.DEV) console.error("Error adding step log:", error);
       set({ error: message });
     }
   },
@@ -376,7 +391,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchDailyStepLogs(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to delete step log");
-      console.error("Error deleting step log:", error);
+      if (import.meta.env.DEV) console.error("Error deleting step log:", error);
       set({ error: message });
     }
   },
@@ -387,7 +402,7 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ bodyMeasurements: measurements, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch body measurements");
-      console.error("Error fetching body measurements:", error);
+      if (import.meta.env.DEV) console.error("Error fetching body measurements:", error);
       set({ error: message });
     }
   },
@@ -401,7 +416,7 @@ export const useAppState = create<AppState>((set, get) => ({
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add measurement");
-      console.error("Error adding body measurement:", error);
+      if (import.meta.env.DEV) console.error("Error adding body measurement:", error);
       set({ error: message });
     }
   },
@@ -414,7 +429,7 @@ export const useAppState = create<AppState>((set, get) => ({
       await state.fetchBodyMeasurements(state.userId);
     } catch (error) {
       const message = mapDbError(error, "Failed to delete measurement");
-      console.error("Error deleting body measurement:", error);
+      if (import.meta.env.DEV) console.error("Error deleting body measurement:", error);
       set({ error: message });
     }
   },
@@ -456,7 +471,7 @@ export const useAppState = create<AppState>((set, get) => ({
         if (def) toast.success(`${def.icon} Achievement Unlocked: ${def.title}`);
       }
     } catch (err) {
-      console.error("Achievement check failed:", err);
+      if (import.meta.env.DEV) console.error("Achievement check failed:", err);
     }
   },
 

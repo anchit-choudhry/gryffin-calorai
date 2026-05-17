@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { toast } from "sonner";
 import FoodLogger from "../components/FoodLogger";
 import PageLoading from "../components/PageLoading";
 import VoiceFoodLogger from "../components/VoiceFoodLogger";
@@ -31,6 +32,22 @@ const Dashboard = () => {
     userId,
     allFoodItems,
   } = useAppState();
+
+  const handleDeleteWithUndo = useCallback(
+    async (id: Parameters<typeof deleteFoodLog>[0]) => {
+      const item = dailyLogs.find((l) => l.id === id);
+      await deleteFoodLog(id);
+      if (item && userId) {
+        toast("Entry removed", {
+          action: {
+            label: "Undo",
+            onClick: () => addFoodLog(item),
+          },
+        });
+      }
+    },
+    [dailyLogs, deleteFoodLog, addFoodLog, userId],
+  );
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
   const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
   const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
@@ -127,7 +144,7 @@ const Dashboard = () => {
         animate={shouldReduceMotion ? undefined : "show"}
       >
         {/* Section A — Masthead / Hero */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6" {...sv}>
+        <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash" {...sv}>
           <DashboardHero
             totalCalories={totalCalories}
             totals={{ protein: totalProtein, carbs: totalCarbs, fat: totalFat }}
@@ -140,13 +157,13 @@ const Dashboard = () => {
           <div className="col-span-12 lg:col-span-6 border border-rule p-6">
             <WeeklySummary />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <StreakCard />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <WaterTracker />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5">
+          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <StepTracker />
           </div>
         </motion.section>
@@ -175,7 +192,7 @@ const Dashboard = () => {
                       });
                     }
                   }}
-                  className="shrink-0 border border-rule rounded-full px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-ink-soft hover:bg-paper-muted hover:text-ink transition-colors snap-start"
+                  className="shrink-0 border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-ink-soft hover:bg-paper-muted hover:text-ink hover:border-ink transition-colors snap-start"
                 >
                   {item.name} · {item.calories} kcal
                 </button>
@@ -208,7 +225,7 @@ const Dashboard = () => {
                       });
                     }
                   }}
-                  className="shrink-0 border border-ink rounded-full px-4 py-1.5 font-mono text-[11px] uppercase tracking-wider text-ink hover:bg-ink hover:text-paper transition-colors snap-start"
+                  className="shrink-0 border-b-2 border-ink px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-ink hover:bg-ink hover:text-paper transition-colors snap-start"
                 >
                   {fav.name} · {fav.calories} kcal
                 </button>
@@ -223,6 +240,7 @@ const Dashboard = () => {
             className="col-span-12"
             kicker={sectionKicker.addLog!}
             title="Add to Today's Log"
+            accent
           />
           <div className="col-span-12 lg:col-span-6">
             <EditorialFrame label="01 · Write">
@@ -251,11 +269,24 @@ const Dashboard = () => {
             kicker={sectionKicker.todayLog!}
             title="Today's Log"
             subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
+            accent
           />
           {init.status === "loading" ? (
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mt-6">
-              Loading...
-            </p>
+            <div className="mt-4 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="animate-pulse flex items-baseline gap-4 py-4 border-b border-rule/40"
+                >
+                  <div className="h-2 bg-paper-muted rounded w-16 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-paper-muted rounded w-3/4" />
+                    <div className="h-2 bg-paper-muted rounded w-1/2" />
+                  </div>
+                  <div className="h-4 bg-paper-muted rounded w-12 shrink-0" />
+                </div>
+              ))}
+            </div>
           ) : init.status === "error" ? (
             <p className="text-destructive mt-6 font-mono text-sm">{init.message}</p>
           ) : dailyLogs.length > 0 ? (
@@ -287,7 +318,7 @@ const Dashboard = () => {
                               key={log.id!}
                               log={log}
                               onEdit={setEditingLog}
-                              onDelete={deleteFoodLog}
+                              onDelete={handleDeleteWithUndo}
                               onToggleFavorite={toggleFavorite}
                             />
                           ))}
@@ -299,9 +330,12 @@ const Dashboard = () => {
               </AnimatePresence>
             </div>
           ) : (
-            <p className="font-display italic text-ink-soft text-lg mt-6">
-              Nothing logged yet today.
-            </p>
+            <div className="mt-6 border-y border-rule/40 py-8 flex items-center gap-6">
+              <p className="font-display italic text-ink-soft text-lg">Nothing logged yet today.</p>
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft/50 ml-auto">
+                Use the logger above
+              </span>
+            </div>
           )}
         </motion.section>
       </motion.main>

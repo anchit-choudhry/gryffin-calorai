@@ -46,7 +46,7 @@ export function useWaterHistoryData(days: 7 | 30 = 7) {
       })
       .catch((error) => {
         if (!cancelled) {
-          console.error("Error fetching water history data:", error);
+          if (import.meta.env.DEV) console.error("Error fetching water history data:", error);
           toast.error("Failed to load water history.");
           setIsLoading(false);
         }

@@ -1,5 +1,162 @@
-import { describe, expect, it } from "vitest";
-import { computeWeeklySummary } from "./useWeeklySummary";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { computeWeeklySummary, useWeeklySummary } from "./useWeeklySummary";
+import { UserId } from "@/types";
+import type { AppState } from "../state/AppState";
+import * as appState from "../state/AppState";
+import * as progressDataHook from "./useProgressData";
+
+vi.mock("../state/AppState");
+vi.mock("./useProgressData");
+
+describe("useWeeklySummary", () => {
+  const userId = UserId("test-user");
+  let mockAppStateData: AppState;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAppStateData = {
+      userId,
+      init: {
+        status: "ready" as const,
+        user: {
+          id: userId,
+          calorieGoal: 2000,
+          username: "test",
+          email: "test@example.com",
+          lastLogin: new Date().toISOString(),
+        },
+      },
+      dailyLogs: [],
+      allFoodItems: [],
+      recipes: [],
+      favoriteFoods: [],
+      dailyWaterLogs: [],
+      dailyStepLogs: [],
+      bodyMeasurements: [],
+      unlockedAchievements: [],
+      error: null,
+      waterGoalMl: 2000,
+      stepGoal: 10000,
+      fetchInitialData: vi.fn(),
+      refreshDailyLogs: vi.fn(),
+      addFoodLog: vi.fn(),
+      deleteFoodLog: vi.fn(),
+      updateCalorieGoal: vi.fn(),
+      fetchRecipes: vi.fn(),
+      deleteRecipe: vi.fn(),
+      updateRecipe: vi.fn(),
+      fetchAllFoodItems: vi.fn(),
+      fetchFavorites: vi.fn(),
+      toggleFavorite: vi.fn(),
+      updateFoodLog: vi.fn(),
+      addWaterLog: vi.fn(),
+      deleteWaterLog: vi.fn(),
+      fetchDailyWaterLogs: vi.fn(),
+      setWaterGoalMl: vi.fn(),
+      addStepLog: vi.fn(),
+      deleteStepLog: vi.fn(),
+      fetchDailyStepLogs: vi.fn(),
+      setStepGoal: vi.fn(),
+      addBodyMeasurement: vi.fn(),
+      deleteBodyMeasurement: vi.fn(),
+      fetchBodyMeasurements: vi.fn(),
+      checkAndUnlockAchievements: vi.fn(),
+      fetchAchievements: vi.fn(),
+    } as unknown as AppState;
+
+    vi.mocked(appState).useAppState.mockImplementation(((
+      selector?: (state: AppState) => unknown,
+    ) => {
+      if (typeof selector === "function") {
+        return selector(mockAppStateData);
+      }
+      return mockAppStateData;
+    }) as unknown as typeof appState.useAppState);
+
+    vi.mocked(progressDataHook).useProgressData.mockReturnValue({
+      labels: [],
+      data: [],
+      mealTypeData: null,
+      macroData: null,
+      isLoading: false,
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should return summary data structure", () => {
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current).toHaveProperty("averageCalories");
+    expect(result.current).toHaveProperty("daysOnTarget");
+    expect(result.current).toHaveProperty("consistency");
+    expect(result.current).toHaveProperty("calorieGoal");
+  });
+
+  it("should use progress data for 7 days", () => {
+    renderHook(() => useWeeklySummary());
+    expect(vi.mocked(progressDataHook).useProgressData).toHaveBeenCalledWith(7);
+  });
+
+  it("should compute summary from progress data", () => {
+    const data = [2000, 1800, 2100, 1900, 2000, 2100, 2000];
+    vi.mocked(progressDataHook).useProgressData.mockReturnValue({
+      labels: [],
+      data,
+      mealTypeData: null,
+      macroData: null,
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current.averageCalories).toBeGreaterThan(0);
+  });
+
+  it("should use calorie goal from app state", () => {
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current.calorieGoal).toBe(2000);
+  });
+
+  it("should use default goal when init not ready", () => {
+    mockAppStateData.init = { status: "loading" as const };
+
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current.calorieGoal).toBe(2000);
+  });
+
+  it("should handle empty data", () => {
+    vi.mocked(progressDataHook).useProgressData.mockReturnValue({
+      labels: [],
+      data: [],
+      mealTypeData: null,
+      macroData: null,
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current.averageCalories).toBe(0);
+    expect(result.current.daysOnTarget).toBe(0);
+    expect(result.current.consistency).toBe(0);
+  });
+
+  it("should handle custom calorie goal", () => {
+    mockAppStateData.init = {
+      status: "ready" as const,
+      user: {
+        id: userId,
+        calorieGoal: 3000,
+        username: "test",
+        email: "test@example.com",
+        lastLogin: new Date().toISOString(),
+      },
+    };
+
+    const { result } = renderHook(() => useWeeklySummary());
+    expect(result.current.calorieGoal).toBe(3000);
+  });
+});
 
 describe("computeWeeklySummary", () => {
   it("should calculate averageCalories as sum divided by 7", () => {

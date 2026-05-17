@@ -1,5 +1,6 @@
 // src/App.tsx
 import { lazy, Suspense, useLayoutEffect, useState } from "react";
+import { BookOpen, LayoutDashboard, Moon, Sun, TrendingUp } from "lucide-react";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
@@ -112,26 +113,58 @@ function App() {
                 </span>
               </button>
               <div className="flex items-center gap-7">
-                {navLink("#dashboard", "Dashboard")}
-                {navLink("#recipes", "Recipes")}
-                {navLink("#progress", "Progress")}
+                <div className="hidden md:flex items-center gap-7">
+                  {navLink("#dashboard", "Dashboard")}
+                  {navLink("#recipes", "Recipes")}
+                  {navLink("#progress", "Progress")}
+                </div>
                 <button
                   onClick={toggleDarkMode}
-                  className="border border-rule px-2.5 py-1 font-mono text-[11px] text-ink-soft hover:text-ink hover:border-ink transition-colors"
+                  className="border border-rule p-1.5 text-ink-soft hover:text-ink hover:border-ink transition-colors"
                   aria-label="Toggle dark mode"
                 >
-                  {darkMode ? "Light" : "Dark"}
+                  {darkMode ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
                 </button>
               </div>
             </div>
           </div>
         </nav>
 
-        <main>
+        <main className="pb-16 md:pb-0">
           <ErrorBoundary>
             <Suspense fallback={<PageLoading />}>{renderPage()}</Suspense>
           </ErrorBoundary>
         </main>
+
+        {/* Mobile bottom navigation */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-paper border-t border-rule">
+          <div className="flex justify-around items-center h-16">
+            {(
+              [
+                { hash: "#dashboard", label: "Dashboard", Icon: LayoutDashboard },
+                { hash: "#recipes", label: "Recipes", Icon: BookOpen },
+                { hash: "#progress", label: "Progress", Icon: TrendingUp },
+              ] as const
+            ).map(({ hash, label, Icon }) => {
+              const isActive = currentPath === hash;
+              return (
+                <a
+                  key={hash}
+                  href={hash}
+                  className={`relative flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+                    isActive ? "text-persimmon" : "text-ink-soft hover:text-ink"
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-persimmon" />
+                  )}
+                  <Icon className="size-5" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.15em]">{label}</span>
+                </a>
+              );
+            })}
+          </div>
+        </nav>
       </div>
       <Toaster richColors />
     </TooltipProvider>

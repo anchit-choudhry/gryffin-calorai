@@ -29,7 +29,11 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
 
   useEffect(() => {
     if (prefillName && !initialFood) {
-      form.setValue("name", prefillName);
+      const safe = prefillName
+        .replace(/[^\w\s\-',.()/]/g, "")
+        .slice(0, 100)
+        .trim();
+      if (safe) form.setValue("name", safe);
     }
   }, [prefillName, initialFood, form]);
 
@@ -104,7 +108,7 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
                   type="number"
                   className={EDITORIAL_INPUT_CLS}
                   placeholder="e.g., 95"
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                 />
               </FormControl>
               <FormMessage className="font-mono text-[10px]" />
@@ -125,7 +129,7 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
                   className={EDITORIAL_INPUT_CLS}
                   placeholder="e.g., 1"
                   min="1"
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                  onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 1)}
                 />
               </FormControl>
               <FormMessage className="font-mono text-[10px]" />
@@ -139,14 +143,19 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             name="protein"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelCls}>Protein (g)</FormLabel>
+                <FormLabel className={labelCls}>
+                  Protein (g)
+                  <span className="ml-1 font-sans normal-case tracking-normal text-[10px] text-ink-soft/50">
+                    (optional)
+                  </span>
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />
@@ -158,14 +167,19 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             name="carbs"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelCls}>Carbs (g)</FormLabel>
+                <FormLabel className={labelCls}>
+                  Carbs (g)
+                  <span className="ml-1 font-sans normal-case tracking-normal text-[10px] text-ink-soft/50">
+                    (optional)
+                  </span>
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />
@@ -177,14 +191,19 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             name="fat"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelCls}>Fat (g)</FormLabel>
+                <FormLabel className={labelCls}>
+                  Fat (g)
+                  <span className="ml-1 font-sans normal-case tracking-normal text-[10px] text-ink-soft/50">
+                    (optional)
+                  </span>
+                </FormLabel>
                 <FormControl>
                   <Input
                     {...field}
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />

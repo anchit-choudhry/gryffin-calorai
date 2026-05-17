@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertDefined,
   computeStreaks,
   fuzzyMatchFoodName,
+  isBodyMeasurementId,
   isFoodItemId,
   isISODate,
+  isLengthUnit,
   isRecipeId,
+  isStepLogId,
+  isUserAchievementId,
   isUserId,
+  isWaterLogId,
+  isWeightUnit,
   sanitizeBarcodeInput,
   sanitizeVoiceTranscript,
 } from "./index";
@@ -204,6 +211,82 @@ describe("isISODate", () => {
   });
 });
 
+describe("isWaterLogId", () => {
+  it("accepts positive integer", () => {
+    expect(isWaterLogId(1)).toBe(true);
+  });
+
+  it("rejects float", () => {
+    expect(isWaterLogId(1.5)).toBe(false);
+  });
+
+  it("rejects unsafe integer", () => {
+    expect(isWaterLogId(Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+  });
+
+  it("rejects zero", () => {
+    expect(isWaterLogId(0)).toBe(false);
+  });
+
+  it("rejects negative", () => {
+    expect(isWaterLogId(-1)).toBe(false);
+  });
+});
+
+describe("isBodyMeasurementId", () => {
+  it("accepts positive integer", () => {
+    expect(isBodyMeasurementId(1)).toBe(true);
+  });
+
+  it("rejects float", () => {
+    expect(isBodyMeasurementId(1.5)).toBe(false);
+  });
+
+  it("rejects unsafe integer", () => {
+    expect(isBodyMeasurementId(Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+  });
+
+  it("rejects zero", () => {
+    expect(isBodyMeasurementId(0)).toBe(false);
+  });
+});
+
+describe("isUserAchievementId", () => {
+  it("accepts positive integer", () => {
+    expect(isUserAchievementId(1)).toBe(true);
+  });
+
+  it("rejects float", () => {
+    expect(isUserAchievementId(1.5)).toBe(false);
+  });
+
+  it("rejects unsafe integer", () => {
+    expect(isUserAchievementId(Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+  });
+
+  it("rejects zero", () => {
+    expect(isUserAchievementId(0)).toBe(false);
+  });
+});
+
+describe("isStepLogId", () => {
+  it("accepts positive integer", () => {
+    expect(isStepLogId(1)).toBe(true);
+  });
+
+  it("rejects float", () => {
+    expect(isStepLogId(1.5)).toBe(false);
+  });
+
+  it("rejects unsafe integer", () => {
+    expect(isStepLogId(Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+  });
+
+  it("rejects zero", () => {
+    expect(isStepLogId(0)).toBe(false);
+  });
+});
+
 describe("computeStreaks", () => {
   it("returns zeros for empty input", () => {
     expect(computeStreaks([])).toEqual({ currentStreak: 0, longestStreak: 0 });
@@ -243,5 +326,102 @@ describe("computeStreaks", () => {
     const old = "2020-01-01";
     const { currentStreak } = computeStreaks([old]);
     expect(currentStreak).toBe(0);
+  });
+
+  it("counts currentStreak when logs include today", () => {
+    const today = new Date().toISOString().split("T")[0]!;
+    const dates = [
+      new Date(new Date().setDate(new Date().getDate() - 2)).toISOString().split("T")[0]!,
+      new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0]!,
+      today,
+    ];
+    const { currentStreak } = computeStreaks(dates);
+    expect(currentStreak).toBeGreaterThan(0);
+  });
+
+  it("correctly computes currentStreak with yesterday and today", () => {
+    const today = new Date().toISOString().split("T")[0]!;
+    const yesterday = new Date(new Date().setDate(new Date().getDate() - 1))
+      .toISOString()
+      .split("T")[0]!;
+    const { currentStreak } = computeStreaks([yesterday, today]);
+    expect(currentStreak).toBeGreaterThan(0);
+  });
+});
+
+describe("fuzzyMatchFoodName edge cases", () => {
+  const corpus = [{ name: "Apple" }, { name: "Apple Juice" }, { name: "Banana" }];
+
+  it("matches when query is substring of name", () => {
+    const results = fuzzyMatchFoodName("apple", corpus);
+    expect(results.map((r) => r.name)).toContain("Apple");
+  });
+
+  it("matches when name is substring of query", () => {
+    const results = fuzzyMatchFoodName("apple juice blend", corpus);
+    expect(results.map((r) => r.name)).toContain("Apple Juice");
+  });
+
+  it("matches substring containment when query contains name", () => {
+    const results = fuzzyMatchFoodName("fresh apple juice", corpus);
+    expect(results.length).toBeGreaterThan(0);
+  });
+});
+
+describe("assertDefined", () => {
+  it("does not throw for defined value", () => {
+    const value: string | undefined = "test";
+    expect(() => assertDefined(value, "Should be defined")).not.toThrow();
+  });
+
+  it("throws for undefined value", () => {
+    const value: string | undefined = undefined;
+    expect(() => assertDefined(value, "Value is undefined")).toThrow("Value is undefined");
+  });
+
+  it("throws for null value", () => {
+    const value: string | null = null;
+    expect(() => assertDefined(value, "Value is null")).toThrow("Value is null");
+  });
+
+  it("throws with custom message", () => {
+    const value: number | null = null;
+    expect(() => assertDefined(value, "Custom error message")).toThrow("Custom error message");
+  });
+});
+
+describe("isWeightUnit", () => {
+  it("accepts kg", () => {
+    expect(isWeightUnit("kg")).toBe(true);
+  });
+
+  it("accepts lb", () => {
+    expect(isWeightUnit("lb")).toBe(true);
+  });
+
+  it("rejects invalid unit", () => {
+    expect(isWeightUnit("g")).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    expect(isWeightUnit("")).toBe(false);
+  });
+});
+
+describe("isLengthUnit", () => {
+  it("accepts cm", () => {
+    expect(isLengthUnit("cm")).toBe(true);
+  });
+
+  it("accepts in", () => {
+    expect(isLengthUnit("in")).toBe(true);
+  });
+
+  it("rejects invalid unit", () => {
+    expect(isLengthUnit("m")).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    expect(isLengthUnit("")).toBe(false);
   });
 });

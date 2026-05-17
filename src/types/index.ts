@@ -14,19 +14,39 @@ export const UserAchievementId = (id: number): UserAchievementId => id as UserAc
 export const StepLogId = (id: number): StepLogId => id as StepLogId;
 
 export function isWaterLogId(value: unknown): value is WaterLogId {
-  return typeof value === "number" && value > 0;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 export function isBodyMeasurementId(value: unknown): value is BodyMeasurementId {
-  return typeof value === "number" && value > 0;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 export function isUserAchievementId(value: unknown): value is UserAchievementId {
-  return typeof value === "number" && value > 0;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 export function isStepLogId(value: unknown): value is StepLogId {
-  return typeof value === "number" && value > 0;
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
 }
 
 export type UserId = Brand<string, "UserId">;

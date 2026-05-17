@@ -78,7 +78,7 @@ export function useFoodForm(initialFood?: FoodItem): {
             resetForm();
             resolve(true);
           } catch (error) {
-            console.error("Error logging food:", error);
+            if (import.meta.env.DEV) console.error("Error logging food:", error);
             toast.error("Failed to save food log. Check console for details.");
             resolve(false);
           } finally {

@@ -118,7 +118,7 @@ export function useProgressData(days: 7 | 30 = 7): {
       })
       .catch((error) => {
         if (!cancelled) {
-          console.error("Error fetching progress data:", error);
+          if (import.meta.env.DEV) console.error("Error fetching progress data:", error);
           setIsLoading(false);
         }
       });

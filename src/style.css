@@ -30,11 +30,19 @@
   /* Editorial palette */
   --color-paper: var(--paper);
   --color-paper-muted: var(--paper-muted);
+  --color-paper-raised: var(--paper-raised);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-rule: var(--rule);
   --color-persimmon: var(--persimmon);
   --color-persimmon-soft: var(--persimmon-soft);
+  /* Chart palette */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-goal: var(--chart-goal);
   /* Editorial typography */
   --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
@@ -64,11 +72,21 @@
   /* Editorial custom properties */
   --paper: oklch(0.975 0.012 80);
   --paper-muted: oklch(0.940 0.018 78);
+  --paper-raised: oklch(0.958 0.015 79);
   --ink: oklch(0.18 0.020 60);
   --ink-soft: oklch(0.42 0.020 60);
   --rule: oklch(0.85 0.015 75);
   --persimmon: oklch(0.65 0.190 38);
   --persimmon-soft: oklch(0.92 0.050 40);
+  /* Chart tokens */
+  --chart-1: oklch(0.65 0.190 38);
+  --chart-2: oklch(0.55 0.130 165);
+  --chart-3: oklch(0.50 0.110 260);
+  --chart-4: oklch(0.70 0.095 75);
+  --chart-grid: oklch(0.85 0.015 75 / 0.6);
+  --chart-goal: oklch(0.65 0.190 38);
+  --chart-tooltip-bg: oklch(0.975 0.012 80 / 0.96);
+  --chart-tooltip-border: oklch(0.85 0.015 75);
 }
 
 .dark {
@@ -93,9 +111,27 @@
   /* Editorial custom properties */
   --paper: oklch(0.18 0.012 50);
   --paper-muted: oklch(0.23 0.014 50);
+  --paper-raised: oklch(0.205 0.013 52);
   --ink: oklch(0.96 0.010 80);
   --ink-soft: oklch(0.74 0.012 75);
   --rule: oklch(0.32 0.015 60);
   --persimmon: oklch(0.78 0.170 38);
   --persimmon-soft: oklch(0.32 0.080 38);
+  /* Chart tokens */
+  --chart-1: oklch(0.78 0.170 38);
+  --chart-2: oklch(0.72 0.110 165);
+  --chart-3: oklch(0.70 0.090 260);
+  --chart-4: oklch(0.78 0.080 75);
+  --chart-grid: oklch(0.32 0.015 60 / 0.8);
+  --chart-goal: oklch(0.78 0.170 38);
+  --chart-tooltip-bg: oklch(0.23 0.014 50 / 0.96);
+  --chart-tooltip-border: oklch(0.32 0.015 60);
+}
+
+.hero-wash {
+  background: radial-gradient(
+    ellipse 80% 120% at 20% -10%,
+    oklch(from var(--persimmon) l c h / 0.04) 0%,
+    transparent 70%
+  );
 }

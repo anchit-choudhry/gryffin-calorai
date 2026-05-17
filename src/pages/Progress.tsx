@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import type { LegendPayload, TooltipContentProps } from "recharts";
 import {
   Area,
   AreaChart,
@@ -28,35 +27,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import { pageVariants, sectionVariants } from "../lib/motionVariants";
 import { ACHIEVEMENTS } from "../lib/achievements";
-
-const MEAL_COLORS: Record<string, string> = {
-  Breakfast: "#f59e0b",
-  Lunch: "#22c55e",
-  Snacks: "#a855f7",
-  Dinner: "#3b82f6",
-};
-
-const ChartTooltip = ({ label, payload }: TooltipContentProps) => (
-  <div className="rounded border border-rule bg-paper p-2 text-xs shadow-sm text-ink">
-    <p className="mb-1 font-semibold">{label}</p>
-    {payload?.map((p) => (
-      <p key={p.name} style={{ color: p.color ?? undefined }}>
-        {p.name}: {p.value}
-      </p>
-    ))}
-  </div>
-);
-
-const ChartLegend = ({ payload }: { payload?: ReadonlyArray<LegendPayload> }) => (
-  <ul className="flex flex-wrap justify-center gap-3 pt-1 text-xs">
-    {payload?.map((p) => (
-      <li key={p.value} className="flex items-center gap-1">
-        <span className="inline-block size-2 rounded-full" style={{ background: p.color }} />
-        {p.value}
-      </li>
-    ))}
-  </ul>
-);
+import {
+  BODY_CHART_COLOR,
+  chartTheme,
+  MACRO_CHART_COLOR,
+  MEAL_CHART_COLOR,
+} from "../lib/chartTheme";
+import ChartTooltip from "../components/charts/ChartTooltip";
+import ChartLegend from "../components/charts/ChartLegend";
+import EditorialChartCard from "../components/charts/EditorialChartCard";
+import ProgressHero from "../components/progress/ProgressHero";
 
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
@@ -119,17 +99,59 @@ const Progress = () => {
 
   const pieData = useMemo(() => {
     if (!mealTypeData) return [];
-    const totals = MEAL_TYPES.map((mt) => {
+    return MEAL_TYPES.map((mt) => {
       const sum = mealTypeData[mt].reduce((acc, val) => acc + val, 0);
       return { name: mt, value: sum };
     }).filter((d) => d.value > 0);
-    return totals;
   }, [mealTypeData]);
+
+  const { avgCalories, avgProtein, avgCarbs, avgFat, daysLogged, daysOnTrack } = useMemo(() => {
+    const activeDays = data.filter((v) => v > 0);
+    const avg =
+      activeDays.length > 0 ? activeDays.reduce((a, b) => a + b, 0) / activeDays.length : 0;
+    const tolerance = calorieGoal * 0.1;
+    const onTrack = data.filter(
+      (v) => v > 0 && v >= calorieGoal - tolerance && v <= calorieGoal + tolerance,
+    ).length;
+
+    const avgP = macroData
+      ? macroData.protein.reduce((a, b) => a + b, 0) / (activeDays.length || 1)
+      : null;
+    const avgC = macroData
+      ? macroData.carbs.reduce((a, b) => a + b, 0) / (activeDays.length || 1)
+      : null;
+    const avgF = macroData
+      ? macroData.fat.reduce((a, b) => a + b, 0) / (activeDays.length || 1)
+      : null;
+
+    return {
+      avgCalories: Math.round(avg),
+      avgProtein: avgP !== null ? Math.round(avgP) : null,
+      avgCarbs: avgC !== null ? Math.round(avgC) : null,
+      avgFat: avgF !== null ? Math.round(avgF) : null,
+      daysLogged: activeDays.length,
+      daysOnTrack: onTrack,
+    };
+  }, [data, macroData, calorieGoal]);
+
+  const axisTickStyle = {
+    fill: "var(--ink-soft)",
+    fontSize: chartTheme.axisFontSize,
+    fontFamily: chartTheme.axisFontFamily,
+  };
 
   const motionProps = shouldReduceMotion
     ? {}
     : { variants: pageVariants, initial: "hidden", animate: "show" };
   const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
+
+  const isCaloriesEmpty = chartData.every((d) => d.calories === 0);
+  const isMacroEmpty =
+    !macroData ||
+    (macroData.protein.every((v) => v === 0) &&
+      macroData.carbs.every((v) => v === 0) &&
+      macroData.fat.every((v) => v === 0));
+  const isWaterEmpty = waterData.every((v) => v === 0);
 
   return (
     <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
@@ -137,127 +159,171 @@ const Progress = () => {
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
         {...motionProps}
       >
-        {/* Section A — Progress Tracking */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <div className="col-span-12 flex justify-between items-center">
-            <SectionHeader kicker="01" title="Progress Tracking" />
-            <Tabs
-              value={String(days)}
-              onValueChange={(v) => {
-                const n = Number(v);
-                if (n === 7 || n === 30) setDays(n);
-              }}
-            >
-              <TabsList>
-                <TabsTrigger value="7">7 days</TabsTrigger>
-                <TabsTrigger value="30">30 days</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {isLoading ? (
-            <div className="col-span-12 text-ink-soft font-mono text-[10px] uppercase tracking-[0.2em]">
-              Loading...
-            </div>
-          ) : (
-            <>
-              <div className="col-span-12 border border-rule p-6 h-[400px] text-ink-soft">
-                <ResponsiveContainer width="100%" height="100%">
-                  {days === 7 && mealTypeData !== null ? (
-                    <ComposedChart
-                      data={chartData}
-                      margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-                      <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "currentColor", fontSize: 12 }} />
-                      <Tooltip content={ChartTooltip} />
-                      <Legend content={ChartLegend} />
-                      <ReferenceLine
-                        y={calorieGoal}
-                        stroke="rgba(239,68,68,0.7)"
-                        strokeDasharray="5 5"
-                        label={{
-                          value: "Goal",
-                          position: "insideTopRight",
-                          fontSize: 11,
-                          fill: "rgba(239,68,68,0.8)",
-                        }}
-                      />
-                      {MEAL_TYPES.map((mt) => (
-                        <Bar key={mt} dataKey={mt} stackId="meals" fill={MEAL_COLORS[mt]} />
-                      ))}
-                    </ComposedChart>
-                  ) : (
-                    <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-                      <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 12 }} />
-                      <YAxis tick={{ fill: "currentColor", fontSize: 12 }} />
-                      <Tooltip content={ChartTooltip} />
-                      <Legend content={ChartLegend} />
-                      <ReferenceLine
-                        y={calorieGoal}
-                        stroke="rgba(239,68,68,0.6)"
-                        strokeDasharray="5 5"
-                        label={{
-                          value: "Goal",
-                          position: "insideTopRight",
-                          fontSize: 11,
-                          fill: "rgba(239,68,68,0.8)",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="calories"
-                        name="Calories Consumed"
-                        stroke="rgb(79,70,229)"
-                        fill="rgba(79,70,229,0.1)"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-              <p className="col-span-12 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-                The dashed red line shows your daily calorie goal.
-              </p>
-            </>
-          )}
+        {/* Section A - Progress Hero */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash" {...sv}>
+          <ProgressHero
+            days={days}
+            setDays={setDays}
+            avgCalories={avgCalories}
+            avgProtein={avgProtein}
+            avgCarbs={avgCarbs}
+            avgFat={avgFat}
+            daysLogged={daysLogged}
+            daysOnTrack={daysOnTrack}
+          />
         </motion.section>
 
-        {/* Section B — Body Measurements */}
+        {/* Section B - Daily Calorie Trend */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="02" title="Body Measurements" />
+          <SectionHeader className="col-span-12" kicker="01" title="Daily Calorie Trend" />
+          <div
+            className="col-span-12"
+            role="figure"
+            aria-label={`Daily calorie trend chart for the last ${days} days`}
+          >
+            <EditorialChartCard
+              label="01 · Daily Calories"
+              height={400}
+              raised
+              isLoading={isLoading}
+              isEmpty={isCaloriesEmpty}
+              emptyMessage="No logs in this window. Start logging on the Dashboard."
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                {days === 7 && mealTypeData !== null ? (
+                  <ComposedChart
+                    data={chartData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="label" tick={axisTickStyle} />
+                    <YAxis tick={axisTickStyle} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<ChartLegend />} />
+                    <ReferenceLine
+                      y={calorieGoal}
+                      stroke={chartTheme.goal}
+                      strokeDasharray="5 5"
+                      label={{
+                        value: "Goal",
+                        position: "insideTopRight",
+                        fontSize: 11,
+                        fill: "var(--ink-soft)",
+                      }}
+                    />
+                    {MEAL_TYPES.map((mt) => (
+                      <Bar key={mt} dataKey={mt} stackId="meals" fill={MEAL_CHART_COLOR[mt]} />
+                    ))}
+                  </ComposedChart>
+                ) : (
+                  <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="label" tick={axisTickStyle} />
+                    <YAxis tick={axisTickStyle} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<ChartLegend />} />
+                    <ReferenceLine
+                      y={calorieGoal}
+                      stroke={chartTheme.goal}
+                      strokeDasharray="5 5"
+                      label={{
+                        value: "Goal",
+                        position: "insideTopRight",
+                        fontSize: 11,
+                        fill: "var(--ink-soft)",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="calories"
+                      name="Calories Consumed"
+                      stroke={chartTheme.chart1}
+                      fill={chartTheme.chart1}
+                      fillOpacity={0.12}
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </EditorialChartCard>
+          </div>
+          <p className="col-span-12 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+            Dashed persimmon line marks your daily goal.
+          </p>
+          <table className="sr-only col-span-12" aria-label="Daily calorie data">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Calories</th>
+              </tr>
+            </thead>
+            <tbody>
+              {chartData.map((d) => (
+                <tr key={d.label}>
+                  <td>{d.label}</td>
+                  <td>{d.calories}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </motion.section>
+
+        {/* Section C - Body Measurements */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" kicker="02" title="Body Measurements" accent />
           <div className="col-span-12 border border-rule p-6">
             <BodyMeasurements />
           </div>
         </motion.section>
 
-        {/* Section C — Macro Nutrient Trends */}
-        {days === 7 ? (
+        {/* Section D - Macro Nutrient Trends (7-day only) */}
+        {days === 7 && (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <SectionHeader className="col-span-12" kicker="03" title="Macro Nutrient Trends" />
-            {macroData && !isLoading ? (
-              <div className="col-span-12 border border-rule p-6 h-[400px] text-ink-soft">
+            <SectionHeader
+              className="col-span-12"
+              kicker="03"
+              title="Macro Nutrient Trends"
+              subtitle="7-day only"
+              accent
+            />
+            <div
+              className="col-span-12"
+              role="figure"
+              aria-label="Macro nutrient trends chart for the last 7 days"
+            >
+              <EditorialChartCard
+                label="03 · Macro Breakdown"
+                height={400}
+                raised
+                isLoading={isLoading}
+                isEmpty={isMacroEmpty}
+                emptyMessage="Macro breakdown unlocks once you log foods with protein/carbs/fat."
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={macroChartData}
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-                    <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 12 }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="label" tick={axisTickStyle} />
                     <YAxis
-                      tick={{ fill: "currentColor", fontSize: 12 }}
-                      label={{ value: "(g)", angle: -90, position: "insideLeft" }}
+                      tick={axisTickStyle}
+                      label={{
+                        value: "(g)",
+                        angle: -90,
+                        position: "insideLeft",
+                        fill: "var(--ink-soft)",
+                        fontSize: 11,
+                      }}
                     />
-                    <Tooltip content={ChartTooltip} />
-                    <Legend content={ChartLegend} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<ChartLegend />} />
                     <Area
                       type="monotone"
                       dataKey="protein"
                       name="Protein"
-                      stroke="var(--persimmon)"
-                      fill="var(--persimmon)"
+                      stroke={MACRO_CHART_COLOR.protein}
+                      fill={MACRO_CHART_COLOR.protein}
                       fillOpacity={0.15}
                       strokeWidth={2}
                     />
@@ -265,8 +331,8 @@ const Progress = () => {
                       type="monotone"
                       dataKey="carbs"
                       name="Carbs"
-                      stroke="#f59e0b"
-                      fill="#f59e0b"
+                      stroke={MACRO_CHART_COLOR.carbs}
+                      fill={MACRO_CHART_COLOR.carbs}
                       fillOpacity={0.15}
                       strokeWidth={2}
                     />
@@ -274,165 +340,229 @@ const Progress = () => {
                       type="monotone"
                       dataKey="fat"
                       name="Fat"
-                      stroke="#6366f1"
-                      fill="#6366f1"
+                      stroke={MACRO_CHART_COLOR.fat}
+                      fill={MACRO_CHART_COLOR.fat}
                       fillOpacity={0.15}
                       strokeWidth={2}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
-            ) : null}
-          </motion.section>
-        ) : (
-          <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <SectionHeader className="col-span-12" kicker="03" title="Macro Nutrient Trends" />
-            <div className="col-span-12 border border-rule p-6 h-[400px] flex items-center justify-center text-ink-soft text-sm">
-              Available for 7-day view only. Switch to 7-day tab above.
+              </EditorialChartCard>
             </div>
+            <table className="sr-only col-span-12" aria-label="Macro nutrient data">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Protein (g)</th>
+                  <th>Carbs (g)</th>
+                  <th>Fat (g)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {macroChartData.map((d) => (
+                  <tr key={d.label}>
+                    <td>{d.label}</td>
+                    <td>{d.protein}</td>
+                    <td>{d.carbs}</td>
+                    <td>{d.fat}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </motion.section>
         )}
 
-        {/* Section D — Water Intake Trend */}
+        {/* Section E - Water Intake Trend */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
           <SectionHeader className="col-span-12" kicker="04" title="Water Intake Trend" />
-          {waterLoading ? (
-            <div className="col-span-12 text-ink-soft font-mono text-[10px] uppercase tracking-[0.2em]">
-              Loading...
-            </div>
-          ) : (
-            <div className="col-span-12 border border-rule p-6 h-[400px] text-ink-soft">
+          <div
+            className="col-span-12"
+            role="figure"
+            aria-label={`Water intake trend chart for the last ${days} days`}
+          >
+            <EditorialChartCard
+              label="04 · Water Intake"
+              height={400}
+              raised
+              isLoading={waterLoading}
+              isEmpty={isWaterEmpty}
+              emptyMessage="Log water on the Dashboard to see your trend."
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={waterChartData}
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-                  <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis dataKey="label" tick={axisTickStyle} />
                   <YAxis
-                    tick={{ fill: "currentColor", fontSize: 12 }}
-                    label={{ value: "(ml)", angle: -90, position: "insideLeft" }}
+                    tick={axisTickStyle}
+                    label={{
+                      value: "(ml)",
+                      angle: -90,
+                      position: "insideLeft",
+                      fill: "var(--ink-soft)",
+                      fontSize: 11,
+                    }}
                   />
-                  <Tooltip content={ChartTooltip} />
-                  <Legend content={ChartLegend} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend content={<ChartLegend />} />
                   <ReferenceLine
                     y={waterGoalMl}
-                    stroke="rgba(239,68,68,0.6)"
+                    stroke={chartTheme.goal}
                     strokeDasharray="5 5"
                     label={{
                       value: "Goal",
                       position: "insideTopRight",
                       fontSize: 11,
-                      fill: "rgba(239,68,68,0.8)",
+                      fill: "var(--ink-soft)",
                     }}
                   />
                   <Area
                     type="monotone"
                     dataKey="water"
                     name="Water Intake"
-                    stroke="var(--persimmon)"
-                    fill="var(--persimmon)"
+                    stroke={chartTheme.chart2}
+                    fill={chartTheme.chart2}
                     fillOpacity={0.2}
                     strokeWidth={2}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-          )}
+            </EditorialChartCard>
+          </div>
+          <table className="sr-only col-span-12" aria-label="Water intake data">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Water (ml)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {waterChartData.map((d) => (
+                <tr key={d.label}>
+                  <td>{d.label}</td>
+                  <td>{d.water}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </motion.section>
 
-        {/* Section E — Body Composition */}
-        {bodyMeasurements.length >= 2 ? (
+        {/* Section F - Body Composition */}
+        {bodyMeasurements.length < 2 ? (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <div className="col-span-12 flex justify-between items-center">
-              <SectionHeader kicker="05" title="Body Composition" />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDisplayUnit("cm")}
-                  className={`px-3 py-1 text-xs font-mono uppercase tracking-wider border ${
-                    displayUnit === "cm"
-                      ? "border-ink bg-ink text-paper"
-                      : "border-rule text-ink-soft hover:bg-paper-muted"
-                  } transition-colors`}
-                >
-                  cm
-                </button>
-                <button
-                  onClick={() => setDisplayUnit("in")}
-                  className={`px-3 py-1 text-xs font-mono uppercase tracking-wider border ${
-                    displayUnit === "in"
-                      ? "border-ink bg-ink text-paper"
-                      : "border-rule text-ink-soft hover:bg-paper-muted"
-                  } transition-colors`}
-                >
-                  in
-                </button>
-              </div>
-            </div>
-            <div className="col-span-12 border border-rule p-6 h-[400px] text-ink-soft">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={bodyChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.15} />
-                  <XAxis dataKey="label" tick={{ fill: "currentColor", fontSize: 12 }} />
-                  <YAxis tick={{ fill: "currentColor", fontSize: 12 }} />
-                  <Tooltip content={ChartTooltip} />
-                  <Legend content={ChartLegend} />
-                  {bodyChartData.some((d) => d.bodyFat !== undefined) && (
-                    <Line
-                      type="monotone"
-                      dataKey="bodyFat"
-                      name="Body Fat %"
-                      stroke="#a78bfa"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                  {bodyChartData.some((d) => d.waist !== undefined) && (
-                    <Line
-                      type="monotone"
-                      dataKey="waist"
-                      name={`Waist (${displayUnit})`}
-                      stroke="#34d399"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                  {bodyChartData.some((d) => d.chest !== undefined) && (
-                    <Line
-                      type="monotone"
-                      dataKey="chest"
-                      name={`Chest (${displayUnit})`}
-                      stroke="#f59e0b"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                  {bodyChartData.some((d) => d.hips !== undefined) && (
-                    <Line
-                      type="monotone"
-                      dataKey="hips"
-                      name={`Hips (${displayUnit})`}
-                      stroke="#60a5fa"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
+            <SectionHeader kicker="05" title="Body Composition" className="col-span-12" accent />
+            <div className="col-span-12 border border-rule p-8 flex items-center gap-6">
+              <p className="font-display italic text-ink-soft text-lg">
+                Add at least 2 body measurements above to unlock your composition trend.
+              </p>
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft/50 ml-auto">
+                Log above
+              </span>
             </div>
           </motion.section>
-        ) : null}
-
-        {/* Section F — Calorie Distribution */}
-        {days === 7 ? (
+        ) : (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <SectionHeader className="col-span-12" kicker="06" title="Calorie Distribution" />
-            {pieData.length > 0 && !isLoading ? (
-              <div className="col-span-12 border border-rule p-6 h-[400px] text-ink-soft">
+            <div className="col-span-12 flex justify-between items-center">
+              <SectionHeader kicker="05" title="Body Composition" accent />
+              <Tabs
+                value={displayUnit}
+                onValueChange={(v) => {
+                  if (v === "cm" || v === "in") setDisplayUnit(v);
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="cm">cm</TabsTrigger>
+                  <TabsTrigger value="in">in</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="col-span-12" role="figure" aria-label="Body composition trend chart">
+              <EditorialChartCard label="05 · Body Composition" height={400} raised>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={bodyChartData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="label" tick={axisTickStyle} />
+                    <YAxis tick={axisTickStyle} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<ChartLegend />} />
+                    {bodyChartData.some((d) => d.bodyFat !== undefined) && (
+                      <Line
+                        type="monotone"
+                        dataKey="bodyFat"
+                        name="Body Fat %"
+                        stroke={BODY_CHART_COLOR.bodyFat}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+                    {bodyChartData.some((d) => d.waist !== undefined) && (
+                      <Line
+                        type="monotone"
+                        dataKey="waist"
+                        name={`Waist (${displayUnit})`}
+                        stroke={BODY_CHART_COLOR.waist}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+                    {bodyChartData.some((d) => d.chest !== undefined) && (
+                      <Line
+                        type="monotone"
+                        dataKey="chest"
+                        name={`Chest (${displayUnit})`}
+                        stroke={BODY_CHART_COLOR.chest}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+                    {bodyChartData.some((d) => d.hips !== undefined) && (
+                      <Line
+                        type="monotone"
+                        dataKey="hips"
+                        name={`Hips (${displayUnit})`}
+                        stroke={BODY_CHART_COLOR.hips}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </EditorialChartCard>
+            </div>
+          </motion.section>
+        )}
+
+        {/* Section G - Calorie Distribution (7-day only) */}
+        {days === 7 && (
+          <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+            <SectionHeader
+              className="col-span-12"
+              kicker="06"
+              title="Calorie Distribution"
+              subtitle="7-day only"
+            />
+            <div
+              className="col-span-12"
+              role="figure"
+              aria-label="Calorie distribution pie chart by meal type"
+            >
+              <EditorialChartCard
+                label="06 · Meal Distribution"
+                height={400}
+                raised
+                isLoading={isLoading}
+                isEmpty={pieData.length === 0}
+                emptyMessage="Once you log meals across multiple types, slices appear."
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 10 }}>
-                    <Tooltip content={ChartTooltip} />
-                    <Legend content={ChartLegend} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend content={<ChartLegend />} />
                     <Pie
                       data={pieData}
                       cx="50%"
@@ -446,26 +576,22 @@ const Progress = () => {
                       }
                     >
                       {pieData.map((entry) => (
-                        <Cell key={entry.name} fill={MEAL_COLORS[entry.name]} />
+                        <Cell
+                          key={entry.name}
+                          fill={MEAL_CHART_COLOR[entry.name as keyof typeof MEAL_CHART_COLOR]}
+                        />
                       ))}
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
-            ) : null}
-          </motion.section>
-        ) : (
-          <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <SectionHeader className="col-span-12" kicker="06" title="Calorie Distribution" />
-            <div className="col-span-12 border border-rule p-6 h-[400px] flex items-center justify-center text-ink-soft text-sm">
-              Available for 7-day view only. Switch to 7-day tab above.
+              </EditorialChartCard>
             </div>
           </motion.section>
         )}
 
-        {/* Section 07 — Achievements */}
+        {/* Section H - Achievements */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="07" title="Achievements" />
+          <SectionHeader className="col-span-12" kicker="07" title="Achievements" accent />
           <div className="col-span-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {ACHIEVEMENTS.map((achievement) => {
               const isUnlocked = unlockedAchievements.some(
@@ -480,27 +606,36 @@ const Progress = () => {
                   key={achievement.id}
                   className={`border p-4 flex flex-col gap-2 transition-all ${
                     isUnlocked
-                      ? "border-ink bg-paper-muted text-ink"
-                      : "border-rule/40 bg-paper text-ink-soft opacity-50"
+                      ? "border-ink bg-paper-raised text-ink"
+                      : "border-rule/40 bg-paper text-ink-soft opacity-60"
                   }`}
                   whileHover={isUnlocked ? { scale: 1.02 } : undefined}
                 >
-                  <div className="text-3xl mb-1">{isUnlocked ? achievement.icon : "?"}</div>
-                  <h3 className="font-semibold text-sm">{achievement.title}</h3>
+                  <div className={`text-3xl mb-1 ${!isUnlocked ? "grayscale opacity-40" : ""}`}>
+                    {achievement.icon}
+                  </div>
+                  <h3 className="font-display text-base">{achievement.title}</h3>
                   {!isUnlocked && (
                     <p className="text-xs text-ink-soft">{achievement.description}</p>
                   )}
                   {isUnlocked && unlockedEntry && (
-                    <p className="text-xs text-ink-soft">
-                      {new Date(unlockedEntry.unlockedAt).toLocaleDateString()}
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon">
+                      {new Date(unlockedEntry.unlockedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </p>
                   )}
                 </motion.div>
               );
             })}
           </div>
-          <div className="col-span-12 text-sm text-ink-soft text-center border-t border-rule pt-4">
-            {unlockedAchievements.length} / {ACHIEVEMENTS.length} achievements unlocked
+          <div className="col-span-12 border-t border-rule pt-4 flex items-baseline gap-3 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft">
+            Achievements unlocked
+            <span className="tabular-nums text-persimmon ml-auto">
+              {unlockedAchievements.length} / {ACHIEVEMENTS.length}
+            </span>
           </div>
         </motion.section>
       </motion.main>

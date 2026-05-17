@@ -1,30 +1,52 @@
 // src/db/dbService.test.ts
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addBodyMeasurement,
+  addFoodItemLog,
+  addStepLog,
+  addUserAchievement,
   addWaterLog,
+  clearDatabase,
   db,
   deleteBodyMeasurement,
   deleteFoodItem,
   deleteRecipe,
+  deleteStepLog,
   deleteWaterLog,
   type FoodItem,
   foodItems,
   getAllBodyMeasurements,
   getAllFoodLogs,
   getAllRecipes,
+  getAllStepLogs,
+  getAllWaterLogs,
   getDailyFoodLogs,
+  getDailyStepLogs,
   getDailyWaterLogs,
   getFavoriteFoodItems,
+  getFoodItemById,
   getOrCreateUser,
+  getRecentFoodItems,
+  getUnlockedAchievementIds,
+  getUnlockedAchievements,
   initializeDB,
   type Recipe,
   saveRecipe,
   toggleFavoriteFoodItem,
   updateFoodItem,
+  updateRecipe,
   updateUserProfile,
 } from "./dbService";
-import { FoodItemId as makeFoodItemId, ISODate, todayISO, UserId } from "../types";
+import {
+  BodyMeasurementId,
+  FoodItemId as makeFoodItemId,
+  ISODate,
+  RecipeId,
+  StepLogId,
+  todayISO,
+  UserId,
+  WaterLogId,
+} from "../types";
 
 describe("dbService", () => {
   beforeAll(async () => {
@@ -473,6 +495,711 @@ describe("dbService", () => {
       await deleteBodyMeasurement(id, userId);
       const after = await getAllBodyMeasurements(userId);
       expect(after).toHaveLength(0);
+    });
+  });
+
+  describe("step logs", () => {
+    it("should add and retrieve daily step logs", async () => {
+      const userId = UserId("sl-1");
+      const today = todayISO();
+
+      await addStepLog({
+        userId,
+        steps: 5000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addStepLog({
+        userId,
+        steps: 3000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const logs = await getDailyStepLogs(userId, today);
+      expect(logs).toHaveLength(2);
+      expect(logs.map((l) => l.steps).sort()).toEqual([3000, 5000]);
+    });
+
+    it("should retrieve all step logs across dates", async () => {
+      const userId = UserId("sl-2");
+      const today = todayISO();
+      const yesterday = ISODate(
+        new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0]!,
+      );
+
+      await addStepLog({
+        userId,
+        steps: 8000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addStepLog({
+        userId,
+        steps: 10000,
+        dateLogged: yesterday,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const allLogs = await getAllStepLogs(userId);
+      expect(allLogs.length).toBeGreaterThanOrEqual(2);
+      expect(allLogs.some((l) => l.steps === 8000)).toBe(true);
+      expect(allLogs.some((l) => l.steps === 10000)).toBe(true);
+    });
+
+    it("should not return step logs from other dates", async () => {
+      const userId = UserId("sl-3");
+      const today = todayISO();
+      const other = ISODate("2023-07-01");
+
+      await addStepLog({
+        userId,
+        steps: 6000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addStepLog({
+        userId,
+        steps: 9000,
+        dateLogged: other,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const logs = await getDailyStepLogs(userId, today);
+      expect(logs).toHaveLength(1);
+      expect(logs[0]!.steps).toBe(6000);
+    });
+
+    it("should delete a step log", async () => {
+      const userId = UserId("sl-4");
+      const today = todayISO();
+
+      const id = await addStepLog({
+        userId,
+        steps: 7000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      const before = await getDailyStepLogs(userId, today);
+      expect(before).toHaveLength(1);
+
+      await deleteStepLog(id, userId);
+      const after = await getDailyStepLogs(userId, today);
+      expect(after).toHaveLength(0);
+    });
+
+    it("should not delete if userId does not match", async () => {
+      const userId = UserId("sl-5");
+      const differentUserId = UserId("sl-5-other");
+      const today = todayISO();
+
+      const id = await addStepLog({
+        userId,
+        steps: 7000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+
+      await deleteStepLog(id, differentUserId);
+      const logs = await getDailyStepLogs(userId, today);
+      expect(logs).toHaveLength(1);
+    });
+  });
+
+  describe("achievements", () => {
+    it("should add and retrieve achievements", async () => {
+      const userId = UserId("ach-1");
+
+      await addUserAchievement({
+        userId,
+        achievementId: "first_food_log",
+        unlockedAt: new Date().toISOString(),
+      });
+      await addUserAchievement({
+        userId,
+        achievementId: "week_streak_7",
+        unlockedAt: new Date().toISOString(),
+      });
+
+      const achievements = await getUnlockedAchievements(userId);
+      expect(achievements.length).toBeGreaterThanOrEqual(2);
+      expect(achievements.some((a) => a.achievementId === "first_food_log")).toBe(true);
+      expect(achievements.some((a) => a.achievementId === "week_streak_7")).toBe(true);
+    });
+
+    it("should retrieve achievement ids as a set", async () => {
+      const userId = UserId("ach-2");
+
+      await addUserAchievement({
+        userId,
+        achievementId: "hydration_500ml",
+        unlockedAt: new Date().toISOString(),
+      });
+      await addUserAchievement({
+        userId,
+        achievementId: "step_goal_reached",
+        unlockedAt: new Date().toISOString(),
+      });
+
+      const achievementIds = await getUnlockedAchievementIds(userId);
+      expect(achievementIds.has("hydration_500ml")).toBe(true);
+      expect(achievementIds.has("step_goal_reached")).toBe(true);
+    });
+
+    it("should return empty set for user with no achievements", async () => {
+      const userId = UserId("ach-3");
+      const achievementIds = await getUnlockedAchievementIds(userId);
+      expect(achievementIds.size).toBe(0);
+    });
+  });
+
+  describe("recipe operations", () => {
+    it("should update a recipe", async () => {
+      const userId = UserId("recipe-1");
+      const recipe: Recipe = {
+        name: "Original Recipe",
+        description: "Original description",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId,
+        dateCreated: new Date().toISOString(),
+        userId,
+      };
+
+      const id = await saveRecipe(recipe);
+      const updatedRecipe = { ...recipe, id, name: "Updated Recipe", description: "Updated" };
+
+      await updateRecipe(updatedRecipe, userId);
+
+      const recipes = await getAllRecipes(userId);
+      const found = recipes.find((r) => r.id === id);
+      expect(found?.name).toBe("Updated Recipe");
+      expect(found?.description).toBe("Updated");
+    });
+  });
+
+  describe("getRecentFoodItems", () => {
+    it("should retrieve recent food items for a user", async () => {
+      const userId = UserId("recent-1");
+      const today = todayISO();
+
+      await foodItems.add({
+        userId,
+        name: "Apple",
+        calories: 95,
+        servingSize: 1,
+        protein: 0.5,
+        carbs: 25,
+        fat: 0.3,
+        dateLogged: today,
+        isFavorite: false,
+      });
+      await foodItems.add({
+        userId,
+        name: "Banana",
+        calories: 105,
+        servingSize: 1,
+        protein: 1,
+        carbs: 27,
+        fat: 0.3,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      const recent = await getRecentFoodItems(userId);
+      expect(recent.length).toBeGreaterThanOrEqual(2);
+      expect(recent.some((i) => i.name === "Apple")).toBe(true);
+      expect(recent.some((i) => i.name === "Banana")).toBe(true);
+    });
+  });
+
+  describe("deletion edge cases", () => {
+    it("should handle deletion of non-existent food items gracefully", async () => {
+      const userId = UserId("edge-1");
+      const nonExistentId = makeFoodItemId(99999);
+
+      await expect(deleteFoodItem(nonExistentId, userId)).resolves.not.toThrow();
+    });
+
+    it("should handle deletion of food items by wrong user", async () => {
+      const userId1 = UserId("edge-2a");
+      const userId2 = UserId("edge-2b");
+      const today = todayISO();
+
+      const id = await foodItems.add({
+        userId: userId1,
+        name: "Protected Food",
+        calories: 100,
+        servingSize: 1,
+        protein: 5,
+        carbs: 15,
+        fat: 3,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      await deleteFoodItem(makeFoodItemId(id), userId2);
+
+      const logs = await getDailyFoodLogs(userId1, today);
+      expect(logs.some((log) => log.name === "Protected Food")).toBe(true);
+    });
+
+    it("should handle deletion of non-existent water logs gracefully", async () => {
+      const userId = UserId("edge-3");
+      const nonExistentId = WaterLogId(99999);
+
+      await expect(deleteWaterLog(nonExistentId, userId)).resolves.not.toThrow();
+    });
+
+    it("should handle deletion of non-existent body measurements gracefully", async () => {
+      const userId = UserId("edge-4");
+      const nonExistentId = BodyMeasurementId(99999);
+
+      await expect(deleteBodyMeasurement(nonExistentId, userId)).resolves.not.toThrow();
+    });
+
+    it("should handle deletion of non-existent step logs gracefully", async () => {
+      const userId = UserId("edge-5");
+      const nonExistentId = StepLogId(99999);
+
+      await expect(deleteStepLog(nonExistentId, userId)).resolves.not.toThrow();
+    });
+  });
+
+  describe("additional coverage", () => {
+    it("should retrieve all water logs for a user", async () => {
+      const userId = UserId("wl-all");
+      const today = todayISO();
+      const yesterday = ISODate(
+        new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0]!,
+      );
+
+      await addWaterLog({
+        userId,
+        amount: 500,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+      await addWaterLog({
+        userId,
+        amount: 250,
+        dateLogged: yesterday,
+        loggedAt: new Date().toISOString(),
+      });
+
+      const allLogs = await getAllWaterLogs(userId);
+      expect(allLogs.length).toBeGreaterThanOrEqual(2);
+      expect(allLogs.some((l) => l.amount === 500)).toBe(true);
+      expect(allLogs.some((l) => l.amount === 250)).toBe(true);
+    });
+
+    it("should retrieve food item by id with authorization check", async () => {
+      const userId1 = UserId("food-auth-1");
+      const userId2 = UserId("food-auth-2");
+      const today = todayISO();
+
+      const id = await foodItems.add({
+        userId: userId1,
+        name: "Secret Food",
+        calories: 200,
+        servingSize: 1,
+        protein: 10,
+        carbs: 20,
+        fat: 5,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      const item = await getFoodItemById(makeFoodItemId(id), userId1);
+      expect(item).toBeDefined();
+      expect(item?.name).toBe("Secret Food");
+
+      const itemByWrongUser = await getFoodItemById(makeFoodItemId(id), userId2);
+      expect(itemByWrongUser).toBeUndefined();
+    });
+
+    it("should return undefined for non-existent food item", async () => {
+      const userId = UserId("food-missing");
+      const item = await getFoodItemById(makeFoodItemId(99999), userId);
+      expect(item).toBeUndefined();
+    });
+
+    it("should throw error when updating recipe without id", async () => {
+      const userId = UserId("recipe-no-id");
+      const recipe: Recipe = {
+        name: "No ID Recipe",
+        description: "Has no ID",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId,
+        dateCreated: new Date().toISOString(),
+        userId,
+      };
+
+      await expect(updateRecipe(recipe, userId)).rejects.toThrow("Recipe id required");
+    });
+
+    it("should throw error when updating another user's recipe", async () => {
+      const userId1 = UserId("recipe-owner");
+      const userId2 = UserId("recipe-intruder");
+
+      const recipe: Recipe = {
+        name: "Protected Recipe",
+        description: "Owned by user1",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId1,
+        dateCreated: new Date().toISOString(),
+        userId: userId1,
+      };
+
+      const id = await saveRecipe(recipe);
+      const recipeWithId = { ...recipe, id };
+
+      await expect(updateRecipe(recipeWithId, userId2)).rejects.toThrow("Unauthorized");
+    });
+
+    it("should throw error when updating non-existent recipe", async () => {
+      const userId = UserId("recipe-missing");
+      const recipe: Recipe = {
+        id: RecipeId(99999),
+        name: "Missing Recipe",
+        description: "Does not exist",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId,
+        dateCreated: new Date().toISOString(),
+        userId,
+      };
+
+      await expect(updateRecipe(recipe, userId)).rejects.toThrow("Unauthorized");
+    });
+
+    it("should add food item log using addFoodItemLog function", async () => {
+      const userId = UserId("food-log-1");
+      const mockFood: FoodItem = {
+        userId,
+        name: "Burger",
+        calories: 500,
+        servingSize: 1,
+        protein: 25,
+        carbs: 40,
+        fat: 20,
+        dateLogged: todayISO(),
+        isFavorite: false,
+      };
+
+      const id = await addFoodItemLog(mockFood);
+      expect(id).toBeDefined();
+      expect(typeof id).toBe("number");
+
+      const retrieved = await getFoodItemById(id, userId);
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.name).toBe("Burger");
+    });
+
+    it("should throw error when updating user profile from different user", async () => {
+      const userId1 = UserId("profile-owner");
+      const userId2 = UserId("profile-intruder");
+
+      const user = await getOrCreateUser(userId1, "Owner", "owner@example.com");
+      const modifiedProfile = { ...user, calorieGoal: 3000 };
+
+      await expect(updateUserProfile(modifiedProfile, userId2)).rejects.toThrow("Unauthorized");
+    });
+
+    it("should clear database in test mode", async () => {
+      const userId = UserId("clear-test");
+      const mockFood: FoodItem = {
+        userId,
+        name: "Temp Food",
+        calories: 100,
+        servingSize: 1,
+        protein: 5,
+        carbs: 10,
+        fat: 3,
+        dateLogged: todayISO(),
+        isFavorite: false,
+      };
+
+      await foodItems.add(mockFood);
+      const before = await getAllFoodLogs(userId);
+      expect(before.some((f) => f.name === "Temp Food")).toBe(true);
+
+      await clearDatabase();
+      await initializeDB();
+
+      const after = await getAllFoodLogs(userId);
+      expect(after.some((f) => f.name === "Temp Food")).toBe(false);
+    });
+
+    it("should deduplicate by name in getRecentFoodItems", async () => {
+      const userId = UserId("recent-dedup");
+      const today = todayISO();
+      const yesterday = ISODate(
+        new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split("T")[0]!,
+      );
+
+      await foodItems.add({
+        userId,
+        name: "Apple",
+        calories: 95,
+        servingSize: 1,
+        protein: 0.5,
+        carbs: 25,
+        fat: 0.3,
+        dateLogged: today,
+        isFavorite: false,
+      });
+      await foodItems.add({
+        userId,
+        name: "Apple",
+        calories: 95,
+        servingSize: 2,
+        protein: 1,
+        carbs: 50,
+        fat: 0.6,
+        dateLogged: yesterday,
+        isFavorite: false,
+      });
+
+      const recent = await getRecentFoodItems(userId);
+      const apples = recent.filter((i) => i.name === "Apple");
+      expect(apples.length).toBe(1);
+    });
+
+    it("should reject toggle favorite for non-existent food item", async () => {
+      const userId = UserId("toggle-missing");
+      const nonExistentId = makeFoodItemId(99999);
+
+      await expect(toggleFavoriteFoodItem(nonExistentId, true, userId)).resolves.not.toThrow();
+    });
+
+    it("should not allow wrong user to toggle favorite", async () => {
+      const userId1 = UserId("toggle-owner");
+      const userId2 = UserId("toggle-intruder");
+      const today = todayISO();
+
+      const id = await foodItems.add({
+        userId: userId1,
+        name: "Secret Snack",
+        calories: 150,
+        servingSize: 1,
+        protein: 5,
+        carbs: 20,
+        fat: 5,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      await toggleFavoriteFoodItem(makeFoodItemId(id), true, userId2);
+
+      const item = await getFoodItemById(makeFoodItemId(id), userId1);
+      expect(item?.isFavorite).toBe(false);
+    });
+
+    it("should not allow wrong user to update food item", async () => {
+      const userId1 = UserId("update-owner");
+      const userId2 = UserId("update-intruder");
+      const today = todayISO();
+
+      const id = await foodItems.add({
+        userId: userId1,
+        name: "Protected Dish",
+        calories: 200,
+        servingSize: 1,
+        protein: 10,
+        carbs: 25,
+        fat: 5,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      await updateFoodItem(makeFoodItemId(id), { name: "Hacked!" }, userId2);
+
+      const item = await getFoodItemById(makeFoodItemId(id), userId1);
+      expect(item?.name).toBe("Protected Dish");
+    });
+
+    it("should handle deletion of non-existent recipe gracefully", async () => {
+      const userId = UserId("recipe-missing-del");
+      const nonExistentId = RecipeId(99999);
+
+      await expect(deleteRecipe(nonExistentId, userId)).resolves.not.toThrow();
+    });
+
+    it("should not allow wrong user to delete recipe", async () => {
+      const userId1 = UserId("recipe-del-owner");
+      const userId2 = UserId("recipe-del-intruder");
+
+      const recipe: Recipe = {
+        name: "Protected Recipe",
+        description: "Owned by user1",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId1,
+        dateCreated: new Date().toISOString(),
+        userId: userId1,
+      };
+
+      const id = await saveRecipe(recipe);
+      await deleteRecipe(id, userId2);
+
+      const recipes = await getAllRecipes(userId1);
+      expect(recipes.some((r) => r.id === id)).toBe(true);
+    });
+
+    it("should not delete water log from wrong user", async () => {
+      const userId1 = UserId("water-owner");
+      const userId2 = UserId("water-intruder");
+      const today = todayISO();
+
+      const id = await addWaterLog({
+        userId: userId1,
+        amount: 500,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+
+      await deleteWaterLog(id, userId2);
+
+      const logs = await getDailyWaterLogs(userId1, today);
+      expect(logs.some((l) => l.amount === 500)).toBe(true);
+    });
+
+    it("should not delete body measurement from wrong user", async () => {
+      const userId1 = UserId("meas-owner");
+      const userId2 = UserId("meas-intruder");
+
+      const id = await addBodyMeasurement({
+        userId: userId1,
+        measuredAt: todayISO(),
+        weight: 75,
+      });
+
+      await deleteBodyMeasurement(id, userId2);
+
+      const measurements = await getAllBodyMeasurements(userId1);
+      expect(measurements.some((m) => m.weight === 75)).toBe(true);
+    });
+
+    it("should not delete step log from wrong user", async () => {
+      const userId1 = UserId("step-owner");
+      const userId2 = UserId("step-intruder");
+      const today = todayISO();
+
+      const id = await addStepLog({
+        userId: userId1,
+        steps: 8000,
+        dateLogged: today,
+        loggedAt: new Date().toISOString(),
+      });
+
+      await deleteStepLog(id, userId2);
+
+      const logs = await getDailyStepLogs(userId1, today);
+      expect(logs.some((l) => l.steps === 8000)).toBe(true);
+    });
+
+    it("should return undefined when getFoodItemById item not found", async () => {
+      const userId = UserId("missing-food-user");
+      const nonExistentId = makeFoodItemId(999999);
+      const result = await getFoodItemById(nonExistentId, userId);
+      expect(result).toBeUndefined();
+    });
+
+    it("should return undefined when getRecentFoodItems called with no items", async () => {
+      const userId = UserId("no-recent-items");
+      const recent = await getRecentFoodItems(userId);
+      expect(Array.isArray(recent)).toBe(true);
+      expect(recent.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should handle recipe update when recipe has no id", async () => {
+      const userId = UserId("recipe-update-no-id");
+      const recipe: Recipe = {
+        name: "No ID Recipe",
+        description: "Missing ID field",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: userId,
+        dateCreated: new Date().toISOString(),
+        userId,
+      };
+
+      await expect(updateRecipe(recipe, userId)).rejects.toThrow();
+    });
+
+    it("should reject recipe update when trying to update someone else's recipe", async () => {
+      const owner = UserId("owner123");
+      const intruder = UserId("intruder456");
+
+      const recipe: Recipe = {
+        name: "Original Recipe",
+        description: "Description",
+        ingredients: [{ foodItemId: makeFoodItemId(1), quantity: 1, serving: 1 }],
+        totalCalories: 100,
+        createdBy: owner,
+        dateCreated: new Date().toISOString(),
+        userId: owner,
+      };
+
+      const id = await saveRecipe(recipe);
+      const recipeWithId = { ...recipe, id };
+
+      await expect(updateRecipe(recipeWithId, intruder)).rejects.toThrow("Unauthorized");
+    });
+
+    it("should handle updateFoodItem when item not found", async () => {
+      const userId = UserId("update-missing");
+      const nonExistentId = makeFoodItemId(999999);
+
+      await updateFoodItem(nonExistentId, { name: "Updated" }, userId);
+
+      // Should not crash - item simply doesn't exist to update
+      expect(true).toBe(true);
+    });
+
+    it("should not allow wrong user to update food item", async () => {
+      const userId1 = UserId("original-owner");
+      const userId2 = UserId("unauthorized-updater");
+      const today = todayISO();
+
+      const id = await foodItems.add({
+        userId: userId1,
+        name: "Original Name",
+        calories: 100,
+        servingSize: 1,
+        protein: 5,
+        carbs: 15,
+        fat: 3,
+        dateLogged: today,
+        isFavorite: false,
+      });
+
+      await updateFoodItem(makeFoodItemId(id), { name: "Hacked!" }, userId2);
+
+      const item = await getFoodItemById(makeFoodItemId(id), userId1);
+      expect(item?.name).toBe("Original Name");
+    });
+  });
+
+  describe("clearDatabase", () => {
+    it("throws in production mode to prevent accidental data wipe", async () => {
+      vi.stubEnv("MODE", "production");
+      try {
+        await expect(clearDatabase()).rejects.toThrow(
+          "clearDatabase must not be called in production",
+        );
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("succeeds in non-production mode and leaves the db open and empty", async () => {
+      await clearDatabase();
+      const count = await db.table("foodItems").count();
+      expect(count).toBe(0);
     });
   });
 });

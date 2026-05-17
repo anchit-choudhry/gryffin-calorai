@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { saveRecipe } from "../db/dbService";
+import { type Recipe, saveRecipe, updateRecipe } from "../db/dbService";
 import { FoodItemId, type UserId } from "@/types";
 import { RecipeFormSchema, type RecipeFormValues } from "../forms/schemas";
 import { useAppState } from "../state/AppState";
@@ -14,15 +14,34 @@ type UseRecipeFormReturn = {
   remove: ReturnType<typeof useFieldArray<RecipeFormValues, "ingredients">>["remove"];
   isLoading: boolean;
   saveRecipeForm: () => Promise<boolean>;
+  mode: "create" | "edit";
 };
 
-export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
+export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): UseRecipeFormReturn {
+  const mode: "create" | "edit" = initialRecipe ? "edit" : "create";
   const [isLoading, setIsLoading] = useState(false);
-  const { checkAndUnlockAchievements } = useAppState();
+  const { checkAndUnlockAchievements, allFoodItems } = useAppState();
+
+  const computedDefaults: RecipeFormValues = initialRecipe
+    ? {
+        recipeName: initialRecipe.name,
+        description: initialRecipe.description,
+        ingredients: initialRecipe.ingredients.map((ing) => {
+          const foodItem = allFoodItems.find((fi) => fi.id === ing.foodItemId);
+          return {
+            foodItemId: Number(ing.foodItemId),
+            foodItemName: foodItem?.name ?? "",
+            calories: foodItem?.calories ?? 0,
+            quantity: ing.quantity,
+            serving: ing.serving,
+          };
+        }),
+      }
+    : { recipeName: "", description: "", ingredients: [] };
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(RecipeFormSchema),
-    defaultValues: { recipeName: "", description: "", ingredients: [] },
+    defaultValues: computedDefaults,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -46,26 +65,42 @@ export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
               0,
             );
 
-            await saveRecipe({
-              name: data.recipeName,
-              description: data.description,
-              ingredients: data.ingredients.map(({ foodItemId, quantity, serving }) => ({
-                foodItemId: FoodItemId(foodItemId),
-                quantity,
-                serving,
-              })),
-              totalCalories,
-              createdBy: userId,
-              dateCreated: new Date().toISOString(),
-              userId,
-            });
+            const mappedIngredients = data.ingredients.map(({ foodItemId, quantity, serving }) => ({
+              foodItemId: FoodItemId(foodItemId),
+              quantity,
+              serving,
+            }));
 
-            toast.success(`Recipe "${data.recipeName}" saved successfully!`);
-            form.reset();
+            if (mode === "edit" && initialRecipe) {
+              await updateRecipe(
+                {
+                  ...initialRecipe,
+                  name: data.recipeName,
+                  description: data.description,
+                  ingredients: mappedIngredients,
+                  totalCalories,
+                },
+                userId,
+              );
+              toast.success(`Recipe "${data.recipeName}" updated successfully!`);
+            } else {
+              await saveRecipe({
+                name: data.recipeName,
+                description: data.description,
+                ingredients: mappedIngredients,
+                totalCalories,
+                createdBy: userId,
+                dateCreated: new Date().toISOString(),
+                userId,
+              });
+              toast.success(`Recipe "${data.recipeName}" saved successfully!`);
+              form.reset();
+            }
+
             void checkAndUnlockAchievements();
             resolve(true);
           } catch (error) {
-            console.error("Error saving recipe:", error);
+            if (import.meta.env.DEV) console.error("Error saving recipe:", error);
             toast.error("Failed to save recipe. Check console for details.");
             resolve(false);
           } finally {
@@ -86,5 +121,5 @@ export function useRecipeForm(userId: UserId | null): UseRecipeFormReturn {
     });
   };
 
-  return { form, fields, append, remove, isLoading, saveRecipeForm };
+  return { form, fields, append, remove, isLoading, saveRecipeForm, mode };
 }

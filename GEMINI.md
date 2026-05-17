@@ -1,4 +1,4 @@
-# Project Documentation: Gryffin Calorai (v0.0.7)
+# Project Documentation: Gryffin Calorai (v0.0.8)
 
 ## Architectural Overview
 
@@ -9,7 +9,7 @@ dependency.
 - **Routing:** Hash-based navigation (`window.location.hash`) using `React.lazy` and `Suspense` for
   code-splitting.
 - **State Management:** Global state is managed by a single Zustand store (`src/state/AppState.ts`).
-- **Persistence:** Local storage via Dexie.js (currently **schema version 7**) with compound indices
+- **Persistence:** Local storage via Dexie.js (currently **schema version 9**) with compound indices
   for performance.
 - **Styling:** Tailwind CSS v4 using modern CSS-only `@import` directives.
 - **Security:** Strict Content Security Policy (CSP) and HTTP security headers configured in
@@ -45,11 +45,11 @@ dependency.
   provides the `Suspense` boundary for lazy-loaded pages.
 - `state/AppState.ts`: Central Zustand store. Manages state and async actions for food logs,
   recipes, water intake, body measurements, and user goals.
-- `db/dbService.ts`: Dexie.js service layer. Defines schema v7 (adding `waterLogs` and
-  `bodyMeasurements`) and provides CRUD abstractions with compound index queries.
+- `db/dbService.ts`: Dexie.js service layer. Defines schema v9 (adding `waterLogs`,
+  `bodyMeasurements`, `stepLogs`, `userAchievements`) and provides CRUD abstractions.
 - `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId,
   BodyMeasurementId, ISODate). Includes sanitizers for barcode/voice inputs and utility functions
-  like `computeStreaks` and `fuzzyMatchFoodName`.
+  like `computeStreaks` and `fuzzyMatchFoodName`. **Note: All ID-based interactions now require numeric factory-function wrappers (e.g., `UserId(1)`) to ensure type safety.**
 
 ### UI Components (`/src/components`)
 
@@ -57,6 +57,7 @@ dependency.
 - `VoiceFoodLogger.tsx`: Hands-free logging using Web Speech API with fuzzy matching.
 - `BarcodeScanner.tsx`: Interface for camera-based barcode scanning (ZXing).
 - `WaterTracker.tsx`: Daily hydration tracking against a 2000ml goal.
+- `StepTracker.tsx`: Daily step tracking.
 - `BodyMeasurements.tsx`: Tracker for weight, body fat, and dimensions with unit conversions.
 - `StreakCard.tsx`: Displays current and longest logging streaks.
 - `PageLoading.tsx`: Minimal spinner used as a Suspense fallback.
@@ -64,7 +65,7 @@ dependency.
 ### Page Components (`/src/pages`)
 
 - `Dashboard.tsx`: Main overview. Integrates food logging (manual/barcode/voice), hydration
-  tracking, and streaks. Refactored with 5-section editorial layout.
+  tracking, steps, and streaks. Refactored with 5-section editorial layout.
 - `Recipes.tsx`: User-defined recipe management system.
 - `Progress.tsx`: Data visualizations (Recharts) and body measurement history.
 
@@ -79,13 +80,29 @@ dependency.
   store or database.
 - **Security:** CSP restricts hardware (camera/mic) to `self` and disables geolocation.
 
-## Roadmap (v0.0.8)
+## Common Pitfalls & Gotchas
 
-- [ ] Step Tracking (Feature 5 - follows useWaterForm pattern; `StepLog` entity, `StepTracker`
-  component)
+- **Branded Types**: Always use the provided factory functions (e.g., `UserId()`, `FoodItemId()`) for ID generation. Do not cast raw numbers or strings, as this will lead to runtime type mismatches.
+- **Async State Updates**: Ensure `await` is used when calling store actions that depend on database operations to avoid race conditions.
+- **Zustand Selectors**: When using Zustand selectors, ensure the returned state slice is typed correctly. Avoid using `any` for `mockAppStateData` in tests; import and cast properly to the exported `AppState` interface.
+
+## Testing & Mocking Standards
+
+- **Mocking Strategy**: Use `vi.mocked()` for DB services. When mocking object properties that are read-only (like `dbService` methods), use `vi.spyOn()` or `vi.mocked()` selectively to avoid `TS2540` errors.
+- **Factory Functions**: Use numeric factory-function wrappers in test data factories to match domain types.
+- **Test Setup**: Use `vi.resetModules()` when testing IIFE-initialized state (e.g., in `AppState.ts`) to ensure a fresh evaluation of `localStorage` dependencies.
+
+## Development Lifecycle
+
+- **Pre-Commit Verification**: Run `pnpm lint:fix` and `pnpm build` locally before any commit to ensure type safety and code quality standards.
+- **Testing**: Before submitting a PR, verify coverage by running `pnpm test`. Aim for >80% coverage on all new components or refactors.
+
+## Roadmap (v0.0.9)
+
 - [ ] Macro nutrient breakdown display for recipes (on recipe card + log entry)
 - [ ] Component test coverage >80% (targeting all Dashboard sub-components)
 - [ ] Advanced filtering and search (date range, meal type filters)
 
 ---
-**Last Updated:** May 9, 2026
+**Last Updated:** May 17, 2026
+

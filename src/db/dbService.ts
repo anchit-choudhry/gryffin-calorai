@@ -312,6 +312,15 @@ export const deleteRecipe = async (id: RecipeId, userId: UserId): Promise<void> 
   await recipes.delete(id);
 };
 
+export const updateRecipe = async (recipe: Recipe, userId: UserId): Promise<void> => {
+  if (!recipe.id) throw new Error("Recipe id required for update");
+  const existing = await recipes.get(recipe.id);
+  if (!existing || existing.userId !== userId) {
+    throw new Error("Unauthorized: cannot modify another user's recipe");
+  }
+  await recipes.put({ ...recipe, userId });
+};
+
 export const getFoodItemById = async (
   id: FoodItemId,
   userId: UserId,

@@ -5,12 +5,15 @@ interface Props {
   title: string;
   subtitle?: string;
   className?: string;
+  accent?: boolean;
 }
 
-const SectionHeader: FC<Props> = ({ kicker, title, subtitle, className }) => (
-  <div className={`pb-3 border-b border-rule ${className ?? ""}`}>
-    <div className="flex items-baseline gap-3">
-      <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft">
+const SectionHeader: FC<Props> = ({ kicker, title, subtitle, className, accent }) => (
+  <div
+    className={`pb-3 border-b border-rule ${accent ? "border-l-2 border-l-persimmon pl-4" : ""} ${className ?? ""}`}
+  >
+    <div className="flex items-baseline gap-4">
+      <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-ink-soft opacity-50">
         {kicker}
       </span>
       <h2 className="font-display text-2xl text-ink">{title}</h2>

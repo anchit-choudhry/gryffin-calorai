@@ -3,7 +3,14 @@ import type { LengthUnit, WeightUnit } from "@/types";
 
 // Food form schema
 export const FoodFormSchema = z.object({
-  name: z.string().min(1, "Food name is required").max(100, "Name must be 100 characters or fewer"),
+  name: z
+    .string()
+    .min(1, "Food name is required")
+    .max(100, "Name must be 100 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]+$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation (- ' , . ( ) /)",
+    ),
   calories: z
     .number({ invalid_type_error: "Enter a valid number" })
     .min(0, "Cannot be negative")
@@ -82,7 +89,13 @@ export type BodyFormValues = z.infer<ReturnType<typeof makeBodySchema>>;
 // Recipe form schemas
 export const IngredientSchema = z.object({
   foodItemId: z.number().int("Must be a whole number").min(1, "Must be a valid food item"),
-  foodItemName: z.string().max(100, "Name must be 100 characters or fewer"),
+  foodItemName: z
+    .string()
+    .max(100, "Name must be 100 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]*$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation (- ' , . ( ) /)",
+    ),
   calories: z.number().min(0, "Cannot be negative").max(10000, "Cannot exceed 10,000 kcal"),
   quantity: z.number().min(1, "Min 1").max(999, "Max 999"),
   serving: z.number().min(1, "Min 1").max(999, "Max 999"),
@@ -92,11 +105,16 @@ export const RecipeFormSchema = z.object({
   recipeName: z
     .string()
     .min(1, "Recipe name is required")
-    .max(100, "Name must be 100 characters or fewer"),
+    .max(100, "Name must be 100 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]+$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation (- ' , . ( ) /)",
+    ),
   description: z
     .string()
     .min(1, "Description is required")
-    .max(500, "Description must be 500 characters or fewer"),
+    .max(500, "Description must be 500 characters or fewer")
+    .regex(/^[\x20-\x7E]+$/, "Description may only contain printable characters"),
   ingredients: z
     .array(IngredientSchema)
     .min(1, "At least one ingredient is required")
