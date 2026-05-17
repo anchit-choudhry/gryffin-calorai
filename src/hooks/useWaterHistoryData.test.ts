@@ -91,32 +91,44 @@ describe("useWaterHistoryData", () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  it("should return hook with required properties", () => {
+  it("should return hook with required properties", async () => {
     const { result } = renderHook(() => useWaterHistoryData(7));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
     expect(result.current).toHaveProperty("labels");
     expect(result.current).toHaveProperty("data");
     expect(result.current).toHaveProperty("isLoading");
   });
 
-  it("should return arrays for labels and data", () => {
+  it("should return arrays for labels and data", async () => {
     const { result } = renderHook(() => useWaterHistoryData(7));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
     expect(Array.isArray(result.current.labels)).toBe(true);
     expect(Array.isArray(result.current.data)).toBe(true);
   });
 
-  it("should accept 7 day parameter", () => {
+  it("should accept 7 day parameter", async () => {
     const { result } = renderHook(() => useWaterHistoryData(7));
-    expect(result.current).toBeDefined();
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
   });
 
-  it("should accept 30 day parameter", () => {
+  it("should accept 30 day parameter", async () => {
     const { result } = renderHook(() => useWaterHistoryData(30));
-    expect(result.current).toBeDefined();
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
   });
 
-  it("should call getAllWaterLogs when userId is set", () => {
+  it("should call getAllWaterLogs when userId is set", async () => {
     renderHook(() => useWaterHistoryData(7));
-    expect(vi.mocked(dbService).getAllWaterLogs).toHaveBeenCalledWith(userId);
+    await waitFor(() => {
+      expect(vi.mocked(dbService).getAllWaterLogs).toHaveBeenCalledWith(userId);
+    });
   });
 
   it("should aggregate water logs by date", async () => {
@@ -164,12 +176,14 @@ describe("useWaterHistoryData", () => {
     expect(Array.isArray(result.current.data)).toBe(true);
   });
 
-  it("should handle empty water logs", () => {
+  it("should handle empty water logs", async () => {
     vi.mocked(dbService).getAllWaterLogs.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useWaterHistoryData(7));
-    expect(result.current.labels).toBeDefined();
-    expect(result.current.data).toBeDefined();
+    await waitFor(() => {
+      expect(result.current.labels).toBeDefined();
+      expect(result.current.data).toBeDefined();
+    });
   });
 
   it("should handle fetch error gracefully", async () => {
@@ -195,7 +209,7 @@ describe("useWaterHistoryData", () => {
     expect(true).toBe(true);
   });
 
-  it("should handle water logs from different dates", () => {
+  it("should handle water logs from different dates", async () => {
     const logs = [
       {
         id: WaterLogId(1),
@@ -216,7 +230,9 @@ describe("useWaterHistoryData", () => {
     vi.mocked(dbService).getAllWaterLogs.mockResolvedValueOnce(logs);
 
     const { result } = renderHook(() => useWaterHistoryData(7));
-    expect(result.current).toBeDefined();
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
   });
 
   it("should filter out logs outside the date range", async () => {

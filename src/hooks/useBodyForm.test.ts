@@ -107,22 +107,38 @@ describe("useBodyForm", () => {
 
   it("should have setWeightUnit function that accepts kg", () => {
     const { result } = renderHook(() => useBodyForm());
-    expect(() => result.current.setWeightUnit("kg")).not.toThrow();
+    expect(() => {
+      act(() => {
+        result.current.setWeightUnit("kg");
+      });
+    }).not.toThrow();
   });
 
   it("should have setWeightUnit function that accepts lb", () => {
     const { result } = renderHook(() => useBodyForm());
-    expect(() => result.current.setWeightUnit("lb")).not.toThrow();
+    expect(() => {
+      act(() => {
+        result.current.setWeightUnit("lb");
+      });
+    }).not.toThrow();
   });
 
   it("should have setLengthUnit function that accepts cm", () => {
     const { result } = renderHook(() => useBodyForm());
-    expect(() => result.current.setLengthUnit("cm")).not.toThrow();
+    expect(() => {
+      act(() => {
+        result.current.setLengthUnit("cm");
+      });
+    }).not.toThrow();
   });
 
   it("should have setLengthUnit function that accepts in", () => {
     const { result } = renderHook(() => useBodyForm());
-    expect(() => result.current.setLengthUnit("in")).not.toThrow();
+    expect(() => {
+      act(() => {
+        result.current.setLengthUnit("in");
+      });
+    }).not.toThrow();
   });
 
   it("should have form with required properties", () => {

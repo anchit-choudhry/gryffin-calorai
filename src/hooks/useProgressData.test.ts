@@ -32,8 +32,11 @@ describe("useProgressData", () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  it("should return hook with required properties", () => {
+  it("should return hook with required properties", async () => {
     const { result } = renderHook(() => useProgressData(7));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
     expect(result.current).toHaveProperty("labels");
     expect(result.current).toHaveProperty("data");
     expect(result.current).toHaveProperty("mealTypeData");
@@ -41,20 +44,27 @@ describe("useProgressData", () => {
     expect(result.current).toHaveProperty("isLoading");
   });
 
-  it("should return initial empty arrays", () => {
+  it("should return initial empty arrays", async () => {
     const { result } = renderHook(() => useProgressData(7));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
     expect(Array.isArray(result.current.labels)).toBe(true);
     expect(Array.isArray(result.current.data)).toBe(true);
   });
 
-  it("should accept 7 day parameter", () => {
+  it("should accept 7 day parameter", async () => {
     const { result } = renderHook(() => useProgressData(7));
-    expect(result.current).toBeDefined();
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
   });
 
-  it("should accept 30 day parameter", () => {
+  it("should accept 30 day parameter", async () => {
     const { result } = renderHook(() => useProgressData(30));
-    expect(result.current).toBeDefined();
+    await waitFor(() => {
+      expect(result.current).toBeDefined();
+    });
   });
 
   it("should handle missing userId gracefully", () => {
@@ -66,9 +76,11 @@ describe("useProgressData", () => {
     expect(result.current.labels).toEqual([]);
   });
 
-  it("should call getAllFoodLogs when userId is set", () => {
+  it("should call getAllFoodLogs when userId is set", async () => {
     renderHook(() => useProgressData(7));
-    expect(vi.mocked(dbService).getAllFoodLogs).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(vi.mocked(dbService).getAllFoodLogs).toHaveBeenCalled();
+    });
   });
 
   it("should handle error during data fetch", async () => {
