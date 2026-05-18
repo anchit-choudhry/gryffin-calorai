@@ -108,7 +108,7 @@ const BarcodeScanner = ({ onBarcodeDetected }: BarcodeScannerProps) => {
               onChange={(e) => setManualInput(e.target.value)}
               placeholder="Enter barcode number"
               aria-label="Manual barcode entry"
-              className="flex-1 border-b border-rule bg-transparent font-mono text-sm text-ink focus:outline-none focus:border-persimmon pb-1 pt-1 placeholder:text-ink-soft/50 transition-colors"
+              className="flex-1 border-b border-rule bg-transparent font-mono text-sm text-ink focus-visible:outline-none focus-visible:border-persimmon pb-1 pt-1 placeholder:text-ink-soft/50 transition-colors"
             />
             <button
               type="submit"

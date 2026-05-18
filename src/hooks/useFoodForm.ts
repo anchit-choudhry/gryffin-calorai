@@ -24,6 +24,7 @@ export function useFoodForm(initialFood?: FoodItem): {
 
   const form = useForm<FoodFormValues>({
     resolver: zodResolver(FoodFormSchema),
+    mode: "onBlur",
     defaultValues: {
       name: initialFood?.name ?? "",
       calories: initialFood?.calories ?? 0,

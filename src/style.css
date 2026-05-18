@@ -51,25 +51,15 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  /* Editorial custom properties */
+
+  /* ---- Editorial primitive tokens ---- */
+  /* Contrast ratios (WCAG, on --paper background):
+     --ink       (L 0.18) on --paper    (L 0.975): ~16.5:1  AAA ✓
+     --ink-soft  (L 0.42) on --paper    (L 0.975):  ~7.2:1  AAA ✓
+     --ink-soft  (L 0.42) on --paper-muted (L 0.940): ~6.4:1  AA ✓
+     --ink-soft  (L 0.42) on --paper-raised (L 0.958): ~6.9:1 AA ✓
+     --persimmon (L 0.65) on --paper    (L 0.975):  ~3.1:1  (decorative/large text only)
+     Placeholder text inherits --ink-soft via --muted-foreground: 7.2:1 ✓ */
   --paper: oklch(0.975 0.012 80);
   --paper-muted: oklch(0.940 0.018 78);
   --paper-raised: oklch(0.958 0.015 79);
@@ -78,7 +68,29 @@
   --rule: oklch(0.85 0.015 75);
   --persimmon: oklch(0.65 0.190 38);
   --persimmon-soft: oklch(0.92 0.050 40);
-  /* Chart tokens */
+
+  /* ---- Shadcn semantic tokens — wired to editorial layer ---- */
+  /* Neutrals carry a chroma of 0.008–0.018 toward hue 70 (persimmon-warm) */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--persimmon);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-muted);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-muted);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--paper-muted);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--persimmon);
+
+  /* ---- Chart tokens ---- */
   --chart-1: oklch(0.65 0.190 38);
   --chart-2: oklch(0.55 0.130 165);
   --chart-3: oklch(0.50 0.110 260);
@@ -87,28 +99,22 @@
   --chart-goal: oklch(0.65 0.190 38);
   --chart-tooltip-bg: oklch(0.975 0.012 80 / 0.96);
   --chart-tooltip-border: oklch(0.85 0.015 75);
+
+  /* ---- Motion tokens ---- */
+  --dur-instant: 120ms;
+  --dur-state: 240ms;
+  --dur-layout: 400ms;
+  --dur-entrance: 600ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---- Safe area ---- */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  /* Editorial custom properties */
+  /* ---- Editorial primitive tokens (dark) ---- */
   --paper: oklch(0.18 0.012 50);
   --paper-muted: oklch(0.23 0.014 50);
   --paper-raised: oklch(0.205 0.013 52);
@@ -117,7 +123,28 @@
   --rule: oklch(0.32 0.015 60);
   --persimmon: oklch(0.78 0.170 38);
   --persimmon-soft: oklch(0.32 0.080 38);
-  /* Chart tokens */
+
+  /* ---- Shadcn semantic tokens — wired to editorial dark layer ---- */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper-raised);
+  --card-foreground: var(--ink);
+  --popover: var(--paper-raised);
+  --popover-foreground: var(--ink);
+  --primary: var(--persimmon);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-muted);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-muted);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--paper-muted);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--persimmon);
+
+  /* ---- Chart tokens (dark) ---- */
   --chart-1: oklch(0.78 0.170 38);
   --chart-2: oklch(0.72 0.110 165);
   --chart-3: oklch(0.70 0.090 260);
@@ -126,6 +153,9 @@
   --chart-goal: oklch(0.78 0.170 38);
   --chart-tooltip-bg: oklch(0.23 0.014 50 / 0.96);
   --chart-tooltip-border: oklch(0.32 0.015 60);
+
+  /* Dark mode: reduce font weight visually by using lighter rendering */
+  font-weight: 350;
 }
 
 .hero-wash {
@@ -134,4 +164,30 @@
     oklch(from var(--persimmon) l c h / 0.04) 0%,
     transparent 70%
   );
+}
+
+/* ---- Touch-target adaptive density ---- */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ---- Base text color (Tailwind v4 preflight does not set body color) ---- */
+@layer base {
+  body {
+    color: var(--color-foreground);
+  }
+}
+
+/* ---- Reduced motion: disable all spatial animations ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

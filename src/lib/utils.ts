@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const EDITORIAL_INPUT_CLS =
-  "border-0 border-b border-rule rounded-none bg-transparent font-mono text-sm text-ink " +
+  "border-0 border-b border-rule rounded-none bg-transparent dark:bg-paper font-mono text-sm text-ink " +
   "focus-visible:ring-0 focus-visible:border-persimmon placeholder:text-ink-soft/50 py-1 h-auto";
 
 export interface GroupedMealLog {

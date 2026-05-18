@@ -15,6 +15,7 @@ export function useStepForm(): {
 
   const form = useForm<StepFormValues>({
     resolver: zodResolver(StepSchema),
+    mode: "onBlur",
     defaultValues: { steps: 1000 },
   });
 

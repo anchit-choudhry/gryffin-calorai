@@ -8,6 +8,7 @@ import {
   addUserAchievement as addUserAchievementToDB,
   addWaterLog as addWaterLogToDB,
   type BodyMeasurement,
+  completeOnboarding as completeOnboardingInDB,
   deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
   deleteRecipe as deleteRecipeFromDB,
@@ -45,6 +46,7 @@ import type {
   WaterLogId,
 } from "@/types";
 import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
+import { TOUR_TOTAL_STEPS } from "../components/tour/tourSteps";
 import { ACHIEVEMENTS, evaluateAchievements } from "../lib/achievements";
 
 export interface AppState {
@@ -89,6 +91,15 @@ export interface AppState {
   checkAndUnlockAchievements: () => Promise<void>;
   setWaterGoalMl: (ml: number) => void;
   setStepGoal: (steps: number) => void;
+  tourActive: boolean;
+  tourStep: number;
+  tourTotalSteps: number;
+  startTour: () => void;
+  nextTourStep: () => void;
+  prevTourStep: () => void;
+  endTour: () => Promise<void>;
+  skipTour: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
 }
 
 export const useAppState = create<AppState>((set, get) => ({
@@ -119,6 +130,9 @@ export const useAppState = create<AppState>((set, get) => ({
   })(),
   error: null,
   userId: null,
+  tourActive: false,
+  tourStep: 0,
+  tourTotalSteps: TOUR_TOTAL_STEPS,
 
   fetchInitialData: async (userId: UserId) => {
     set({ init: { status: "loading" }, userId });
@@ -284,14 +298,33 @@ export const useAppState = create<AppState>((set, get) => ({
   toggleFavorite: async (id: FoodItemId, isFavorite: boolean) => {
     const state = get();
     if (!state.userId) return;
+    const prevAllFoodItems = state.allFoodItems;
+    const prevFavoriteFoods = state.favoriteFoods;
+    const prevDailyLogs = state.dailyLogs;
+    set({
+      allFoodItems: state.allFoodItems.map((f) => (f.id === id ? { ...f, isFavorite } : f)),
+      favoriteFoods: isFavorite
+        ? [
+            ...state.favoriteFoods.filter((f) => f.id !== id),
+            ...(state.allFoodItems.find((f) => f.id === id)
+              ? [{ ...state.allFoodItems.find((f) => f.id === id)!, isFavorite: true }]
+              : []),
+          ]
+        : state.favoriteFoods.filter((f) => f.id !== id),
+      dailyLogs: state.dailyLogs.map((f) => (f.id === id ? { ...f, isFavorite } : f)),
+    });
     try {
       await toggleFavoriteFoodItem(id, isFavorite, state.userId);
-      await state.fetchFavorites(state.userId);
-      await state.fetchAllFoodItems(state.userId);
     } catch (error) {
+      set({
+        allFoodItems: prevAllFoodItems,
+        favoriteFoods: prevFavoriteFoods,
+        dailyLogs: prevDailyLogs,
+      });
       const message = mapDbError(error, "Failed to toggle favorite");
       if (import.meta.env.DEV) console.error("Error toggling favorite:", error);
       set({ error: message });
+      toast.error(message);
     }
   },
 
@@ -322,20 +355,24 @@ export const useAppState = create<AppState>((set, get) => ({
   addWaterLog: async (amount: number) => {
     const state = get();
     if (!state.userId) return;
+    const optimisticLog: WaterLog = {
+      userId: state.userId,
+      amount,
+      dateLogged: todayISO(),
+      loggedAt: new Date().toISOString(),
+    };
+    const prevWaterLogs = state.dailyWaterLogs;
+    set({ dailyWaterLogs: [...state.dailyWaterLogs, optimisticLog] });
     try {
-      const log: WaterLog = {
-        userId: state.userId,
-        amount,
-        dateLogged: todayISO(),
-        loggedAt: new Date().toISOString(),
-      };
-      await addWaterLogToDB(log);
-      await state.fetchDailyWaterLogs(state.userId);
+      await addWaterLogToDB(optimisticLog);
+      await get().fetchDailyWaterLogs(state.userId);
       void get().checkAndUnlockAchievements();
     } catch (error) {
+      set({ dailyWaterLogs: prevWaterLogs });
       const message = mapDbError(error, "Failed to add water log");
       if (import.meta.env.DEV) console.error("Error adding water log:", error);
       set({ error: message });
+      toast.error(message);
     }
   },
 
@@ -366,20 +403,24 @@ export const useAppState = create<AppState>((set, get) => ({
   addStepLog: async (steps: number) => {
     const state = get();
     if (!state.userId) return;
+    const optimisticLog: StepLog = {
+      userId: state.userId,
+      steps,
+      dateLogged: todayISO(),
+      loggedAt: new Date().toISOString(),
+    };
+    const prevStepLogs = state.dailyStepLogs;
+    set({ dailyStepLogs: [...state.dailyStepLogs, optimisticLog] });
     try {
-      const log: StepLog = {
-        userId: state.userId,
-        steps,
-        dateLogged: todayISO(),
-        loggedAt: new Date().toISOString(),
-      };
-      await addStepLogToDB(log);
-      await state.fetchDailyStepLogs(state.userId);
+      await addStepLogToDB(optimisticLog);
+      await get().fetchDailyStepLogs(state.userId);
       void get().checkAndUnlockAchievements();
     } catch (error) {
+      set({ dailyStepLogs: prevStepLogs });
       const message = mapDbError(error, "Failed to add step log");
       if (import.meta.env.DEV) console.error("Error adding step log:", error);
       set({ error: message });
+      toast.error(message);
     }
   },
 
@@ -485,5 +526,47 @@ export const useAppState = create<AppState>((set, get) => ({
     if (!Number.isFinite(steps) || steps < 1000 || steps > 100000) return;
     localStorage.setItem("stepGoal", String(steps));
     set({ stepGoal: steps });
+  },
+
+  startTour: () => {
+    set({ tourActive: true, tourStep: 0 });
+  },
+
+  nextTourStep: () => {
+    const { tourStep, tourTotalSteps } = get();
+    if (tourStep < tourTotalSteps - 1) {
+      set({ tourStep: tourStep + 1 });
+    }
+  },
+
+  prevTourStep: () => {
+    const { tourStep } = get();
+    if (tourStep > 0) {
+      set({ tourStep: tourStep - 1 });
+    }
+  },
+
+  endTour: async () => {
+    set({ tourActive: false, tourStep: 0 });
+    await get().completeOnboarding();
+  },
+
+  skipTour: async () => {
+    set({ tourActive: false, tourStep: 0 });
+    await get().completeOnboarding();
+  },
+
+  completeOnboarding: async () => {
+    const state = get();
+    if (!state.userId) return;
+    if (state.init.status !== "ready") return;
+    try {
+      await completeOnboardingInDB(state.userId);
+      set({
+        init: { status: "ready", user: { ...state.init.user, hasCompletedOnboarding: true } },
+      });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error completing onboarding:", error);
+    }
   },
 }));

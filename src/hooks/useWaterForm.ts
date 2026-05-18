@@ -15,6 +15,7 @@ export function useWaterForm(): {
 
   const form = useForm<WaterFormValues>({
     resolver: zodResolver(WaterSchema),
+    mode: "onBlur",
     defaultValues: { amount: 250 },
   });
 

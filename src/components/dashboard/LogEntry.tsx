@@ -4,6 +4,7 @@ import { MoreHorizontal, Pencil, Star, X } from "lucide-react";
 import type { FoodItemId } from "@/types";
 import { DEFAULT_MEAL_TYPE } from "@/types";
 import type { FoodItem } from "@/db/dbService.ts";
+import { motionTokens } from "@/lib/motionVariants";
 
 interface Props {
   log: FoodItem;
@@ -11,6 +12,9 @@ interface Props {
   onDelete: (id: FoodItemId) => void;
   onToggleFavorite: (id: FoodItemId, isFavorite: boolean) => void;
 }
+
+const iconBtn =
+  "flex items-center justify-center size-9 rounded hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1";
 
 const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorite }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,16 +32,16 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -16 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      transition={{ duration: motionTokens.durState, ease: motionTokens.easeOutExpo }}
       className="flex flex-col py-4 group"
       data-testid="log-entry"
     >
-      <div className="flex items-baseline gap-4">
-        <span className="font-mono uppercase text-[10px] tracking-[0.25em] text-ink-soft w-20 shrink-0">
+      <div className="flex items-baseline gap-3">
+        <span className="text-xs text-ink-soft w-20 shrink-0">
           {log.mealType ?? DEFAULT_MEAL_TYPE}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="font-display text-xl text-ink truncate">{log.name}</p>
+          <p className="font-sans text-base font-semibold text-ink truncate">{log.name}</p>
           <p className="font-mono text-[11px] text-ink-soft mt-0.5 tabular-nums">
             P {log.protein ?? 0}g · C {log.carbs ?? 0}g · F {log.fat ?? 0}g
             {log.servingSize !== 1 && (
@@ -45,32 +49,33 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
             )}
           </p>
         </div>
-        <span className="font-display text-2xl tabular-nums text-ink shrink-0">
+        <span className="font-sans text-lg font-semibold tabular-nums text-ink shrink-0">
           {log.calories.toLocaleString()}
           <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
         </span>
-        {/* Mobile menu button */}
+        {/* Mobile menu button — 44px touch target, hidden once container is wide enough */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="md:hidden p-1.5 rounded hover:bg-paper-muted transition-colors shrink-0"
+          className="@md:hidden flex items-center justify-center size-11 rounded hover:bg-paper-muted transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
           aria-label={`${menuOpen ? "Hide" : "Show"} actions for ${log.name}`}
+          aria-expanded={menuOpen}
         >
-          <MoreHorizontal className="size-3.5 text-ink-soft" />
+          <MoreHorizontal className="size-4 text-ink-soft" />
         </button>
-        {/* Desktop hover actions */}
-        <div className="hidden md:flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+        {/* Action row — container-driven: shown above @md container width */}
+        <div className="hidden @md:flex items-center gap-0.5 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
           {pendingDelete ? (
             <>
               <button
                 onClick={handleDelete}
-                className="px-1.5 py-0.5 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity"
+                className="px-2 py-1 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 aria-label={`Confirm delete ${log.name}`}
               >
                 Delete
               </button>
               <button
                 onClick={() => setPendingDelete(false)}
-                className="px-1.5 py-0.5 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors"
+                className="px-2 py-1 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 aria-label="Cancel delete"
               >
                 Cancel
@@ -80,7 +85,7 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
             <>
               <button
                 onClick={() => log.id && onToggleFavorite(log.id, !log.isFavorite)}
-                className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                className={iconBtn}
                 aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
               >
                 <Star
@@ -89,14 +94,14 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
               </button>
               <button
                 onClick={() => onEdit(log)}
-                className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                className={iconBtn}
                 aria-label={`Edit ${log.name}`}
               >
                 <Pencil className="size-3.5 text-ink-soft" />
               </button>
               <button
                 onClick={() => setPendingDelete(true)}
-                className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                className={iconBtn}
                 aria-label={`Delete ${log.name}`}
               >
                 <X className="size-3.5 text-ink-soft" />
@@ -112,21 +117,21 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
-            className="md:hidden mt-3 flex items-center gap-1 pl-24"
+            transition={{ duration: motionTokens.durInstant }}
+            className="@md:hidden mt-3 flex items-center gap-1 pl-24"
           >
             {pendingDelete ? (
               <>
                 <button
                   onClick={handleDelete}
-                  className="px-2 py-1 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity"
+                  className="px-2 py-1 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                   aria-label={`Confirm delete ${log.name}`}
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => setPendingDelete(false)}
-                  className="px-2 py-1 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors"
+                  className="px-2 py-1 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                   aria-label="Cancel delete"
                 >
                   Cancel
@@ -136,7 +141,7 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
               <>
                 <button
                   onClick={() => log.id && onToggleFavorite(log.id, !log.isFavorite)}
-                  className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                  className={iconBtn}
                   aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
                 >
                   <Star
@@ -145,14 +150,14 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
                 </button>
                 <button
                   onClick={() => onEdit(log)}
-                  className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                  className={iconBtn}
                   aria-label={`Edit ${log.name}`}
                 >
                   <Pencil className="size-3.5 text-ink-soft" />
                 </button>
                 <button
                   onClick={() => setPendingDelete(true)}
-                  className="p-1.5 rounded hover:bg-paper-muted transition-colors"
+                  className={iconBtn}
                   aria-label={`Delete ${log.name}`}
                 >
                   <X className="size-3.5 text-ink-soft" />

@@ -16,7 +16,7 @@ import DashboardHero from "../components/dashboard/DashboardHero";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import EditorialFrame from "../components/dashboard/EditorialFrame";
 import LogEntry from "../components/dashboard/LogEntry";
-import { pageVariants, sectionVariants } from "../lib/motionVariants";
+import { motionTokens, pageVariants, useSectionMotion } from "../lib/motionVariants";
 import { groupLogsByMeal } from "../lib/utils";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
@@ -71,25 +71,9 @@ const Dashboard = () => {
   const closeBarcodeFood = useCallback(() => setBarcodeFood(null), []);
   const closeVoiceFood = useCallback(() => setVoiceFood(null), []);
 
-  const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
+  const sv = useSectionMotion();
   const hasFavorites = favoriteFoods.length > 0;
   const hasRecentFoods = recentFoods.length > 0;
-
-  const sectionKicker = useMemo(() => {
-    const kickers: (string | null)[] = [];
-    if (hasRecentFoods) kickers.push(String(kickers.length + 1).padStart(2, "0"));
-    else kickers.push(null);
-    if (hasFavorites) kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
-    else kickers.push(null);
-    kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
-    kickers.push(String(kickers.filter((k) => k).length + 1).padStart(2, "0"));
-    return {
-      recent: kickers[0],
-      pantry: kickers[1],
-      addLog: kickers[2],
-      todayLog: kickers[3],
-    };
-  }, [hasRecentFoods, hasFavorites]);
 
   return (
     <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
@@ -97,7 +81,9 @@ const Dashboard = () => {
       <Dialog open={!!editingLog} onOpenChange={(open) => !open && closeEditLog()}>
         <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl text-ink">Edit Meal Entry</DialogTitle>
+            <DialogTitle className="font-sans text-xl font-semibold text-ink">
+              Edit Meal Entry
+            </DialogTitle>
           </DialogHeader>
           {editingLog && (
             <FoodLogger initialFood={editingLog} onCancel={closeEditLog} onSuccess={closeEditLog} />
@@ -109,7 +95,7 @@ const Dashboard = () => {
       <Dialog open={!!barcodeFood} onOpenChange={(open) => !open && closeBarcodeFood()}>
         <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl text-ink">
+            <DialogTitle className="font-sans text-xl font-semibold text-ink">
               Barcode: {barcodeFood?.name}
             </DialogTitle>
           </DialogHeader>
@@ -123,7 +109,7 @@ const Dashboard = () => {
       <Dialog open={!!voiceFood} onOpenChange={(open) => !open && closeVoiceFood()}>
         <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl text-ink">
+            <DialogTitle className="font-sans text-xl font-semibold text-ink">
               Voice Match: {voiceFood?.name}
             </DialogTitle>
           </DialogHeader>
@@ -144,7 +130,11 @@ const Dashboard = () => {
         animate={shouldReduceMotion ? undefined : "show"}
       >
         {/* Section A — Masthead / Hero */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash" {...sv}>
+        <motion.section
+          data-tour-id="dashboard-hero"
+          className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash"
+          {...sv}
+        >
           <DashboardHero
             totalCalories={totalCalories}
             totals={{ protein: totalProtein, carbs: totalCarbs, fat: totalFat }}
@@ -152,8 +142,12 @@ const Dashboard = () => {
         </motion.section>
 
         {/* Section B — Week in Review */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="01" title="The Week in Review" />
+        <motion.section
+          data-tour-id="dashboard-week"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="The Week in Review" />
           <div className="col-span-12 lg:col-span-6 border border-rule p-6">
             <WeeklySummary />
           </div>
@@ -171,7 +165,7 @@ const Dashboard = () => {
         {/* Section C — Recently Logged */}
         {hasRecentFoods && (
           <motion.section className="col-span-12" {...sv}>
-            <SectionHeader kicker={sectionKicker.recent!} title="Recently Logged" />
+            <SectionHeader title="Recently Logged" />
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
               {recentFoods.map((item) => (
                 <button
@@ -192,7 +186,7 @@ const Dashboard = () => {
                       });
                     }
                   }}
-                  className="shrink-0 border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-ink-soft hover:bg-paper-muted hover:text-ink hover:border-ink transition-colors snap-start"
+                  className="shrink-0 border border-rule px-4 py-2 text-sm text-ink-soft hover:bg-paper-muted hover:text-ink hover:border-ink transition-colors snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 >
                   {item.name} · {item.calories} kcal
                 </button>
@@ -204,7 +198,7 @@ const Dashboard = () => {
         {/* Section D — From the Pantry */}
         {hasFavorites && (
           <motion.section className="col-span-12" {...sv}>
-            <SectionHeader kicker={sectionKicker.pantry!} title="From the Pantry" />
+            <SectionHeader title="From the Pantry" />
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
               {favoriteFoods.map((fav) => (
                 <button
@@ -225,7 +219,7 @@ const Dashboard = () => {
                       });
                     }
                   }}
-                  className="shrink-0 border-b-2 border-ink px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-ink hover:bg-ink hover:text-paper transition-colors snap-start"
+                  className="shrink-0 border-b-2 border-ink px-4 py-2 text-sm text-ink hover:bg-ink hover:text-paper transition-colors snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 >
                   {fav.name} · {fav.calories} kcal
                 </button>
@@ -235,20 +229,19 @@ const Dashboard = () => {
         )}
 
         {/* Section E — Add to Today's Log */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader
-            className="col-span-12"
-            kicker={sectionKicker.addLog!}
-            title="Add to Today's Log"
-            accent
-          />
+        <motion.section
+          data-tour-id="dashboard-add"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="Add to Today's Log" accent />
           <div className="col-span-12 lg:col-span-6">
-            <EditorialFrame label="01 · Write">
+            <EditorialFrame label="Write">
               <FoodLogger />
             </EditorialFrame>
           </div>
           <div className="col-span-12 md:col-span-6 lg:col-span-3">
-            <EditorialFrame label="02 · Scan">
+            <EditorialFrame label="Scan">
               <Suspense fallback={<PageLoading message="Loading scanner..." />}>
                 <BarcodeScanner
                   onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })}
@@ -257,16 +250,15 @@ const Dashboard = () => {
             </EditorialFrame>
           </div>
           <div className="col-span-12 md:col-span-6 lg:col-span-3">
-            <EditorialFrame label="03 · Speak">
+            <EditorialFrame label="Speak">
               <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
             </EditorialFrame>
           </div>
         </motion.section>
 
         {/* Section F — Today's Log */}
-        <motion.section className="col-span-12" {...sv}>
+        <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>
           <SectionHeader
-            kicker={sectionKicker.todayLog!}
             title="Today's Log"
             subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
             accent
@@ -301,17 +293,18 @@ const Dashboard = () => {
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -16 }}
-                      transition={{ duration: 0.15 }}
+                      transition={{
+                        duration: motionTokens.durInstant,
+                        ease: motionTokens.easeOutExpo,
+                      }}
                     >
                       <div className="flex items-baseline gap-4 mb-3 pb-2 border-b border-rule/50">
-                        <span className="font-mono uppercase text-[11px] tracking-[0.25em] text-ink-soft font-semibold">
-                          {group.meal}
-                        </span>
-                        <span className="ml-auto font-mono text-[10px] text-persimmon tabular-nums">
+                        <span className="text-sm font-semibold text-ink-soft">{group.meal}</span>
+                        <span className="ml-auto text-xs text-persimmon tabular-nums">
                           {groupTotal.toLocaleString()} kcal
                         </span>
                       </div>
-                      <ul className="space-y-0 divide-y divide-rule/50">
+                      <ul className="space-y-0 divide-y divide-rule/50 @container">
                         <AnimatePresence initial={false}>
                           {group.items.map((log) => (
                             <LogEntry
@@ -331,10 +324,8 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="mt-6 border-y border-rule/40 py-8 flex items-center gap-6">
-              <p className="font-display italic text-ink-soft text-lg">Nothing logged yet today.</p>
-              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft/50 ml-auto">
-                Use the logger above
-              </span>
+              <p className="font-sans text-base text-ink-soft">Nothing logged yet today.</p>
+              <span className="text-xs text-ink-soft/50 ml-auto">Use the logger above</span>
             </div>
           )}
         </motion.section>

@@ -8,6 +8,7 @@ import DateKicker from "./DateKicker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils.ts";
+import { motionTokens } from "@/lib/motionVariants";
 
 interface Props {
   totalCalories: number;
@@ -31,8 +32,8 @@ function DashboardHero({ totalCalories, totals }: Props) {
       return;
     }
     const controls = animate(count, totalCalories, {
-      duration: 0.9,
-      ease: [0.2, 0, 0.1, 1] as [number, number, number, number],
+      duration: motionTokens.durEntrance,
+      ease: motionTokens.easeOutExpo,
     });
     return () => controls.stop();
   }, [totalCalories, shouldReduceMotion, count]);
@@ -72,9 +73,7 @@ function DashboardHero({ totalCalories, totals }: Props) {
           >
             {displayCount}
           </motion.span>
-          <span className="font-mono uppercase text-xs tracking-widest text-ink-soft self-start mt-3 ml-3">
-            kcal
-          </span>
+          <span className="font-sans text-xs text-ink-soft self-start mt-3 ml-3">kcal</span>
         </div>
 
         {/* Progress bar */}
@@ -84,20 +83,20 @@ function DashboardHero({ totalCalories, totals }: Props) {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: ratio }}
             transition={
-              shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay: 0.4, ease: "easeOut" }
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: motionTokens.durLayout, delay: 0.3, ease: "easeOut" }
             }
           />
         </div>
         <div className="flex justify-between mt-1.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-            {Math.round(ratio * 100)}% of goal
-          </span>
+          <span className="text-xs text-ink-soft">{Math.round(ratio * 100)}% of goal</span>
           {isOver ? (
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon">
+            <span className="text-xs text-persimmon">
               Over by {(totalCalories - calorieGoal).toLocaleString()} kcal
             </span>
           ) : (
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+            <span className="text-xs text-ink-soft">
               {Math.max(0, calorieGoal - totalCalories).toLocaleString()} remaining
             </span>
           )}
@@ -107,17 +106,17 @@ function DashboardHero({ totalCalories, totals }: Props) {
       {/* Meta column: greeting + latest weight + date label + goal editor */}
       <div className="col-span-12 md:col-span-3 flex flex-col justify-end gap-3 pb-2">
         {username && (
-          <p className="font-sans text-[11px] text-ink-soft">
+          <p className="text-sm text-ink-soft">
             {greeting}, <span className="text-ink font-semibold">{username}</span>
           </p>
         )}
         {latestWeight !== null && (
-          <p className="font-sans text-[11px] text-ink-soft">
+          <p className="text-sm text-ink-soft">
             Last weighed{" "}
             <span className="text-ink font-semibold">{latestWeight.toFixed(1)} kg</span>
           </p>
         )}
-        <p className="font-sans text-[11px] text-ink-soft">
+        <p className="text-sm text-ink-soft">
           {today.toLocaleDateString("en-US", {
             weekday: "long",
             month: "long",
@@ -136,7 +135,7 @@ function DashboardHero({ totalCalories, totals }: Props) {
               data-testid="goal-edit"
               autoFocus
             />
-            <span className="font-mono text-[10px] text-ink-soft">kcal</span>
+            <span className="text-xs text-ink-soft">kcal</span>
             <Button
               variant="ghost"
               onClick={async () => {
@@ -147,14 +146,14 @@ function DashboardHero({ totalCalories, totals }: Props) {
                 else if (goalInput > 6000)
                   toast.warning("Goal seems high - double-check your entry");
               }}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon hover:text-persimmon/80 rounded-none h-auto p-0"
+              className="text-xs text-persimmon hover:text-persimmon/80 rounded-none h-auto p-0"
             >
               Save
             </Button>
             <Button
               variant="ghost"
               onClick={() => setEditingGoal(false)}
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink rounded-none h-auto p-0"
+              className="text-xs text-ink-soft hover:text-ink rounded-none h-auto p-0"
             >
               Cancel
             </Button>
@@ -163,7 +162,7 @@ function DashboardHero({ totalCalories, totals }: Props) {
           <Button
             type="button"
             variant="ghost"
-            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors group w-fit rounded-none h-auto p-0"
+            className="flex items-center gap-1.5 text-xs text-ink-soft hover:text-ink transition-colors group w-fit rounded-none h-auto p-0"
             onClick={() => {
               setGoalInput(calorieGoal);
               setEditingGoal(true);

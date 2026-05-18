@@ -1226,6 +1226,108 @@ describe("AppState IIFE localStorage initialization", () => {
     expect(freshStore.getState().stepGoal).toBe(15000);
   });
 
+  describe("Optimistic UI rollbacks", () => {
+    it("toggleFavorite optimistically updates store before DB call", async () => {
+      const userId = UserId("opt-user");
+      const foodId = FoodItemId(1);
+      const food = {
+        id: foodId,
+        userId,
+        name: "Opt Food",
+        calories: 100,
+        servingSize: 1,
+        protein: 5,
+        carbs: 10,
+        fat: 3,
+        dateLogged: ISODate("2026-05-17"),
+        isFavorite: false,
+      };
+      useAppState.setState({ userId, allFoodItems: [food], dailyLogs: [food], favoriteFoods: [] });
+
+      let storeStateBeforeDB!: boolean;
+      vi.mocked(dbService.toggleFavoriteFoodItem).mockImplementationOnce(async () => {
+        storeStateBeforeDB = useAppState.getState().allFoodItems[0]?.isFavorite ?? false;
+      });
+      await useAppState.getState().toggleFavorite(foodId, true);
+
+      expect(storeStateBeforeDB).toBe(true);
+    });
+
+    it("toggleFavorite rolls back store on DB error", async () => {
+      const userId = UserId("opt-rb-user");
+      const foodId = FoodItemId(2);
+      const food = {
+        id: foodId,
+        userId,
+        name: "Opt Food",
+        calories: 100,
+        servingSize: 1,
+        protein: 5,
+        carbs: 10,
+        fat: 3,
+        dateLogged: ISODate("2026-05-17"),
+        isFavorite: false,
+      };
+      useAppState.setState({ userId, allFoodItems: [food], dailyLogs: [food], favoriteFoods: [] });
+      vi.mocked(dbService.toggleFavoriteFoodItem).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().toggleFavorite(foodId, true);
+
+      expect(useAppState.getState().allFoodItems[0]?.isFavorite).toBe(false);
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("addWaterLog optimistically adds entry before DB call", async () => {
+      const userId = UserId("opt-water");
+      useAppState.setState({ userId, dailyWaterLogs: [] });
+
+      let countBeforeDB = 0;
+      vi.mocked(dbService.addWaterLog).mockImplementationOnce(async () => {
+        countBeforeDB = useAppState.getState().dailyWaterLogs.length;
+        return WaterLogId(99);
+      });
+      await useAppState.getState().addWaterLog(250);
+
+      expect(countBeforeDB).toBe(1);
+    });
+
+    it("addWaterLog rolls back store on DB error", async () => {
+      const userId = UserId("opt-water-rb");
+      useAppState.setState({ userId, dailyWaterLogs: [] });
+      vi.mocked(dbService.addWaterLog).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().addWaterLog(250);
+
+      expect(useAppState.getState().dailyWaterLogs).toHaveLength(0);
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("addStepLog optimistically adds entry before DB call", async () => {
+      const userId = UserId("opt-step");
+      useAppState.setState({ userId, dailyStepLogs: [] });
+
+      let countBeforeDB = 0;
+      vi.mocked(dbService.addStepLog).mockImplementationOnce(async () => {
+        countBeforeDB = useAppState.getState().dailyStepLogs.length;
+        return StepLogId(99);
+      });
+      await useAppState.getState().addStepLog(1000);
+
+      expect(countBeforeDB).toBe(1);
+    });
+
+    it("addStepLog rolls back store on DB error", async () => {
+      const userId = UserId("opt-step-rb");
+      useAppState.setState({ userId, dailyStepLogs: [] });
+      vi.mocked(dbService.addStepLog).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().addStepLog(1000);
+
+      expect(useAppState.getState().dailyStepLogs).toHaveLength(0);
+      expect(useAppState.getState().error).toBeDefined();
+    });
+  });
+
   it("ignores stepGoal below the minimum (1000) and falls back to 10000", async () => {
     localStorage.setItem("stepGoal", "500");
     const { useAppState: freshStore } = await import("./AppState");

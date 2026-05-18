@@ -22,9 +22,7 @@ const EditorialChartCard: FC<Props> = ({
   <div className={`border border-rule ${raised ? "bg-paper-raised" : ""}`}>
     {label && (
       <div className="px-5 pt-3 pb-2 border-b border-rule">
-        <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft">
-          {label}
-        </span>
+        <span className="text-xs text-ink-soft font-sans">{label}</span>
       </div>
     )}
     <div className="p-6 text-ink-soft relative" style={{ height }}>
@@ -35,7 +33,7 @@ const EditorialChartCard: FC<Props> = ({
         </div>
       ) : isEmpty ? (
         <div className="h-full flex items-center justify-center">
-          <p className="font-display italic text-ink-soft text-lg text-center">
+          <p className="font-sans text-base text-ink-soft text-center">
             {emptyMessage ?? "No data yet."}
           </p>
         </div>

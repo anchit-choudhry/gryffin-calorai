@@ -25,7 +25,7 @@ import { useAppState } from "../state/AppState";
 import BodyMeasurements from "../components/BodyMeasurements";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionHeader from "../components/dashboard/SectionHeader";
-import { pageVariants, sectionVariants } from "../lib/motionVariants";
+import { pageVariants, useSectionMotion } from "../lib/motionVariants";
 import { ACHIEVEMENTS } from "../lib/achievements";
 import {
   BODY_CHART_COLOR,
@@ -143,7 +143,7 @@ const Progress = () => {
   const motionProps = shouldReduceMotion
     ? {}
     : { variants: pageVariants, initial: "hidden", animate: "show" };
-  const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
+  const sv = useSectionMotion();
 
   const isCaloriesEmpty = chartData.every((d) => d.calories === 0);
   const isMacroEmpty =
@@ -174,15 +174,19 @@ const Progress = () => {
         </motion.section>
 
         {/* Section B - Daily Calorie Trend */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="01" title="Daily Calorie Trend" />
+        <motion.section
+          data-tour-id="progress-calorie"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="Daily Calorie Trend" />
           <div
             className="col-span-12"
             role="figure"
             aria-label={`Daily calorie trend chart for the last ${days} days`}
           >
             <EditorialChartCard
-              label="01 · Daily Calories"
+              label="Daily Calories"
               height={400}
               raised
               isLoading={isLoading}
@@ -247,7 +251,7 @@ const Progress = () => {
               </ResponsiveContainer>
             </EditorialChartCard>
           </div>
-          <p className="col-span-12 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+          <p className="col-span-12 text-xs text-ink-soft">
             Dashed persimmon line marks your daily goal.
           </p>
           <table className="sr-only col-span-12" aria-label="Daily calorie data">
@@ -270,7 +274,7 @@ const Progress = () => {
 
         {/* Section C - Body Measurements */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="02" title="Body Measurements" accent />
+          <SectionHeader className="col-span-12" title="Body Measurements" accent />
           <div className="col-span-12 border border-rule p-6">
             <BodyMeasurements />
           </div>
@@ -281,7 +285,6 @@ const Progress = () => {
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
             <SectionHeader
               className="col-span-12"
-              kicker="03"
               title="Macro Nutrient Trends"
               subtitle="7-day only"
               accent
@@ -292,7 +295,7 @@ const Progress = () => {
               aria-label="Macro nutrient trends chart for the last 7 days"
             >
               <EditorialChartCard
-                label="03 · Macro Breakdown"
+                label="Macro Breakdown"
                 height={400}
                 raised
                 isLoading={isLoading}
@@ -374,14 +377,14 @@ const Progress = () => {
 
         {/* Section E - Water Intake Trend */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="04" title="Water Intake Trend" />
+          <SectionHeader className="col-span-12" title="Water Intake Trend" />
           <div
             className="col-span-12"
             role="figure"
             aria-label={`Water intake trend chart for the last ${days} days`}
           >
             <EditorialChartCard
-              label="04 · Water Intake"
+              label="Water Intake"
               height={400}
               raised
               isLoading={waterLoading}
@@ -452,20 +455,18 @@ const Progress = () => {
         {/* Section F - Body Composition */}
         {bodyMeasurements.length < 2 ? (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-            <SectionHeader kicker="05" title="Body Composition" className="col-span-12" accent />
+            <SectionHeader title="Body Composition" className="col-span-12" accent />
             <div className="col-span-12 border border-rule p-8 flex items-center gap-6">
-              <p className="font-display italic text-ink-soft text-lg">
+              <p className="font-sans text-base text-ink-soft">
                 Add at least 2 body measurements above to unlock your composition trend.
               </p>
-              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft/50 ml-auto">
-                Log above
-              </span>
+              <span className="text-xs text-ink-soft/50 ml-auto">Log above</span>
             </div>
           </motion.section>
         ) : (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
             <div className="col-span-12 flex justify-between items-center">
-              <SectionHeader kicker="05" title="Body Composition" accent />
+              <SectionHeader title="Body Composition" accent />
               <Tabs
                 value={displayUnit}
                 onValueChange={(v) => {
@@ -479,7 +480,7 @@ const Progress = () => {
               </Tabs>
             </div>
             <div className="col-span-12" role="figure" aria-label="Body composition trend chart">
-              <EditorialChartCard label="05 · Body Composition" height={400} raised>
+              <EditorialChartCard label="Body Composition" height={400} raised>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={bodyChartData}
@@ -542,7 +543,6 @@ const Progress = () => {
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
             <SectionHeader
               className="col-span-12"
-              kicker="06"
               title="Calorie Distribution"
               subtitle="7-day only"
             />
@@ -552,7 +552,7 @@ const Progress = () => {
               aria-label="Calorie distribution pie chart by meal type"
             >
               <EditorialChartCard
-                label="06 · Meal Distribution"
+                label="Meal Distribution"
                 height={400}
                 raised
                 isLoading={isLoading}
@@ -590,8 +590,12 @@ const Progress = () => {
         )}
 
         {/* Section H - Achievements */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="07" title="Achievements" accent />
+        <motion.section
+          data-tour-id="progress-achievements"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="Achievements" accent />
           <div className="col-span-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {ACHIEVEMENTS.map((achievement) => {
               const isUnlocked = unlockedAchievements.some(
@@ -614,12 +618,12 @@ const Progress = () => {
                   <div className={`text-3xl mb-1 ${!isUnlocked ? "grayscale opacity-40" : ""}`}>
                     {achievement.icon}
                   </div>
-                  <h3 className="font-display text-base">{achievement.title}</h3>
+                  <h3 className="font-sans text-sm font-semibold">{achievement.title}</h3>
                   {!isUnlocked && (
                     <p className="text-xs text-ink-soft">{achievement.description}</p>
                   )}
                   {isUnlocked && unlockedEntry && (
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-persimmon">
+                    <p className="text-xs text-persimmon">
                       {new Date(unlockedEntry.unlockedAt).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
@@ -631,7 +635,7 @@ const Progress = () => {
               );
             })}
           </div>
-          <div className="col-span-12 border-t border-rule pt-4 flex items-baseline gap-3 font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft">
+          <div className="col-span-12 border-t border-rule pt-4 flex items-baseline gap-3 text-xs text-ink-soft">
             Achievements unlocked
             <span className="tabular-nums text-persimmon ml-auto">
               {unlockedAchievements.length} / {ACHIEVEMENTS.length}

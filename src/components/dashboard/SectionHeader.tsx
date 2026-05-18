@@ -1,27 +1,21 @@
 import type { FC } from "react";
 
 interface Props {
-  kicker: string;
+  /** @deprecated kicker is no longer rendered; kept for API compatibility */
+  kicker?: string;
   title: string;
   subtitle?: string;
   className?: string;
   accent?: boolean;
 }
 
-const SectionHeader: FC<Props> = ({ kicker, title, subtitle, className, accent }) => (
-  <div
-    className={`pb-3 border-b border-rule ${accent ? "border-l-2 border-l-persimmon pl-4" : ""} ${className ?? ""}`}
-  >
-    <div className="flex items-baseline gap-4">
-      <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-ink-soft opacity-50">
-        {kicker}
-      </span>
-      <h2 className="font-display text-2xl text-ink">{title}</h2>
-      {subtitle && (
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft ml-auto">
-          {subtitle}
-        </span>
-      )}
+const SectionHeader: FC<Props> = ({ title, subtitle, className, accent }) => (
+  <div className={`pb-3 ${accent ? "border-l-2 border-l-persimmon pl-4" : ""} ${className ?? ""}`}>
+    <div className="flex items-baseline gap-3">
+      <h2 className="font-sans font-semibold text-ink text-[clamp(1.125rem,1rem+0.6vw,1.5rem)]">
+        {title}
+      </h2>
+      {subtitle && <span className="text-sm text-ink-soft ml-auto">{subtitle}</span>}
     </div>
   </div>
 );

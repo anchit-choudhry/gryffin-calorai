@@ -41,6 +41,7 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
 
   const form = useForm<RecipeFormValues>({
     resolver: zodResolver(RecipeFormSchema),
+    mode: "onBlur",
     defaultValues: computedDefaults,
   });
 

@@ -1,7 +1,7 @@
 {
   "name": "gryffin-calorai",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": "^24",
@@ -26,7 +26,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "@zxing/browser": "^0.2.0",
     "@zxing/library": "^0.23.0",
     "autoprefixer": "^10.5.0",

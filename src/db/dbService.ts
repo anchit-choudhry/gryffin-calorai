@@ -56,6 +56,7 @@ export interface UserProfile {
   email: string;
   lastLogin: string;
   calorieGoal: number;
+  hasCompletedOnboarding?: boolean;
 }
 
 export interface WaterLog {
@@ -214,6 +215,29 @@ db.version(9).stores({
   stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
 });
 
+// 10. Version 10: add hasCompletedOnboarding to users
+db.version(10)
+  .stores({
+    users: "id, username, email, lastLogin",
+    foodItems:
+      "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+    recipes: "++id, name, description, createdBy, dateCreated, userId",
+    waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+    bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+    userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+    stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  })
+  .upgrade((tx) => {
+    return tx
+      .table("users")
+      .toCollection()
+      .modify((user) => {
+        if (user.hasCompletedOnboarding === undefined) {
+          user.hasCompletedOnboarding = false;
+        }
+      });
+  });
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -269,9 +293,16 @@ export const getOrCreateUser = async (
     email: user?.email ?? email,
     lastLogin: new Date().toISOString(),
     calorieGoal: user?.calorieGoal ?? 2000,
+    hasCompletedOnboarding: user?.hasCompletedOnboarding ?? false,
   };
   await users.put(updatedUser);
   return updatedUser;
+};
+
+export const completeOnboarding = async (userId: UserId): Promise<void> => {
+  const user = await users.get(userId);
+  if (!user || user.id !== userId) return;
+  await users.put({ ...user, hasCompletedOnboarding: true });
 };
 
 export const getDailyFoodLogs = async (userId: UserId, date: ISODate): Promise<FoodItem[]> => {

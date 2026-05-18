@@ -4,6 +4,7 @@ import { useAppState } from "@/state/AppState";
 import DateKicker from "@/components/dashboard/DateKicker";
 import MacroStat from "@/components/dashboard/MacroStat";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motionTokens } from "@/lib/motionVariants";
 
 interface Props {
   days: 7 | 30;
@@ -39,8 +40,8 @@ function ProgressHero({
       return;
     }
     const controls = animate(count, avgCalories, {
-      duration: 0.9,
-      ease: [0.2, 0, 0.1, 1] as [number, number, number, number],
+      duration: motionTokens.durEntrance,
+      ease: motionTokens.easeOutExpo,
     });
     return () => controls.stop();
   }, [avgCalories, shouldReduceMotion, count]);
@@ -61,21 +62,17 @@ function ProgressHero({
           >
             {displayCount}
           </motion.span>
-          <span className="font-mono uppercase text-xs tracking-widest text-ink-soft self-start mt-3 ml-3">
-            avg kcal
-          </span>
+          <span className="font-sans text-xs text-ink-soft self-start mt-3 ml-3">avg kcal</span>
         </div>
 
         <div className="flex items-baseline gap-6 mt-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-            {days}-day average
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+          <span className="text-xs text-ink-soft">{days}-day average</span>
+          <span className="text-xs text-ink-soft">
             {daysLogged} / {days} days logged
           </span>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-            {daysOnTrack} days on track
-            <span className="ml-1 text-ink-soft/50">
+          <span className="text-xs text-ink-soft">
+            {daysOnTrack} days on track{" "}
+            <span className="text-ink-soft/50">
               (within 10% of {calorieGoal.toLocaleString()} kcal)
             </span>
           </span>
@@ -96,7 +93,7 @@ function ProgressHero({
             <TabsTrigger value="30">30 days</TabsTrigger>
           </TabsList>
         </Tabs>
-        <p className="font-sans text-[11px] text-ink-soft">
+        <p className="text-sm text-ink-soft">
           {today.toLocaleDateString("en-US", {
             weekday: "long",
             month: "long",

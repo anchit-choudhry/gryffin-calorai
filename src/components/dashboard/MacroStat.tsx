@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useEffect } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { motionTokens } from "@/lib/motionVariants";
 
 interface Props {
   label: string;
@@ -19,15 +20,15 @@ const MacroStat: FC<Props> = ({ label, value, unit }) => {
       return;
     }
     const controls = animate(count, value, {
-      duration: 0.7,
-      ease: [0.2, 0, 0.1, 1] as [number, number, number, number],
+      duration: motionTokens.durLayout,
+      ease: motionTokens.easeOutExpo,
     });
     return () => controls.stop();
   }, [value, shouldReduceMotion, count]);
 
   return (
     <div className="flex-1 border-l border-rule first:border-l-0 px-4 py-3">
-      <p className="font-mono uppercase tracking-[0.25em] text-[10px] text-ink-soft">{label}</p>
+      <p className="text-xs text-ink-soft font-sans">{label}</p>
       <p className="font-display text-2xl font-light tabular-nums mt-1 text-ink">
         <motion.span>{displayCount}</motion.span>
         {unit && (

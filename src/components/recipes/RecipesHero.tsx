@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import type { Recipe } from "@/db/dbService";
+import { motionTokens } from "@/lib/motionVariants";
 
 interface Props {
   recipes: Recipe[];
@@ -32,8 +33,8 @@ function RecipesHero({ recipes }: Props) {
       return;
     }
     const controls = animate(count, totalRecipes, {
-      duration: 0.8,
-      ease: [0.2, 0, 0.1, 1] as [number, number, number, number],
+      duration: motionTokens.durEntrance,
+      ease: motionTokens.easeOutExpo,
     });
     return () => controls.stop();
   }, [totalRecipes, shouldReduceMotion, count]);
@@ -49,17 +50,15 @@ function RecipesHero({ recipes }: Props) {
           >
             {displayCount}
           </motion.span>
-          <span className="font-mono uppercase text-xs tracking-widest text-ink-soft self-start mt-3 ml-3">
-            recipes
-          </span>
+          <span className="font-sans text-xs text-ink-soft self-start mt-3 ml-3">recipes</span>
         </div>
         <div className="flex items-baseline flex-wrap gap-6 mt-3">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+          <span className="text-xs text-ink-soft">
             {avgCalories > 0 ? `${avgCalories.toLocaleString()} avg kcal` : "no recipes yet"}
           </span>
           {lastSaved && (
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-              last saved{" "}
+            <span className="text-xs text-ink-soft">
+              Last saved{" "}
               {new Date(lastSaved).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -71,7 +70,7 @@ function RecipesHero({ recipes }: Props) {
 
       {/* Date */}
       <div className="col-span-12 md:col-span-3 md:col-start-10 flex flex-col justify-end pb-2">
-        <p className="font-sans text-[11px] text-ink-soft">
+        <p className="text-sm text-ink-soft">
           {today.toLocaleDateString("en-US", {
             weekday: "long",
             month: "long",

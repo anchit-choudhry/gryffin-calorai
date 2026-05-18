@@ -28,16 +28,14 @@ const RecipeList: FC<Props> = ({ recipes, isLoading, onEdit, onDelete }) => {
   if (recipes.length === 0) {
     return (
       <div className="border border-rule px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <p className="font-display italic text-ink-soft text-lg">No recipes saved yet.</p>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-          Compose one above
-        </span>
+        <p className="font-sans text-base text-ink-soft">No recipes saved yet.</p>
+        <span className="text-xs text-ink-soft">Compose one above</span>
       </div>
     );
   }
 
   return (
-    <ul className="divide-y divide-rule border-y border-rule">
+    <ul className="divide-y divide-rule border-y border-rule @container">
       {recipes.map((recipe) => (
         <RecipeRow key={recipe.id} recipe={recipe} onEdit={onEdit} onDelete={onDelete} />
       ))}

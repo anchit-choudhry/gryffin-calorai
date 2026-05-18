@@ -5,7 +5,7 @@
 **Project Name:** Gryffin Calorai  
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.  
-**Context:** v0.1.0 (May 2026), client-side only, no backend dependency. Health-focused personal
+**Context:** v0.2.0 (May 2026), client-side only, no backend dependency. Health-focused personal
 tool.
 
 ---
@@ -119,31 +119,34 @@ For architecture details, see @@specifications/gryffin-calorai-specifications.md
 For React patterns & best practices, see @@docs/REACT_STANDARDS_REVIEW.md  
 For security guidelines, see @@docs/SECURITY_AUDIT.md and
 @@.claude/skills/owasp-security-audit/SKILL.md  
-For release history & changes, see @@release-notes/0.1.0.md (current), @@release-notes/0.0.8.md,
-@@release-notes/0.0.4.md, @@release-notes/0.0.3.md, and @@release-notes/0.0.2.md  
+For release history & changes, see @@release-notes/0.2.0.md (current), @@release-notes/0.1.0.md,
+@@release-notes/0.0.9.md,
+@@release-notes/0.0.8.md, @@release-notes/0.0.4.md, @@release-notes/0.0.3.md, and
+@@release-notes/0.0.2.md  
 For quick dev commands, see @@README.md
 
 ---
 
 ## Critical File Locations
 
-| Category       | File                                                                                                                                                            | Key Info                                                |
-|----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------|
-| **State**      | `src/state/AppState.ts`                                                                                                                                         | Single Zustand store; all mutations here                |
-| **DB**         | `src/db/dbService.ts`                                                                                                                                           | Dexie schema v9, CRUD, compound indices                 |
-| **Types**      | `src/types/index.ts`                                                                                                                                            | Branded types, type guards, sanitizers, fuzzy match     |
-| **Pages**      | `src/pages/{Dashboard,Recipes,Progress}.tsx`                                                                                                                    | Main views (lazy-loaded)                                |
-| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary}.tsx`                              | UI components; Voice, Water, Step, Body, Streak, Weekly |
-| **Dashboard**  | `src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                       | Dashboard sub-components                                |
-| **Charts**     | `src/components/charts/{ChartLegend,ChartTooltip,EditorialChartCard}.tsx`                                                                                       | Shared chart primitives                                 |
-| **Progress**   | `src/components/progress/ProgressHero.tsx`                                                                                                                      | Progress page hero section                              |
-| **Recipes**    | `src/components/recipes/{IngredientRow,RecipeForm,RecipeList,RecipeRow,RecipesHero}.tsx`                                                                        | Recipe sub-components                                   |
-| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useWaterHistoryData,useStepForm,useBodyForm,useStreaks,useProgressData,useRecipeForm,useWeeklySummary}.ts` | Core logic for logging, tracking, and chart data        |
-| **Forms**      | `src/forms/schemas.ts`                                                                                                                                          | Zod schemas shared across form hooks                    |
-| **Motion**     | `src/lib/motionVariants.ts`                                                                                                                                     | Shared `pageVariants` + `sectionVariants` for motion    |
-| **Charts lib** | `src/lib/chartTheme.ts`                                                                                                                                         | Shared chart color theme / palette                      |
-| **Tests**      | `src/**/*.test.{ts,tsx}` (24 test files)                                                                                                                        | Vitest + jsdom + fake-indexeddb + coverage              |
-| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                                                                                           | Build (with CSP) & test setup                           |
+| Category       | File                                                                                                                                                                                 | Key Info                                                           |
+|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------|
+| **State**      | `src/state/AppState.ts`                                                                                                                                                              | Single Zustand store; all mutations here                           |
+| **DB**         | `src/db/dbService.ts`                                                                                                                                                                | Dexie schema v9, CRUD, compound indices                            |
+| **Types**      | `src/types/index.ts`                                                                                                                                                                 | Branded types, type guards, sanitizers, fuzzy match                |
+| **Pages**      | `src/pages/{Dashboard,Recipes,Progress}.tsx`                                                                                                                                         | Main views (lazy-loaded)                                           |
+| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay}.tsx`                          | UI components; Voice, Water, Step, Body, Streak, Weekly, Shortcuts |
+| **Dashboard**  | `src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                                            | Dashboard sub-components                                           |
+| **Tour**       | `src/components/tour/{ProductTourOverlay,CoachmarkCard,tourSteps,useSpotlightRect}.tsx/.ts`                                                                                          | Product tour system with spotlight and coachmarks                  |
+| **Charts**     | `src/components/charts/{ChartLegend,ChartTooltip,EditorialChartCard}.tsx`                                                                                                            | Shared chart primitives                                            |
+| **Progress**   | `src/components/progress/ProgressHero.tsx`                                                                                                                                           | Progress page hero section                                         |
+| **Recipes**    | `src/components/recipes/{IngredientRow,RecipeForm,RecipeList,RecipeRow,RecipesHero}.tsx`                                                                                             | Recipe sub-components                                              |
+| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useWaterHistoryData,useStepForm,useBodyForm,useStreaks,useProgressData,useRecipeForm,useWeeklySummary,useKeyboardShortcuts}.ts` | Core logic for logging, tracking, chart data, shortcuts            |
+| **Forms**      | `src/forms/schemas.ts`                                                                                                                                                               | Zod schemas shared across form hooks                               |
+| **Motion**     | `src/lib/motionVariants.ts`                                                                                                                                                          | Shared page, section, coachmark, spotlight, arrow variants         |
+| **Charts lib** | `src/lib/chartTheme.ts`                                                                                                                                                              | Shared chart color theme / palette                                 |
+| **Tests**      | `src/**/*.test.{ts,tsx}` (28+ test files)                                                                                                                                            | Vitest + jsdom + fake-indexeddb + coverage                         |
+| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                                                                                                                | Build (with CSP) & test setup                                      |
 
 ---
 
@@ -164,7 +167,8 @@ pnpm build            # Production build
 
 **Implemented (v0.0.1–v0.0.8):**
 
-- Database (Dexie v4 schema v9), food logging with macros, recipe manager, water tracker, body measurements
+- Database (Dexie v4 schema v9), food logging with macros, recipe manager, water tracker, body
+  measurements
 - Voice food logging (Web Speech API) with fuzzy matching, barcode scanner + manual barcode entry
 - Dark mode (class-based), ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
 - Code-split vendor chunks (react, charts, barcode, db, icons, state, form, motion, ui)
@@ -186,14 +190,17 @@ pnpm build            # Production build
   20 achievements across streak, calorie, hydration, milestone, body, recipe categories
 - `StreakCard` and `WeeklySummary` components with full hook implementations (`useStreaks`,
   `useWeeklySummary`) and comprehensive tests
-- Complete Progress page overhaul: 7 sections with charts (calorie, macros, water, measurements, meal
+- Complete Progress page overhaul: 7 sections with charts (calorie, macros, water, measurements,
+  meal
   distribution, achievements, daily performance); 7/30-day toggle via ProgressHero
-- Chart component library: ChartLegend, ChartTooltip, EditorialChartCard with centralized `chartTheme.ts`
+- Chart component library: ChartLegend, ChartTooltip, EditorialChartCard with centralized
+  `chartTheme.ts`
   color palette and styling
 - Mobile-first responsive navigation: bottom nav for mobile devices with icon-based UI
 - Recipe sub-components extracted to `src/components/recipes/`; dashboard sub-components in
   `src/components/dashboard/`; progress components in `src/components/progress/`
-- Comprehensive test coverage: 24+ test files, 9,000+ test lines; >80% coverage for state/db/components
+- Comprehensive test coverage: 24+ test files, 9,000+ test lines; >80% coverage for
+  state/db/components
 - Enhanced hooks with full test coverage: `useBodyForm`, `useProgressData`, `useStreaks`,
   `useWaterHistoryData`, `useWaterForm`, `useWeeklySummary`, `useRecipeForm`
 - Test files for schemas, utilities, types, achievements, and major components
@@ -223,20 +230,38 @@ compliance pending, achievement animations/confetti placeholders
 - [x] Mobile bottom navigation with responsive design
 - [x] Comprehensive test coverage: 24+ test files, >80% for state/db/components
 
-**v0.1.1+ Roadmap:**
+**Implemented (v0.2.0 - Onboarding & Accessibility):**
 
+- Interactive product tour system; `ProductTourOverlay`, `CoachmarkCard`, `tourSteps` configuration,
+  `useSpotlightRect` hook
+- Spotlight animation system with smooth entrance/exit and auto-placement
+- Tour step management (8 guided steps across Dashboard, Recipes, Progress)
+- Tour state persistence in localStorage; one-time onboarding experience
+- Global keyboard shortcuts system; `useKeyboardShortcuts` hook with command registry
+- `KeyboardShortcutsOverlay` component displaying all available commands
+- Motion variants extended: `coachmarkVariants`, `spotlightVariants`, `arrowVariants`
+- `Skeleton` component for loading states; `DashboardSkeleton` export
+- Comprehensive test coverage: 4 new test files for tour system (500+ lines)
+- Full keyboard accessibility: tour navigation, shortcuts help, theme toggle, quick navigation
+- No database schema changes; no new dependencies added
+
+**v0.2.1+ Roadmap:**
+
+- [ ] Tour completion per-page; custom tour speeds and animation intensity
+- [ ] Achievement unlock tour sequence; short celebratory onboarding
+- [ ] Advanced keyboard commands (vim/emacs-style keybindings); command palette
+- [ ] Full keyboard navigation for all UI controls; WCAG 2.1 AAA compliance
+- [ ] Contextual help tooltips for complex features
 - [ ] Macro nutrient breakdown display for recipes (visual on recipe card + log entry)
-- [ ] Component test coverage >80% for remaining components (FoodLogger, WaterTracker, BodyMeasurements)
-- [ ] Achievement unlock animations and celebratory notifications
-- [ ] Advanced filtering and search (date range, meal type, achievement filters)
+- [ ] Component test coverage >80% for remaining components (FoodLogger, WaterTracker,
+  BodyMeasurements)
 - [ ] Barcode → food lookup API integration (Open Food Facts or equivalent)
 - [ ] Weekly/monthly data export functionality (PDF, CSV)
 - [ ] Body Measurements UI refresh and enhanced visualization
-- [ ] WCAG 2.1 AAA compliance audit and fixes
 - [ ] Multi-user auth, PWA / offline sync, data import/export
 
 ---
 
-**Last Updated:** May 17, 2026 (v0.1.0 release)  
+**Last Updated:** May 17, 2026 (v0.2.0 release)  
 **Maintainer:** Anchit Choudhry  
-**Release:** v0.1.0 - Step Tracking, Gamification, Progress Overhaul, Test Infrastructure
+**Release:** v0.2.0 - Interactive Product Tour, Keyboard Shortcuts, Onboarding & Accessibility

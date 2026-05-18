@@ -1,24 +1,45 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import EditorialFrame from "../components/dashboard/EditorialFrame";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { pageVariants, sectionVariants } from "../lib/motionVariants";
+import { pageVariants, useSectionMotion } from "../lib/motionVariants";
 import RecipesHero from "@/components/recipes/RecipesHero";
 import RecipeForm from "@/components/recipes/RecipeForm";
 import RecipeList from "@/components/recipes/RecipeList";
-import type { Recipe } from "@/db/dbService";
+import { type Recipe, saveRecipe } from "@/db/dbService";
+import type { RecipeId } from "@/types";
 
 const Recipes = () => {
-  const { recipes, deleteRecipe } = useAppState();
+  const { recipes, deleteRecipe, fetchRecipes, userId } = useAppState();
   const shouldReduceMotion = useReducedMotion();
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+
+  const handleDeleteRecipeWithUndo = useCallback(
+    async (id: RecipeId) => {
+      const item = recipes.find((r) => r.id === id);
+      await deleteRecipe(id);
+      if (item && userId) {
+        toast("Recipe removed", {
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              await saveRecipe(item);
+              await fetchRecipes(userId);
+            },
+          },
+        });
+      }
+    },
+    [recipes, deleteRecipe, fetchRecipes, userId],
+  );
 
   const motionProps = shouldReduceMotion
     ? {}
     : { variants: pageVariants, initial: "hidden", animate: "show" };
-  const sv = shouldReduceMotion ? {} : { variants: sectionVariants };
+  const sv = useSectionMotion();
 
   return (
     <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
@@ -31,21 +52,28 @@ const Recipes = () => {
           <RecipesHero recipes={recipes} />
         </motion.section>
 
-        {/* Section 01 - Compose */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
-          <SectionHeader className="col-span-12" kicker="01" title="Recipe Manager" accent />
+        {/* Recipe Manager */}
+        <motion.section
+          data-tour-id="recipes-form"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="Recipe Manager" accent />
           <div className="col-span-12 md:col-span-8">
-            <EditorialFrame label="01 · Compose">
+            <EditorialFrame label="Compose">
               <RecipeForm />
             </EditorialFrame>
           </div>
         </motion.section>
 
-        {/* Section 02 - Saved Recipes */}
-        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+        {/* Saved Recipes */}
+        <motion.section
+          data-tour-id="recipes-list"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
           <SectionHeader
             className="col-span-12"
-            kicker="02"
             title="Saved Recipes"
             subtitle={`(${recipes.length})`}
           />
@@ -53,7 +81,7 @@ const Recipes = () => {
             <RecipeList
               recipes={recipes}
               onEdit={setEditingRecipe}
-              onDelete={(id) => void deleteRecipe(id)}
+              onDelete={handleDeleteRecipeWithUndo}
             />
           </div>
         </motion.section>
@@ -68,7 +96,7 @@ const Recipes = () => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl">Edit Recipe</DialogTitle>
+            <DialogTitle className="font-sans text-xl font-semibold">Edit Recipe</DialogTitle>
           </DialogHeader>
           {editingRecipe && (
             <RecipeForm initialRecipe={editingRecipe} onSuccess={() => setEditingRecipe(null)} />

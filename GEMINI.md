@@ -49,7 +49,8 @@ dependency.
   `bodyMeasurements`, `stepLogs`, `userAchievements`) and provides CRUD abstractions.
 - `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId,
   BodyMeasurementId, ISODate). Includes sanitizers for barcode/voice inputs and utility functions
-  like `computeStreaks` and `fuzzyMatchFoodName`. **Note: All ID-based interactions now require numeric factory-function wrappers (e.g., `UserId(1)`) to ensure type safety.**
+  like `computeStreaks` and `fuzzyMatchFoodName`. **Note: All ID-based interactions now require
+  numeric factory-function wrappers (e.g., `UserId(1)`) to ensure type safety.**
 
 ### UI Components (`/src/components`)
 
@@ -82,20 +83,31 @@ dependency.
 
 ## Common Pitfalls & Gotchas
 
-- **Branded Types**: Always use the provided factory functions (e.g., `UserId()`, `FoodItemId()`) for ID generation. Do not cast raw numbers or strings, as this will lead to runtime type mismatches.
-- **Async State Updates**: Ensure `await` is used when calling store actions that depend on database operations to avoid race conditions.
-- **Zustand Selectors**: When using Zustand selectors, ensure the returned state slice is typed correctly. Avoid using `any` for `mockAppStateData` in tests; import and cast properly to the exported `AppState` interface.
+- **Branded Types**: Always use the provided factory functions (e.g., `UserId()`, `FoodItemId()`)
+  for ID generation. Do not cast raw numbers or strings, as this will lead to runtime type
+  mismatches.
+- **Async State Updates**: Ensure `await` is used when calling store actions that depend on database
+  operations to avoid race conditions.
+- **Zustand Selectors**: When using Zustand selectors, ensure the returned state slice is typed
+  correctly. Avoid using `any` for `mockAppStateData` in tests; import and cast properly to the
+  exported `AppState` interface.
 
 ## Testing & Mocking Standards
 
-- **Mocking Strategy**: Use `vi.mocked()` for DB services. When mocking object properties that are read-only (like `dbService` methods), use `vi.spyOn()` or `vi.mocked()` selectively to avoid `TS2540` errors.
-- **Factory Functions**: Use numeric factory-function wrappers in test data factories to match domain types.
-- **Test Setup**: Use `vi.resetModules()` when testing IIFE-initialized state (e.g., in `AppState.ts`) to ensure a fresh evaluation of `localStorage` dependencies.
+- **Mocking Strategy**: Use `vi.mocked()` for DB services. When mocking object properties that are
+  read-only (like `dbService` methods), use `vi.spyOn()` or `vi.mocked()` selectively to avoid
+  `TS2540` errors.
+- **Factory Functions**: Use numeric factory-function wrappers in test data factories to match
+  domain types.
+- **Test Setup**: Use `vi.resetModules()` when testing IIFE-initialized state (e.g., in
+  `AppState.ts`) to ensure a fresh evaluation of `localStorage` dependencies.
 
 ## Development Lifecycle
 
-- **Pre-Commit Verification**: Run `pnpm lint:fix` and `pnpm build` locally before any commit to ensure type safety and code quality standards.
-- **Testing**: Before submitting a PR, verify coverage by running `pnpm test`. Aim for >80% coverage on all new components or refactors.
+- **Pre-Commit Verification**: Run `pnpm lint:fix` and `pnpm build` locally before any commit to
+  ensure type safety and code quality standards.
+- **Testing**: Before submitting a PR, verify coverage by running `pnpm test`. Aim for >80% coverage
+  on all new components or refactors.
 
 ## Roadmap (v0.0.9)
 
