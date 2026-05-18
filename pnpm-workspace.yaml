@@ -5,9 +5,9 @@
 # ── Supply-chain & Security ──────────────────────────────────────────────────
 
 # Delay installing newly-published package versions.
-# Default is 1440 min (1 day); 4320 = 3 days gives the community more time to
+# Default is 1440 min (1 day); 10080 = 7 days gives the community more time to
 # detect and pull a compromised release before it lands in your tree.
-minimumReleaseAge: 4320
+minimumReleaseAge: 10080
 
 # Ownership-change / provenance downgrade protection.
 # "no-downgrade" fails the install if a package's trust level drops vs. any
@@ -18,6 +18,11 @@ minimumReleaseAge: 4320
 # those old-but-safe packages would block installs.
 trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 1460000
+
+# Blocks packages with non-standard/exotic registries (e.g., GitHub raw URLs, tarball links).
+# Helps prevent supply-chain attacks via unconventional distribution channels; forces all
+# dependencies to come from npm or whitelisted registries.
+blockExoticSubdeps: true
 
 # Dependency resolution overrides
 # Forces packages depending on reselect@5.1.1 to use 5.1.0 instead

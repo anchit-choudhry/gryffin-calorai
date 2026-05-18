@@ -1,4 +1,4 @@
-# Project Documentation: Gryffin Calorai (v0.0.8)
+# Project Documentation: Gryffin Calorai (v0.2.0)
 
 ## Architectural Overview
 
@@ -44,77 +44,64 @@ dependency.
 - `App.tsx`: Orchestrator component. Manages hash-based routing, dark/light theme persistence, and
   provides the `Suspense` boundary for lazy-loaded pages.
 - `state/AppState.ts`: Central Zustand store. Manages state and async actions for food logs,
-  recipes, water intake, body measurements, and user goals.
-- `db/dbService.ts`: Dexie.js service layer. Defines schema v9 (adding `waterLogs`,
-  `bodyMeasurements`, `stepLogs`, `userAchievements`) and provides CRUD abstractions.
+  recipes, water intake, body measurements, step logs, user achievements, and tour state.
+- `db/dbService.ts`: Dexie.js service layer. Defines schema v9 (waterLogs, bodyMeasurements,
+  stepLogs, userAchievements) and provides CRUD abstractions.
 - `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId,
-  BodyMeasurementId, ISODate). Includes sanitizers for barcode/voice inputs and utility functions
-  like `computeStreaks` and `fuzzyMatchFoodName`. **Note: All ID-based interactions now require
-  numeric factory-function wrappers (e.g., `UserId(1)`) to ensure type safety.**
+  BodyMeasurementId, StepLogId, UserAchievementId, ISODate). Includes sanitizers for inputs and
+  utility functions for streaks, fuzzy matching, and unit conversions. **Note: All ID-based
+  interactions require numeric factory-function wrappers.**
 
 ### UI Components (`/src/components`)
 
-- `FoodLogger.tsx`: Standard form for logging nutrition data.
-- `VoiceFoodLogger.tsx`: Hands-free logging using Web Speech API with fuzzy matching.
-- `BarcodeScanner.tsx`: Interface for camera-based barcode scanning (ZXing).
-- `WaterTracker.tsx`: Daily hydration tracking against a 2000ml goal.
-- `StepTracker.tsx`: Daily step tracking.
-- `BodyMeasurements.tsx`: Tracker for weight, body fat, and dimensions with unit conversions.
-- `StreakCard.tsx`: Displays current and longest logging streaks.
-- `PageLoading.tsx`: Minimal spinner used as a Suspense fallback.
+- `Dashboard/`: Sub-components for the main overview (Hero, DateKicker, LogEntry, MacroStat).
+- `Recipes/`: Recipe management system (Form, List, Row, IngredientRow).
+- `Progress/`: Visualization components (ProgressHero).
+- `Charts/`: Shared chart primitives (Legend, Tooltip, EditorialChartCard).
+- `Tour/`: Product tour system (Overlay, CoachmarkCard, spotlight logic).
+- `FoodLogger.tsx`: Nutrition logging form.
+- `VoiceFoodLogger.tsx`: Web Speech API logging.
+- `BarcodeScanner.tsx`: ZXing-based barcode interface.
+- `WaterTracker.tsx`: Hydration tracking.
+- `StepTracker.tsx`: Daily step logging.
+- `BodyMeasurements.tsx`: Physical metric tracking.
+- `StreakCard.tsx`: Streak visualization.
+- `KeyboardShortcutsOverlay.tsx`: Command visibility.
+- `PageLoading.tsx`: Suspense fallback.
 
 ### Page Components (`/src/pages`)
 
-- `Dashboard.tsx`: Main overview. Integrates food logging (manual/barcode/voice), hydration
-  tracking, steps, and streaks. Refactored with 5-section editorial layout.
-- `Recipes.tsx`: User-defined recipe management system.
-- `Progress.tsx`: Data visualizations (Recharts) and body measurement history.
+- `Dashboard.tsx`: Main overview with editorial layout.
+- `Recipes.tsx`: User-defined recipe management.
+- `Progress.tsx`: Data visualizations and history tracking.
 
 ## Operational Standards
 
-- **Theme Management:** class-based dark mode toggled via `App.tsx` and persisted in `localStorage`.
-- **Database Safety:** `clearDatabase()` is disabled in production. Schema recovery is restricted to
-  development environments.
-- **Testing:** Every component and logic file must have a `.test.ts/tsx` counterpart. Target
-  coverage is >80%.
-- **Validation:** User input is sanitized (e.g., `sanitizeVoiceTranscript`) before reaching the
-  store or database.
-- **Security:** CSP restricts hardware (camera/mic) to `self` and disables geolocation.
-
-## Common Pitfalls & Gotchas
-
-- **Branded Types**: Always use the provided factory functions (e.g., `UserId()`, `FoodItemId()`)
-  for ID generation. Do not cast raw numbers or strings, as this will lead to runtime type
-  mismatches.
-- **Async State Updates**: Ensure `await` is used when calling store actions that depend on database
-  operations to avoid race conditions.
-- **Zustand Selectors**: When using Zustand selectors, ensure the returned state slice is typed
-  correctly. Avoid using `any` for `mockAppStateData` in tests; import and cast properly to the
-  exported `AppState` interface.
+- **Theme Management:** class-based dark mode toggled via `App.tsx`.
+- **Database Safety:** `clearDatabase()` disabled in production.
+- **Testing:** Every component/logic file must have a `.test.ts/tsx` counterpart. Coverage target >80%.
+- **Validation:** Input sanitization (e.g., `sanitizeVoiceTranscript`) required.
+- **Security:** CSP restricts hardware to `self` and disables geolocation.
 
 ## Testing & Mocking Standards
 
-- **Mocking Strategy**: Use `vi.mocked()` for DB services. When mocking object properties that are
-  read-only (like `dbService` methods), use `vi.spyOn()` or `vi.mocked()` selectively to avoid
-  `TS2540` errors.
-- **Factory Functions**: Use numeric factory-function wrappers in test data factories to match
-  domain types.
-- **Test Setup**: Use `vi.resetModules()` when testing IIFE-initialized state (e.g., in
-  `AppState.ts`) to ensure a fresh evaluation of `localStorage` dependencies.
+- **Mocking**: Use `vi.mocked()` for DB services. `vi.spyOn()` for read-only properties.
+- **Factory Functions**: Use numeric wrappers for test data to ensure type safety.
+- **Isolation**: Use `vi.resetModules()` for IIFE-initialized state (e.g., `AppState.ts`).
 
 ## Development Lifecycle
 
-- **Pre-Commit Verification**: Run `pnpm lint:fix` and `pnpm build` locally before any commit to
-  ensure type safety and code quality standards.
-- **Testing**: Before submitting a PR, verify coverage by running `pnpm test`. Aim for >80% coverage
-  on all new components or refactors.
+- **Pre-Commit**: Run `pnpm lint:fix` and `pnpm build`.
+- **Testing**: Run `pnpm test` for coverage verification.
 
-## Roadmap (v0.0.9)
+## Roadmap (v0.2.1+)
 
-- [ ] Macro nutrient breakdown display for recipes (on recipe card + log entry)
-- [ ] Component test coverage >80% (targeting all Dashboard sub-components)
-- [ ] Advanced filtering and search (date range, meal type filters)
+- [ ] Macro nutrient breakdown for recipes (visual on recipe card + log entry)
+- [ ] Component test coverage >80% for remaining UI components
+- [ ] Barcode → food lookup API integration
+- [ ] Weekly/monthly data export (PDF, CSV)
+- [ ] Body Measurements UI refresh/enhanced viz
+- [ ] Multi-user auth, PWA / offline sync
 
 ---
-**Last Updated:** May 17, 2026
-
+**Last Updated:** May 17, 2026 (v0.2.0 release)
