@@ -7,7 +7,7 @@ import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils.ts";
+import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils.ts";
 import { motionTokens } from "@/lib/motionVariants";
 import { useFastingTimer } from "@/hooks/useFastingTimer";
 
@@ -88,7 +88,10 @@ function DashboardHero({ totalCalories, totals }: Props) {
               <button
                 type="button"
                 onClick={() => setShowNet((v) => !v)}
-                className="font-mono text-[10px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors border border-rule px-2 py-1"
+                className={cn(
+                  LABEL_MONO_CLS,
+                  "hover:text-ink transition-colors border border-rule px-2 py-1 active:scale-[0.97]",
+                )}
               >
                 {showNet ? "Consumed" : "Net"}
               </button>

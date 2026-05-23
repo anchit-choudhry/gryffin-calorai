@@ -203,4 +203,57 @@ describe("useOnboarding", () => {
     const { result } = renderHook(() => useOnboarding());
     expect(result.current.isLoading).toBe(false);
   });
+
+  it("submit converts targetWeightDisplay from lb to kg when weightUnit is lb", async () => {
+    const mockSave = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      saveTdeeProfile: mockSave,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useOnboarding());
+
+    act(() => {
+      result.current.setWeightUnit("lb");
+      result.current.form.setValue("age", 30);
+      result.current.form.setValue("sex", "female");
+      result.current.form.setValue("heightDisplay", 165);
+      result.current.form.setValue("weightDisplay", 154);
+      result.current.form.setValue("targetWeightDisplay", 132); // ~60 kg
+      result.current.form.setValue("activityLevel", "light");
+      result.current.form.setValue("goal", "lose");
+    });
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    const arg = mockSave.mock.calls[0]?.[0];
+    expect(arg?.targetWeightKg).toBeCloseTo(60, 0);
+  });
+
+  it("submit keeps targetWeightDisplay in kg when weightUnit is kg", async () => {
+    const mockSave = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      saveTdeeProfile: mockSave,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useOnboarding());
+
+    act(() => {
+      result.current.form.setValue("age", 30);
+      result.current.form.setValue("sex", "male");
+      result.current.form.setValue("heightDisplay", 175);
+      result.current.form.setValue("weightDisplay", 80);
+      result.current.form.setValue("targetWeightDisplay", 75);
+      result.current.form.setValue("activityLevel", "moderate");
+      result.current.form.setValue("goal", "lose");
+    });
+
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    const arg = mockSave.mock.calls[0]?.[0];
+    expect(arg?.targetWeightKg).toBe(75);
+  });
 });

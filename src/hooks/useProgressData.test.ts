@@ -73,7 +73,7 @@ describe("useProgressData", () => {
     } as unknown as ReturnType<typeof appState.useAppState>);
     const { result } = renderHook(() => useProgressData());
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.labels).toEqual([]);
+    expect(result.current.labels).toStrictEqual([]);
   });
 
   it("should call getAllFoodLogs when userId is set", async () => {
@@ -92,8 +92,8 @@ describe("useProgressData", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.labels).toEqual([]);
-    expect(result.current.data).toEqual([]);
+    expect(result.current.labels).toStrictEqual([]);
+    expect(result.current.data).toStrictEqual([]);
   });
 
   it("should handle logs with undefined mealType by using default", async () => {
@@ -148,8 +148,8 @@ describe("useProgressData", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.mealTypeData).toBe(null);
-    expect(result.current.macroData).toBe(null);
+    expect(result.current.mealTypeData).toBeNull();
+    expect(result.current.macroData).toBeNull();
   });
 
   it("uses 0 for protein/carbs/fat when they are undefined on a log entry", async () => {
@@ -199,6 +199,6 @@ describe("useProgressData", () => {
     await new Promise((r) => setTimeout(r, 100));
 
     // The cancelled guard prevented any state update - labels stays empty
-    expect(result.current.labels).toEqual([]);
+    expect(result.current.labels).toStrictEqual([]);
   });
 });

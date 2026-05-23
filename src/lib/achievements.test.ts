@@ -74,7 +74,7 @@ describe("evaluateAchievements", () => {
   describe("empty state", () => {
     it("returns no achievements for empty data", () => {
       const earned = evaluateAchievements(baseParams(), new Set());
-      expect(earned).toEqual([]);
+      expect(earned).toStrictEqual([]);
     });
 
     it("does not re-unlock already unlocked achievements", () => {

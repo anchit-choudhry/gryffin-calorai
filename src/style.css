@@ -190,4 +190,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* Preserve focus ring transitions so keyboard users see smooth indicator changes */
+  :focus-visible {
+    transition-duration: var(--dur-state) !important;
+  }
 }

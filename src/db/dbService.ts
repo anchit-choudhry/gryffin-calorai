@@ -107,6 +107,7 @@ export interface TdeeProfile {
   sex: Sex;
   heightCm: number;
   weightKg: number;
+  targetWeightKg?: number;
   activityLevel: ActivityLevel;
   goal: GoalType;
   updatedAt: string;
@@ -520,6 +521,16 @@ export const deleteBodyMeasurement = async (
   const m = await bodyMeasurements.get(id);
   if (!m || m.userId !== userId) return;
   await bodyMeasurements.delete(id);
+};
+
+export const updateBodyMeasurement = async (
+  id: BodyMeasurementId,
+  userId: UserId,
+  updates: Partial<Omit<BodyMeasurement, "id" | "userId">>,
+): Promise<void> => {
+  const m = await bodyMeasurements.get(id);
+  if (!m || m.userId !== userId) return;
+  await bodyMeasurements.update(id, updates);
 };
 
 // --- User Achievement CRUD ---

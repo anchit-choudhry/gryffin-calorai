@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EDITORIAL_INPUT_CLS } from "../lib/utils";
+import { EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "../lib/utils";
 
 interface FoodLoggerProps {
   initialFood?: FoodItem;
@@ -22,7 +22,7 @@ interface FoodLoggerProps {
   prefillName?: string;
 }
 
-const labelCls = "font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft";
+const labelCls = LABEL_MONO_CLS;
 
 const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, prefillName }) => {
   const { form, isLoading, isEditMode, submitFoodLog, resetForm } = useFoodForm(initialFood);

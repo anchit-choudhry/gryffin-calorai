@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+// Note: Vitest always runs in DEV mode, so console.error is always called
 import { ErrorBoundary } from "./ErrorBoundary";
 
 describe("ErrorBoundary", () => {
@@ -43,10 +44,7 @@ describe("ErrorBoundary", () => {
     // Call componentDidCatch
     boundary.componentDidCatch(testError);
 
-    if (import.meta.env.DEV) {
-      expect(consoleSpy).toHaveBeenCalled();
-    }
-
+    expect(consoleSpy).toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
 

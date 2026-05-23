@@ -19,7 +19,7 @@ describe("MET_VALUES", () => {
 
 describe("MET_ACTIVITY_NAMES", () => {
   it("contains all keys from MET_VALUES", () => {
-    expect(MET_ACTIVITY_NAMES).toEqual(Object.keys(MET_VALUES));
+    expect(MET_ACTIVITY_NAMES).toStrictEqual(Object.keys(MET_VALUES));
   });
 
   it("is non-empty", () => {

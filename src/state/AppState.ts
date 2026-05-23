@@ -47,6 +47,7 @@ import {
   type StepLog,
   type TdeeProfile,
   toggleFavoriteFoodItem,
+  updateBodyMeasurement as updateBodyMeasurementInDB,
   updateFoodItem,
   updateRecipe as updateRecipeInDB,
   updateUserProfile,
@@ -126,6 +127,10 @@ export interface AppState {
   fetchBodyMeasurements: (userId: UserId) => Promise<void>;
   addBodyMeasurement: (m: Omit<BodyMeasurement, "id">) => Promise<void>;
   deleteBodyMeasurement: (id: BodyMeasurementId) => Promise<void>;
+  updateBodyMeasurement: (
+    id: BodyMeasurementId,
+    updates: Partial<Omit<BodyMeasurement, "id" | "userId">>,
+  ) => Promise<void>;
   checkAndUnlockAchievements: () => Promise<void>;
   setWaterGoalMl: (ml: number) => void;
   setStepGoal: (steps: number) => void;
@@ -541,6 +546,22 @@ export const useAppState = create<AppState>((set, get) => ({
     } catch (error) {
       const message = mapDbError(error, "Failed to delete measurement");
       if (import.meta.env.DEV) console.error("Error deleting body measurement:", error);
+      set({ error: message });
+    }
+  },
+
+  updateBodyMeasurement: async (
+    id: BodyMeasurementId,
+    updates: Partial<Omit<BodyMeasurement, "id" | "userId">>,
+  ) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await updateBodyMeasurementInDB(id, state.userId, updates);
+      await state.fetchBodyMeasurements(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to update measurement");
+      if (import.meta.env.DEV) console.error("Error updating body measurement:", error);
       set({ error: message });
     }
   },

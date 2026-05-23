@@ -14,7 +14,7 @@
     "lint": "eslint --config eslint.config.js ./src",
     "lint:fix": "pnpm lint --fix",
     "preview": "vite preview",
-    "licenses:update": "pnpm licenses list > LICENSES.md",
+    "licenses:update": "pnpm licenses list > LICENSES.txt",
     "audit": "pnpm audit --audit-level=high",
     "build": "pnpm licenses:update && tsc && vite build"
   },
@@ -60,6 +60,7 @@
     "@testing-library/dom": "^10.4.1",
     "@types/node": "^25.9.0",
     "@vitest/coverage-v8": "^4.1.6",
+    "@vitest/eslint-plugin": "^1.6.17",
     "@vitest/ui": "^4.1.6",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",

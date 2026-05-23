@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { TOUR_TOTAL_STEPS } from "../components/tour/tourSteps";
 
 vi.mock("../db/dbService", () => ({
@@ -120,10 +120,8 @@ describe("AppState tour actions", () => {
   it("completeOnboarding updates the user in state", async () => {
     await useAppState.getState().completeOnboarding();
     const state = useAppState.getState();
-    expect(state.init.status).toBe("ready");
-    if (state.init.status === "ready") {
-      expect(state.init.user.hasCompletedOnboarding).toBe(true);
-    }
+    assert(state.init.status === "ready");
+    expect(state.init.user.hasCompletedOnboarding).toBe(true);
   });
 
   it("tourTotalSteps matches TOUR_TOTAL_STEPS constant", () => {

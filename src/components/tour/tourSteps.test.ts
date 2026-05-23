@@ -10,7 +10,7 @@ const pageContents = Object.values(pageContentsMap);
 
 describe("TOUR_STEPS", () => {
   it("has the expected total steps count", () => {
-    expect(TOUR_STEPS.length).toBe(TOUR_TOTAL_STEPS);
+    expect(TOUR_STEPS).toHaveLength(TOUR_TOTAL_STEPS);
   });
 
   it("every targetId has a corresponding data-tour-id attribute in one of the page files", () => {

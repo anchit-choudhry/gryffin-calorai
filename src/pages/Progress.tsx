@@ -38,6 +38,7 @@ import ChartTooltip from "../components/charts/ChartTooltip";
 import ChartLegend from "../components/charts/ChartLegend";
 import EditorialChartCard from "../components/charts/EditorialChartCard";
 import ProgressHero from "../components/progress/ProgressHero";
+import ProjectedWeightCard from "../components/progress/ProjectedWeightCard";
 
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
@@ -55,6 +56,7 @@ const Progress = () => {
     unlockedAchievements,
     allActivityLogs,
     fastingHistory,
+    tdeeProfile,
   } = useAppState();
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
   const shouldReduceMotion = useReducedMotion();
@@ -212,6 +214,16 @@ const Progress = () => {
             daysOnTrack={daysOnTrack}
           />
         </motion.section>
+
+        {/* Section A2 - Projected Weight Timeline */}
+        {tdeeProfile && (
+          <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+            <SectionHeader className="col-span-12" title="Weight Projection" />
+            <div className="col-span-12 md:col-span-6">
+              <ProjectedWeightCard tdeeProfile={tdeeProfile} />
+            </div>
+          </motion.section>
+        )}
 
         {/* Section B - Daily Calorie Trend */}
         <motion.section

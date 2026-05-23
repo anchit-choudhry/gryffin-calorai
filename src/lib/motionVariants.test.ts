@@ -78,13 +78,13 @@ describe("useSectionMotion", () => {
     const { useReducedMotion } = await import("motion/react");
     vi.mocked(useReducedMotion).mockReturnValue(false);
     const { result } = renderHook(() => useSectionMotion());
-    expect(result.current).toEqual({ variants: sectionVariants });
+    expect(result.current).toStrictEqual({ variants: sectionVariants });
   });
 
   it("returns empty object when motion is reduced", async () => {
     const { useReducedMotion } = await import("motion/react");
     vi.mocked(useReducedMotion).mockReturnValue(true);
     const { result } = renderHook(() => useSectionMotion());
-    expect(result.current).toEqual({});
+    expect(result.current).toStrictEqual({});
   });
 });

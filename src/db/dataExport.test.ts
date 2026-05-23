@@ -33,10 +33,10 @@ describe("exportAllData / importBackup", () => {
     const payload = await exportAllData(userId);
     expect(payload.version).toBe(BACKUP_VERSION);
     expect(payload.userId).toBe(userId);
-    expect(payload.tables.foodItems).toEqual([]);
-    expect(payload.tables.waterLogs).toEqual([]);
-    expect(payload.tables.activityLogs).toEqual([]);
-    expect(payload.tables.fastingSessions).toEqual([]);
+    expect(payload.tables.foodItems).toStrictEqual([]);
+    expect(payload.tables.waterLogs).toStrictEqual([]);
+    expect(payload.tables.activityLogs).toStrictEqual([]);
+    expect(payload.tables.fastingSessions).toStrictEqual([]);
   });
 
   it("exports food items", async () => {

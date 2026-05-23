@@ -88,11 +88,6 @@ tool.
 - **Domain types:** `Sex`, `ActivityLevel`, `GoalType` defined in `src/types/index.ts`.
 - **Form input class:** Use `EDITORIAL_INPUT_CLS` from `src/lib/utils.ts` on all `<Input>`
   components for consistent styling.
-- **Tour targets:** Components that are spotlight targets carry a `data-tour-id="..."` attribute (
-  e.g. `data-tour-id="dashboard-activity"`). Match step IDs in `src/components/tour/tourSteps.ts`.
-- **Test mocking:** When a component uses `motion.X` (e.g. `motion.header`), add that element to the
-  `motion/react` vi.mock in its `.test.tsx`. Existing mocks only cover `motion.main`,
-  `motion.section`, etc. - extend as needed.
 
 ---
 
@@ -139,33 +134,34 @@ For release history & changes, see @@release-notes/0.3.0.md (current), @@release
 @@release-notes/0.1.0.md, @@release-notes/0.0.9.md,
 @@release-notes/0.0.8.md, @@release-notes/0.0.4.md, @@release-notes/0.0.3.md, and
 @@release-notes/0.0.2.md  
+For roadmap, implemented history, and DB schema versions, see @@docs/ROADMAP.md  
 For quick dev commands, see @@README.md
 
 ---
 
 ## Critical File Locations
 
-| Category       | File                                                                                                                                                                                                                                                           | Key Info                                                                     |
-|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| **State**      | `src/state/AppState.ts`                                                                                                                                                                                                                                        | Single Zustand store; all mutations here                                     |
-| **DB**         | `src/db/dbService.ts`                                                                                                                                                                                                                                          | Dexie schema v13, CRUD, compound indices                                     |
-| **Types**      | `src/types/index.ts`                                                                                                                                                                                                                                           | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS         |
-| **Pages**      | `src/pages/{Dashboard,Recipes,Progress,Settings}.tsx`                                                                                                                                                                                                          | Main views (lazy-loaded); Settings at `#/settings`                           |
-| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay,FastingTimer,ActivityLogger,ActivityTracker,OnboardingModal,OnboardingBanner,DataExportPanel}.tsx`       | UI components incl. v0.3.0 additions                                         |
-| **Settings**   | `src/components/settings/{TdeeProfilePanel,GoalSettings}.tsx`                                                                                                                                                                                                  | Settings sub-components; TdeeProfilePanel is lazy-loaded                     |
-| **Dashboard**  | `src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                                                                                                                      | Dashboard sub-components                                                     |
-| **Tour**       | `src/components/tour/{ProductTourOverlay,CoachmarkCard,tourSteps,useSpotlightRect}.tsx/.ts`                                                                                                                                                                    | Product tour system with spotlight and coachmarks                            |
-| **Charts**     | `src/components/charts/{ChartLegend,ChartTooltip,EditorialChartCard}.tsx`                                                                                                                                                                                      | Shared chart primitives                                                      |
-| **Progress**   | `src/components/progress/ProgressHero.tsx`                                                                                                                                                                                                                     | Progress page hero section                                                   |
-| **Recipes**    | `src/components/recipes/{IngredientRow,RecipeForm,RecipeList,RecipeRow,RecipesHero}.tsx`                                                                                                                                                                       | Recipe sub-components                                                        |
-| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useWaterHistoryData,useStepForm,useBodyForm,useStreaks,useProgressData,useRecipeForm,useWeeklySummary,useKeyboardShortcuts,useFastingTimer,useActivityForm,useOnboarding,useDataExport,useDataImport}.ts` | Core logic; useFastingTimer uses date-fns differenceInSeconds + setInterval  |
-| **Forms**      | `src/forms/schemas.ts`                                                                                                                                                                                                                                         | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup |
-| **Motion**     | `src/lib/motionVariants.ts`                                                                                                                                                                                                                                    | Shared page, section, coachmark, spotlight, arrow variants                   |
-| **Charts lib** | `src/lib/chartTheme.ts`                                                                                                                                                                                                                                        | Shared chart color theme / palette                                           |
-| **TDEE lib**   | `src/lib/tdee.ts`                                                                                                                                                                                                                                              | mifflinStJeorBMR, computeTDEE, computeCalorieGoal                            |
-| **MET lib**    | `src/lib/metTable.ts`                                                                                                                                                                                                                                          | ~60 activities with ACSM MET values for calorie burn calculation             |
-| **Tests**      | `src/**/*.test.{ts,tsx}` (45+ test files)                                                                                                                                                                                                                      | Vitest + jsdom + fake-indexeddb + coverage                                   |
-| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                                                                                                                                                                                          | Build (with CSP) & test setup                                                |
+| Category       | File                                                                                                                                                                                                                                                                           | Key Info                                                                     |
+|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
+| **State**      | `src/state/AppState.ts`                                                                                                                                                                                                                                                        | Single Zustand store; all mutations here                                     |
+| **DB**         | `src/db/dbService.ts`                                                                                                                                                                                                                                                          | Dexie schema v13, CRUD, compound indices                                     |
+| **Types**      | `src/types/index.ts`                                                                                                                                                                                                                                                           | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS         |
+| **Pages**      | `src/pages/{Dashboard,Recipes,Progress,Settings}.tsx`                                                                                                                                                                                                                          | Main views (lazy-loaded); Settings at `#/settings`                           |
+| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay,FastingTimer,ActivityLogger,ActivityTracker,OnboardingModal,OnboardingBanner,DataExportPanel}.tsx`                       | UI components incl. v0.3.0 additions                                         |
+| **Settings**   | `src/components/settings/{TdeeProfilePanel,GoalSettings}.tsx`                                                                                                                                                                                                                  | Settings sub-components; TdeeProfilePanel is lazy-loaded                     |
+| **Dashboard**  | `src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                                                                                                                                      | Dashboard sub-components                                                     |
+| **Tour**       | `src/components/tour/{ProductTourOverlay,CoachmarkCard,tourSteps,useSpotlightRect}.tsx/.ts`                                                                                                                                                                                    | Product tour system with spotlight and coachmarks                            |
+| **Charts**     | `src/components/charts/{ChartLegend,ChartTooltip,EditorialChartCard}.tsx`                                                                                                                                                                                                      | Shared chart primitives                                                      |
+| **Progress**   | `src/components/progress/ProgressHero.tsx`                                                                                                                                                                                                                                     | Progress page hero section                                                   |
+| **Recipes**    | `src/components/recipes/{IngredientRow,RecipeForm,RecipeList,RecipeRow,RecipesHero}.tsx`                                                                                                                                                                                       | Recipe sub-components                                                        |
+| **Hooks**      | `src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useWaterHistoryData,useStepForm,useBodyForm,useStreaks,useProgressData,useRecipeForm,useWeeklySummary,useKeyboardShortcuts,useFastingTimer,useActivityForm,useOnboarding,useDataExport,useDataImport,useRecipeImport}.ts` | Core logic; useFastingTimer uses date-fns differenceInSeconds + setInterval  |
+| **Forms**      | `src/forms/schemas.ts`                                                                                                                                                                                                                                                         | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup |
+| **Motion**     | `src/lib/motionVariants.ts`                                                                                                                                                                                                                                                    | Shared page, section, coachmark, spotlight, arrow variants                   |
+| **Charts lib** | `src/lib/chartTheme.ts`                                                                                                                                                                                                                                                        | Shared chart color theme / palette                                           |
+| **TDEE lib**   | `src/lib/tdee.ts`                                                                                                                                                                                                                                                              | mifflinStJeorBMR, computeTDEE, computeCalorieGoal                            |
+| **MET lib**    | `src/lib/metTable.ts`                                                                                                                                                                                                                                                          | ~60 activities with ACSM MET values for calorie burn calculation             |
+| **Tests**      | `src/**/*.test.{ts,tsx}` (45+ test files)                                                                                                                                                                                                                                      | Vitest + jsdom + fake-indexeddb + coverage                                   |
+| **Config**     | `vite.config.ts`, `vitest.config.ts`, `tsconfig.json`                                                                                                                                                                                                                          | Build (with CSP) & test setup                                                |
 
 ---
 
@@ -183,126 +179,5 @@ pnpm build            # Production build
 
 ---
 
-## Known Constraints & Roadmap
-
-**Implemented (v0.0.1–v0.0.8):**
-
-- Database (Dexie v4 schema v9), food logging with macros, recipe manager, water tracker, body
-  measurements
-- Voice food logging (Web Speech API) with fuzzy matching, barcode scanner + manual barcode entry
-- Dark mode (class-based), ErrorBoundary, lazy-loading with Suspense, HTTP security headers (CSP)
-- Code-split vendor chunks (react, charts, barcode, db, icons, state, form, motion, ui)
-- shadcn/ui Dialog, Tabs, Form, Input, Button, Card, Tooltip primitives; all overlays use Dialog
-  with focus trap + Esc close
-- react-hook-form 7 + zod v3 validation on all form hooks; field-level errors via `<FormMessage />`
-- motion 12 layout animations on log list with stagger; shared `pageVariants`/`sectionVariants` in
-  `src/lib/motionVariants.ts`; sonner toasts; lucide-react icons
-- Editorial design system (oklch color palette, @fontsource-variable typography, responsive grid
-  layout)
-- Refactored Dashboard with 5-section layout (Hero, Week, Pantry, Add to Log, Today's Log);
-  logs grouped by meal type via `groupLogsByMeal()`
-- 17 GitHub Actions workflows (including 6 Gemini workflows); OWASP/Security skills
-
-**Implemented (v0.1.0 - New Major Features):**
-
-- Step tracking (manual); `StepLog` entity, DB v9, `StepTracker` component, `useStepForm` hook
-- Gamification achievement system; `UserAchievement` entity, DB v9, `evaluateAchievements` engine;
-  19 achievements across streak(4), calorie(3), hydration(3), milestone(4), body(3), recipe(2)
-  categories
-- `StreakCard` and `WeeklySummary` components with full hook implementations (`useStreaks`,
-  `useWeeklySummary`) and comprehensive tests
-- Complete Progress page overhaul: 7 sections with charts (calorie, macros, water, measurements,
-  meal
-  distribution, achievements, daily performance); 7/30-day toggle via ProgressHero
-- Chart component library: ChartLegend, ChartTooltip, EditorialChartCard with centralized
-  `chartTheme.ts`
-  color palette and styling
-- Mobile-first responsive navigation: bottom nav for mobile devices with icon-based UI
-- Recipe sub-components extracted to `src/components/recipes/`; dashboard sub-components in
-  `src/components/dashboard/`; progress components in `src/components/progress/`
-- Comprehensive test coverage: 24+ test files, 9,000+ test lines; >80% coverage for
-  state/db/components
-- Enhanced hooks with full test coverage: `useBodyForm`, `useProgressData`, `useStreaks`,
-  `useWaterHistoryData`, `useWaterForm`, `useWeeklySummary`, `useRecipeForm`
-- Test files for schemas, utilities, types, achievements, and major components
-- `src/lib/chartTheme.ts` for centralized chart theming; color constants for all visualizations
-- Database schema v9 with compound indices for step and achievement lookups
-
-**Still Pending / Placeholders:**
-
-- Barcode → food lookup API integration (scanning + manual entry work; lookup not implemented; Open
-  Food Facts planned for v0.4)
-- Body Measurements UI refresh (charts done, edit/delete UI pending)
-- Achievement unlock animations and celebratory notifications
-- Macro breakdown display for recipes (visual on recipe card + log entry)
-- Multi-user auth, PWA / offline sync
-- Advanced filtering and search (date range, meal type, achievement filters)
-- Projected weight timeline card (estimated goal date at current rate)
-- Recurring meal logging (quick copy-yesterday)
-
-**Technical Debt:** No optimistic updates, recipe descriptions need sanitization, WCAG 2.1 AAA
-compliance pending, achievement animations/confetti placeholders
-
-**v0.1.0 Roadmap (Completed):**
-
-- [x] Step Tracking (Feature 5 - `StepLog` entity, `StepTracker` component, `useStepForm` hook)
-- [x] Gamification achievement system (Feature 8 - `UserAchievement` entity, 19 achievements)
-- [x] `StreakCard` + `WeeklySummary` components with complete hooks and full test coverage
-- [x] Recipe sub-components extracted into `src/components/recipes/`
-- [x] Progress page complete overhaul with 7 sections and ProgressHero component
-- [x] Shared chart primitives in `src/components/charts/`; `chartTheme.ts` color palette
-- [x] Mobile bottom navigation with responsive design
-- [x] Comprehensive test coverage: 24+ test files, >80% for state/db/components
-
-**Implemented (v0.2.0 - Onboarding & Accessibility):**
-
-- Interactive product tour system; `ProductTourOverlay`, `CoachmarkCard`, `tourSteps` configuration,
-  `useSpotlightRect` hook
-- Spotlight animation system with smooth entrance/exit and auto-placement
-- Tour step management (8 guided steps across Dashboard, Recipes, Progress)
-- Tour state persistence in localStorage; one-time onboarding experience
-- Global keyboard shortcuts system; `useKeyboardShortcuts` hook with command registry
-- `KeyboardShortcutsOverlay` component displaying all available commands
-- Motion variants extended: `coachmarkVariants`, `spotlightVariants`, `arrowVariants`
-- `Skeleton` component for loading states; `DashboardSkeleton` export
-- Comprehensive test coverage: 4 new test files for tour system (500+ lines)
-- Full keyboard accessibility: tour navigation, shortcuts help, theme toggle, quick navigation
-- No database schema changes; no new dependencies added
-
-**Implemented (v0.3.0 - Activity Logging, Fasting, Onboarding, Data Export):**
-
-- Basic activity logging (Feature 10); `ActivityLog` entity, MET lookup table (~60 activities),
-  `useActivityForm` hook, `ActivityLogger` + `ActivityTracker` components
-- Intermittent fasting (Feature 6); `FastingSession` entity, `useFastingTimer` hook, `FastingTimer`
-  dashboard widget with SVG ring progress, preset buttons (12:12, 14:10, 16:8, 18:6, OMAD 20h),
-  browser
-  notifications on target completion
-- Onboarding + TDEE goal engine (Feature 13); multi-step modal (age, sex, height, weight, activity,
-  goal), Mifflin-St Jeor TDEE calculation, `useOnboarding` hook, `OnboardingModal` +
-  `OnboardingBanner`
-  components, goal-offset logic (-500/0/+300 kcal), dynamic calorie targets on Dashboard
-- Data export & backup (Feature 19); JSON versioned backup, CSV ZIP export via `fflate`, import with
-  schema validation + confirmation, `useDataExport` + `useDataImport` hooks, `DataExportPanel`
-  component
-- Settings page (`src/pages/Settings.tsx`); 4 sections - Profile (TdeeProfilePanel with live TDEE
-  preview), Goals (GoalSettings inline edit), Data (DataExportPanel), About (version info)
-- Database schema v13; new tables: `tdeeProfiles`, `activityLogs`, `fastingSessions` with compound
-  indices
-- Comprehensive test coverage: 11+ new test files (1,500+ lines); >80% coverage for state/db/hooks
-
-**v0.4 Roadmap:**
-
-- [ ] Recurring meal logging (quick copy-yesterday, day-mask scheduling)
-- [ ] Micronutrient tracking (~25 nutrients: fiber, vitamins, minerals, omega-3/6, etc.)
-- [ ] Diet profiles + restriction flags (keto, paleo, vegan, vegetarian, Mediterranean, etc.)
-- [ ] PWA + service worker (install-to-home-screen, offline UX, prereq for reminders)
-- [ ] Barcode → food lookup API integration (Open Food Facts MVP, USDA FoodData Central secondary)
-- [ ] Body Measurements UI refresh and enhanced visualization
-- [ ] Projected weight timeline card (estimated goal date at current rate)
-
----
-
-**Last Updated:** May 21, 2026 (v0.3.0 release)  
-**Maintainer:** Anchit Choudhry  
-**Release:** v0.3.0 - Activity Logging, Intermittent Fasting, Onboarding + TDEE, Data Export &
-Backup
+**Last Updated:** May 23, 2026 | **Current release:** v0.3.0 | **In progress:** v0.4.0  
+**Maintainer:** Anchit Choudhry

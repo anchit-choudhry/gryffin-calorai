@@ -167,6 +167,11 @@ export const TdeeProfileSchema = z.object({
     .max(10000, "Invalid weight"),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"] as const),
   goal: z.enum(["lose", "maintain", "gain"] as const),
+  targetWeightDisplay: z
+    .number({ invalid_type_error: "Target weight must be a number" })
+    .min(1, "Weight required")
+    .max(10000, "Invalid weight")
+    .optional(),
 });
 
 export type TdeeProfileFormValues = z.infer<typeof TdeeProfileSchema>;

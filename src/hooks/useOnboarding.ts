@@ -58,6 +58,12 @@ export function useOnboarding(onComplete?: () => void): UseOnboardingReturn {
     const values = form.getValues();
     const heightCm = lengthUnit === "in" ? inToCm(values.heightDisplay) : values.heightDisplay;
     const weightKg = weightUnit === "lb" ? lbToKg(values.weightDisplay) : values.weightDisplay;
+    const targetWeightKg =
+      values.targetWeightDisplay !== undefined
+        ? weightUnit === "lb"
+          ? lbToKg(values.targetWeightDisplay)
+          : values.targetWeightDisplay
+        : undefined;
 
     setIsLoading(true);
     try {
@@ -66,6 +72,7 @@ export function useOnboarding(onComplete?: () => void): UseOnboardingReturn {
         sex: values.sex,
         heightCm,
         weightKg,
+        targetWeightKg,
         activityLevel: values.activityLevel,
         goal: values.goal,
       });

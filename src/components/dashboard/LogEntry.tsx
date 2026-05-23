@@ -5,6 +5,7 @@ import type { FoodItemId } from "@/types";
 import { DEFAULT_MEAL_TYPE } from "@/types";
 import type { FoodItem } from "@/db/dbService.ts";
 import { motionTokens } from "@/lib/motionVariants";
+import { ICON_BTN_CLS } from "@/lib/utils";
 
 interface Props {
   log: FoodItem;
@@ -13,8 +14,66 @@ interface Props {
   onToggleFavorite: (id: FoodItemId, isFavorite: boolean) => void;
 }
 
-const iconBtn =
-  "flex items-center justify-center size-9 rounded hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1";
+interface ActionStripProps {
+  log: FoodItem;
+  pendingDelete: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  onInitDelete: () => void;
+  onEdit: () => void;
+  onToggleFavorite: () => void;
+}
+
+function ActionStrip({
+  log,
+  pendingDelete,
+  onConfirmDelete,
+  onCancelDelete,
+  onInitDelete,
+  onEdit,
+  onToggleFavorite,
+}: ActionStripProps) {
+  if (pendingDelete) {
+    return (
+      <>
+        <button
+          onClick={onConfirmDelete}
+          className="px-2 py-1 rounded-none bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
+          aria-label={`Confirm delete ${log.name}`}
+        >
+          Delete
+        </button>
+        <button
+          onClick={onCancelDelete}
+          className="px-2 py-1 rounded-none font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
+          aria-label="Cancel delete"
+        >
+          Cancel
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button
+        onClick={onToggleFavorite}
+        className={ICON_BTN_CLS}
+        aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
+      >
+        <Star
+          className={`size-3.5 ${log.isFavorite ? "fill-persimmon text-persimmon" : "text-ink-soft"}`}
+        />
+      </button>
+      <button onClick={onEdit} className={ICON_BTN_CLS} aria-label={`Edit ${log.name}`}>
+        <Pencil className="size-3.5 text-ink-soft" />
+      </button>
+      <button onClick={onInitDelete} className={ICON_BTN_CLS} aria-label={`Delete ${log.name}`}>
+        <X className="size-3.5 text-ink-soft" />
+      </button>
+    </>
+  );
+}
 
 const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorite }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,6 +83,16 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
     if (log.id) {
       onDelete(log.id);
     }
+  };
+
+  const stripProps: ActionStripProps = {
+    log,
+    pendingDelete,
+    onConfirmDelete: handleDelete,
+    onCancelDelete: () => setPendingDelete(false),
+    onInitDelete: () => setPendingDelete(true),
+    onEdit: () => onEdit(log),
+    onToggleFavorite: () => log.id && onToggleFavorite(log.id, !log.isFavorite),
   };
 
   return (
@@ -56,7 +125,7 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
         {/* Mobile menu button — 44px touch target, hidden once container is wide enough */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="@md:hidden flex items-center justify-center size-11 rounded hover:bg-paper-muted transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+          className="@md:hidden flex items-center justify-center size-11 rounded-none hover:bg-paper-muted transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
           aria-label={`${menuOpen ? "Hide" : "Show"} actions for ${log.name}`}
           aria-expanded={menuOpen}
         >
@@ -64,50 +133,7 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
         </button>
         {/* Action row — container-driven: shown above @md container width */}
         <div className="hidden @md:flex items-center gap-0.5 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-          {pendingDelete ? (
-            <>
-              <button
-                onClick={handleDelete}
-                className="px-2 py-1 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                aria-label={`Confirm delete ${log.name}`}
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => setPendingDelete(false)}
-                className="px-2 py-1 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                aria-label="Cancel delete"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => log.id && onToggleFavorite(log.id, !log.isFavorite)}
-                className={iconBtn}
-                aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
-              >
-                <Star
-                  className={`size-3.5 ${log.isFavorite ? "fill-persimmon text-persimmon" : "text-ink-soft"}`}
-                />
-              </button>
-              <button
-                onClick={() => onEdit(log)}
-                className={iconBtn}
-                aria-label={`Edit ${log.name}`}
-              >
-                <Pencil className="size-3.5 text-ink-soft" />
-              </button>
-              <button
-                onClick={() => setPendingDelete(true)}
-                className={iconBtn}
-                aria-label={`Delete ${log.name}`}
-              >
-                <X className="size-3.5 text-ink-soft" />
-              </button>
-            </>
-          )}
+          <ActionStrip {...stripProps} />
         </div>
       </div>
       {/* Mobile action strip */}
@@ -120,50 +146,7 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
             transition={{ duration: motionTokens.durInstant }}
             className="@md:hidden mt-3 flex items-center gap-1 pl-24"
           >
-            {pendingDelete ? (
-              <>
-                <button
-                  onClick={handleDelete}
-                  className="px-2 py-1 rounded bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                  aria-label={`Confirm delete ${log.name}`}
-                >
-                  Delete
-                </button>
-                <button
-                  onClick={() => setPendingDelete(false)}
-                  className="px-2 py-1 rounded font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                  aria-label="Cancel delete"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => log.id && onToggleFavorite(log.id, !log.isFavorite)}
-                  className={iconBtn}
-                  aria-label={`${log.isFavorite ? "Unstar" : "Star"} ${log.name}`}
-                >
-                  <Star
-                    className={`size-3.5 ${log.isFavorite ? "fill-persimmon text-persimmon" : "text-ink-soft"}`}
-                  />
-                </button>
-                <button
-                  onClick={() => onEdit(log)}
-                  className={iconBtn}
-                  aria-label={`Edit ${log.name}`}
-                >
-                  <Pencil className="size-3.5 text-ink-soft" />
-                </button>
-                <button
-                  onClick={() => setPendingDelete(true)}
-                  className={iconBtn}
-                  aria-label={`Delete ${log.name}`}
-                >
-                  <X className="size-3.5 text-ink-soft" />
-                </button>
-              </>
-            )}
+            <ActionStrip {...stripProps} />
           </motion.div>
         )}
       </AnimatePresence>

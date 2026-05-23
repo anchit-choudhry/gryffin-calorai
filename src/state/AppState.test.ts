@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppState } from "./AppState";
 import type { Recipe } from "../db/dbService";
 import * as dbService from "../db/dbService";
@@ -89,6 +89,7 @@ describe("AppState", () => {
     vi.mocked(dbService.getAllBodyMeasurements).mockResolvedValue([]);
     vi.mocked(dbService.addBodyMeasurement).mockResolvedValue(BodyMeasurementId(1));
     vi.mocked(dbService.deleteBodyMeasurement).mockResolvedValue(undefined);
+    vi.mocked(dbService.updateBodyMeasurement).mockResolvedValue(undefined);
     vi.mocked(dbService.getUnlockedAchievements).mockResolvedValue([]);
     vi.mocked(dbService.getUnlockedAchievementIds).mockResolvedValue(new Set<string>());
     vi.mocked(dbService.addUserAchievement).mockResolvedValue(UserAchievementId(1));
@@ -131,7 +132,7 @@ describe("AppState", () => {
   describe("Initialization", () => {
     it("should initialize with correct default state", () => {
       const state = useAppState.getState();
-      expect(state.dailyLogs).toEqual([]);
+      expect(state.dailyLogs).toStrictEqual([]);
       expect(state.init.status).toBe("idle");
       expect(state.error).toBeNull();
       expect(state.userId).toBeNull();
@@ -164,11 +165,9 @@ describe("AppState", () => {
       const userId = UserId("test-user");
       await useAppState.getState().fetchInitialData(userId);
       const state = useAppState.getState();
-      expect(state.init.status).toBe("ready");
-      if (state.init.status === "ready") {
-        expect(state.init.user).toBeDefined();
-      }
-      expect(state.dailyLogs.length).toBe(1);
+      assert(state.init.status === "ready");
+      expect(state.init.user).toBeDefined();
+      expect(state.dailyLogs).toHaveLength(1);
       expect(state.recipes).toBeDefined();
       expect(state.allFoodItems).toBeDefined();
       expect(state.favoriteFoods).toBeDefined();
@@ -184,10 +183,8 @@ describe("AppState", () => {
       vi.mocked(dbService.getOrCreateUser).mockRejectedValueOnce(error);
       await useAppState.getState().fetchInitialData(userId);
       const state = useAppState.getState();
-      expect(state.init.status).toBe("error");
-      if (state.init.status === "error") {
-        expect(state.init.message).toBeDefined();
-      }
+      assert(state.init.status === "error");
+      expect(state.init.message).toBeDefined();
     });
   });
 
@@ -197,7 +194,7 @@ describe("AppState", () => {
       useAppState.setState({ userId, error: "old error" });
       await useAppState.getState().refreshDailyLogs(userId);
       const state = useAppState.getState();
-      expect(state.dailyLogs.length).toBe(1);
+      expect(state.dailyLogs).toHaveLength(1);
       expect(state.error).toBeNull();
     });
 
@@ -582,6 +579,18 @@ describe("AppState", () => {
         userId,
       );
     });
+
+    it("should update body measurement", async () => {
+      const userId = UserId("test-user");
+      useAppState.setState({ userId });
+      const measurementId = BodyMeasurementId(123);
+      await useAppState.getState().updateBodyMeasurement(measurementId, { weight: 72 });
+      expect(vi.mocked(dbService).updateBodyMeasurement).toHaveBeenCalledWith(
+        measurementId,
+        userId,
+        { weight: 72 },
+      );
+    });
   });
 
   describe("setWaterGoalMl", () => {
@@ -735,7 +744,7 @@ describe("AppState", () => {
       vi.mocked(dbService.getDailyWaterLogs).mockResolvedValueOnce([]);
 
       await useAppState.getState().fetchDailyWaterLogs(userId);
-      expect(useAppState.getState().dailyWaterLogs).toEqual([]);
+      expect(useAppState.getState().dailyWaterLogs).toStrictEqual([]);
     });
 
     it("should handle error when fetching water logs fails", async () => {
@@ -771,7 +780,7 @@ describe("AppState", () => {
       vi.mocked(dbService.getDailyStepLogs).mockResolvedValueOnce([]);
 
       await useAppState.getState().fetchDailyStepLogs(userId);
-      expect(useAppState.getState().dailyStepLogs).toEqual([]);
+      expect(useAppState.getState().dailyStepLogs).toStrictEqual([]);
     });
 
     it("should handle error when fetching step logs fails", async () => {
@@ -831,7 +840,7 @@ describe("AppState", () => {
       vi.mocked(dbService.getAllBodyMeasurements).mockResolvedValueOnce([]);
 
       await useAppState.getState().fetchBodyMeasurements(userId);
-      expect(useAppState.getState().bodyMeasurements).toEqual([]);
+      expect(useAppState.getState().bodyMeasurements).toStrictEqual([]);
     });
 
     it("should handle error when fetching body measurements fails", async () => {
@@ -1235,7 +1244,7 @@ describe("AppState", () => {
 
       await useAppState.getState().fetchTdeeProfile(userId);
 
-      expect(useAppState.getState().tdeeProfile).toEqual(profile);
+      expect(useAppState.getState().tdeeProfile).toStrictEqual(profile);
     });
 
     it("fetchTdeeProfile sets null when no profile", async () => {
@@ -1385,7 +1394,7 @@ describe("AppState", () => {
 
       await useAppState.getState().fetchFastingSessions(userId);
 
-      expect(useAppState.getState().activeFastingSession).toEqual(session);
+      expect(useAppState.getState().activeFastingSession).toStrictEqual(session);
       expect(useAppState.getState().fastingHistory).toHaveLength(1);
     });
 

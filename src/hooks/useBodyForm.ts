@@ -3,10 +3,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
-import { inToCm, lbToKg, type LengthUnit, todayISO, type WeightUnit } from "../types";
+import {
+  type BodyMeasurementId,
+  inToCm,
+  lbToKg,
+  type LengthUnit,
+  todayISO,
+  type WeightUnit,
+} from "../types";
 import { type BodyFormValues, makeBodySchema } from "../forms/schemas";
 
-export function useBodyForm(): {
+interface UseBodyFormOptions {
+  measurementId?: BodyMeasurementId;
+  initialValues?: Partial<BodyFormValues>;
+}
+
+export function useBodyForm(options?: UseBodyFormOptions): {
   form: ReturnType<typeof useForm<BodyFormValues>>;
   weightUnit: WeightUnit;
   setWeightUnit: (unit: WeightUnit) => void;
@@ -15,14 +27,21 @@ export function useBodyForm(): {
   isLoading: boolean;
   submitMeasurement: () => Promise<boolean>;
 } {
-  const { addBodyMeasurement, userId } = useAppState();
+  const { measurementId, initialValues } = options ?? {};
+  const { addBodyMeasurement, updateBodyMeasurement, userId } = useAppState();
   const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [lengthUnit, setLengthUnit] = useState<LengthUnit>("cm");
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<BodyFormValues>({
     resolver: zodResolver(makeBodySchema(weightUnit, lengthUnit)),
-    defaultValues: { weight: "", bodyFat: "", waist: "", chest: "", hips: "" },
+    defaultValues: {
+      weight: initialValues?.weight ?? "",
+      bodyFat: initialValues?.bodyFat ?? "",
+      waist: initialValues?.waist ?? "",
+      chest: initialValues?.chest ?? "",
+      hips: initialValues?.hips ?? "",
+    },
     mode: "onBlur",
   });
 
@@ -51,17 +70,22 @@ export function useBodyForm(): {
             const toStoredCm = (v: number | undefined) =>
               v === undefined ? undefined : lengthUnit === "in" ? inToCm(v) : v;
 
-            await addBodyMeasurement({
-              userId,
-              measuredAt: todayISO(),
+            const payload = {
               weight: Math.round(weightKg * 100) / 100,
               bodyFat: bodyFatVal,
               waist: toStoredCm(waistVal),
               chest: toStoredCm(chestVal),
               hips: toStoredCm(hipsVal),
-            });
+            };
 
-            toast.success("Measurement saved!");
+            if (measurementId) {
+              await updateBodyMeasurement(measurementId, payload);
+              toast.success("Measurement updated!");
+            } else {
+              await addBodyMeasurement({ userId, measuredAt: todayISO(), ...payload });
+              toast.success("Measurement saved!");
+            }
+
             form.reset();
             resolve(true);
           } catch {

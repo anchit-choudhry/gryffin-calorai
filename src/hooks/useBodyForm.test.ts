@@ -369,3 +369,100 @@ describe("useBodyForm", () => {
     });
   });
 });
+
+describe("useBodyForm edit mode", () => {
+  const userId = UserId("edit-user");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId,
+      addBodyMeasurement: vi.fn(),
+      updateBodyMeasurement: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof appState.useAppState>);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should pre-fill form values when initialValues are provided", () => {
+    const { BodyMeasurementId } = vi.mocked({} as typeof import("@/types")) as unknown as {
+      BodyMeasurementId: (n: number) => ReturnType<typeof import("@/types").BodyMeasurementId>;
+    };
+    void BodyMeasurementId;
+
+    const { result } = renderHook(() =>
+      useBodyForm({
+        measurementId: 42 as unknown as import("@/types").BodyMeasurementId,
+        initialValues: { weight: "75", bodyFat: "20" },
+      }),
+    );
+
+    expect(result.current.form.getValues("weight")).toBe("75");
+    expect(result.current.form.getValues("bodyFat")).toBe("20");
+  });
+
+  it("should call updateBodyMeasurement on submit when measurementId is provided", async () => {
+    const updateMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId,
+      addBodyMeasurement: vi.fn(),
+      updateBodyMeasurement: updateMock,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() =>
+      useBodyForm({
+        measurementId: 42 as unknown as import("@/types").BodyMeasurementId,
+        initialValues: { weight: "75" },
+      }),
+    );
+
+    const success = await result.current.submitMeasurement();
+
+    expect(success).toBe(true);
+    expect(updateMock).toHaveBeenCalledWith(42, expect.objectContaining({ weight: 75 }));
+    expect(toast.success).toHaveBeenCalledWith("Measurement updated!");
+  });
+
+  it("should call addBodyMeasurement when no measurementId is provided", async () => {
+    const addMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId,
+      addBodyMeasurement: addMock,
+      updateBodyMeasurement: vi.fn(),
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useBodyForm());
+
+    await act(async () => {
+      result.current.form.setValue("weight", "70");
+    });
+
+    const success = await result.current.submitMeasurement();
+
+    expect(success).toBe(true);
+    expect(addMock).toHaveBeenCalled();
+  });
+
+  it("should handle updateBodyMeasurement error", async () => {
+    const updateMock = vi.fn().mockRejectedValue(new Error("DB error"));
+    vi.mocked(appState).useAppState.mockReturnValue({
+      userId,
+      addBodyMeasurement: vi.fn(),
+      updateBodyMeasurement: updateMock,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() =>
+      useBodyForm({
+        measurementId: 42 as unknown as import("@/types").BodyMeasurementId,
+        initialValues: { weight: "75" },
+      }),
+    );
+
+    const success = await result.current.submitMeasurement();
+
+    expect(success).toBe(false);
+    expect(toast.error).toHaveBeenCalledWith("Failed to save measurement.");
+  });
+});

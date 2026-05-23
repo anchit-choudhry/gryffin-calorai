@@ -12,6 +12,13 @@ export const EDITORIAL_INPUT_CLS =
   "border-0 border-b border-rule rounded-none bg-transparent dark:bg-paper font-mono text-sm text-ink " +
   "focus-visible:ring-0 focus-visible:border-persimmon placeholder:text-ink-soft/50 py-1 h-auto";
 
+export const LABEL_MONO_CLS = "font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft";
+
+export const ICON_BTN_CLS =
+  "flex items-center justify-center size-9 rounded-none hover:bg-paper-muted transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon " +
+  "focus-visible:ring-offset-1 active:scale-[0.97]";
+
 export interface GroupedMealLog {
   meal: MealType;
   items: FoodItem[];

@@ -36,6 +36,7 @@ const TdeeProfilePanel = () => {
     useOnboarding(() => toast.success("Profile updated"));
   const [touchedHeight, setTouchedHeight] = useState(false);
   const [touchedWeight, setTouchedWeight] = useState(false);
+  const [touchedTargetWeight, setTouchedTargetWeight] = useState(false);
 
   const values = form.watch();
   const heightCm =
@@ -337,6 +338,65 @@ const TdeeProfilePanel = () => {
               )}
             />
           </div>
+
+          {/* Target weight - only for lose/gain goals */}
+          {(values.goal === "lose" || values.goal === "gain") && (
+            <div>
+              <h4 className="font-mono text-[10px] uppercase tracking-wider text-ink-soft mb-3">
+                Target Weight
+              </h4>
+              <FormField
+                control={form.control}
+                name="targetWeightDisplay"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between items-center">
+                      <FormLabel className="font-mono text-[10px] uppercase tracking-wider text-ink-soft">
+                        Target ({weightUnit})
+                      </FormLabel>
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={weightUnit === "kg" ? 20 : 44}
+                        max={weightUnit === "kg" ? 500 : 1100}
+                        step={0.1}
+                        placeholder={
+                          tdeeProfile?.targetWeightKg !== undefined
+                            ? String(
+                                weightUnit === "lb"
+                                  ? Math.round(kgToLb(tdeeProfile.targetWeightKg) * 10) / 10
+                                  : Math.round(tdeeProfile.targetWeightKg * 10) / 10,
+                              )
+                            : weightUnit === "kg"
+                              ? "65"
+                              : "143"
+                        }
+                        className={cn(EDITORIAL_INPUT_CLS)}
+                        {...field}
+                        onChange={(e) => {
+                          setTouchedTargetWeight(true);
+                          const v = parseFloat(e.target.value);
+                          field.onChange(Number.isFinite(v) ? v : undefined);
+                        }}
+                        onFocus={() => {
+                          if (!touchedTargetWeight && tdeeProfile?.targetWeightKg !== undefined) {
+                            const display =
+                              weightUnit === "lb"
+                                ? Math.round(kgToLb(tdeeProfile.targetWeightKg) * 10) / 10
+                                : Math.round(tdeeProfile.targetWeightKg * 10) / 10;
+                            field.onChange(display);
+                            setTouchedTargetWeight(true);
+                          }
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
           {/* Live preview */}
           {goalKcal > 0 && (

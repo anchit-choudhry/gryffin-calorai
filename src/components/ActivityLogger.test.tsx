@@ -139,7 +139,7 @@ describe("ActivityLogger", () => {
     await act(async () => {
       fireEvent.mouseDown(dropdownBtns[0]!);
     });
-    expect(screen.queryAllByRole("listitem").length).toBe(0);
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 
   it("duration input onChange fires the field handler", async () => {
@@ -162,7 +162,7 @@ describe("ActivityLogger", () => {
     await act(async () => {
       fireEvent.focus(durationInput);
     });
-    expect(screen.queryAllByRole("listitem").length).toBe(0);
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   });
 
   it("calls deleteActivityLog and shows undo toast on delete", async () => {

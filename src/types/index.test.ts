@@ -95,11 +95,11 @@ describe("fuzzyMatchFoodName", () => {
   ];
 
   it("returns empty array for empty query", () => {
-    expect(fuzzyMatchFoodName("", corpus)).toEqual([]);
+    expect(fuzzyMatchFoodName("", corpus)).toStrictEqual([]);
   });
 
   it("returns empty array for empty corpus", () => {
-    expect(fuzzyMatchFoodName("apple", [])).toEqual([]);
+    expect(fuzzyMatchFoodName("apple", [])).toStrictEqual([]);
   });
 
   it("returns exact match first", () => {
@@ -125,7 +125,7 @@ describe("fuzzyMatchFoodName", () => {
 
   it("returns empty array when nothing matches", () => {
     const results = fuzzyMatchFoodName("zzzzz", corpus);
-    expect(results).toEqual([]);
+    expect(results).toStrictEqual([]);
   });
 
   it("default limit is 3", () => {
@@ -289,7 +289,7 @@ describe("isStepLogId", () => {
 
 describe("computeStreaks", () => {
   it("returns zeros for empty input", () => {
-    expect(computeStreaks([])).toEqual({ currentStreak: 0, longestStreak: 0 });
+    expect(computeStreaks([])).toStrictEqual({ currentStreak: 0, longestStreak: 0 });
   });
 
   it("counts consecutive days correctly for longest streak", () => {

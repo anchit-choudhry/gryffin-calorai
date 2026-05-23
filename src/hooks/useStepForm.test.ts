@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useStepForm } from "./useStepForm";
 import { StepSchema } from "../forms/schemas";
@@ -149,42 +149,32 @@ describe("StepSchema validation", () => {
 
   it("rejects zero steps", () => {
     const result = StepSchema.safeParse({ steps: 0 });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.errors[0]?.message).toBe("Must be at least 1 step");
-    }
+    assert(!result.success);
+    expect(result.error.errors[0]?.message).toBe("Must be at least 1 step");
   });
 
   it("rejects negative steps", () => {
     const result = StepSchema.safeParse({ steps: -100 });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.errors[0]?.message).toBe("Must be at least 1 step");
-    }
+    assert(!result.success);
+    expect(result.error.errors[0]?.message).toBe("Must be at least 1 step");
   });
 
   it("rejects steps exceeding 100,000", () => {
     const result = StepSchema.safeParse({ steps: 100001 });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.errors[0]?.message).toBe("Cannot exceed 100,000 steps");
-    }
+    assert(!result.success);
+    expect(result.error.errors[0]?.message).toBe("Cannot exceed 100,000 steps");
   });
 
   it("rejects fractional steps", () => {
     const result = StepSchema.safeParse({ steps: 1500.5 });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.errors[0]?.message).toBe("Steps must be a whole number");
-    }
+    assert(!result.success);
+    expect(result.error.errors[0]?.message).toBe("Steps must be a whole number");
   });
 
   it("rejects string input", () => {
     const result = StepSchema.safeParse({ steps: "five hundred" });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.errors[0]?.message).toBe("Steps must be a number");
-    }
+    assert(!result.success);
+    expect(result.error.errors[0]?.message).toBe("Steps must be a number");
   });
 
   it("rejects missing steps field", () => {

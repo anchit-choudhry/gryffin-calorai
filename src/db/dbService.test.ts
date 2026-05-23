@@ -33,6 +33,7 @@ import {
   type Recipe,
   saveRecipe,
   toggleFavoriteFoodItem,
+  updateBodyMeasurement,
   updateFoodItem,
   updateRecipe,
   updateUserProfile,
@@ -83,7 +84,7 @@ describe("dbService", () => {
     expect(logs[0]!.name).toBe("Apple");
 
     const names = logs.map((log) => log.name);
-    expect(names).toEqual(["Apple"]);
+    expect(names).toStrictEqual(["Apple"]);
   });
 
   it("should retrieve only logs for the specified user and date", async () => {
@@ -128,7 +129,7 @@ describe("dbService", () => {
 
     expect(logs).toHaveLength(2);
     const names = logs.map((log) => log.name);
-    expect(names).toEqual(["Apple", "Banana"]);
+    expect(names).toStrictEqual(["Apple", "Banana"]);
   });
 
   it("should delete a food item", async () => {
@@ -404,7 +405,7 @@ describe("dbService", () => {
 
       const logs = await getDailyWaterLogs(userId, today);
       expect(logs).toHaveLength(2);
-      expect(logs.map((l) => l.amount).sort()).toEqual([250, 500]);
+      expect(logs.map((l) => l.amount).sort()).toStrictEqual([250, 500]);
     });
 
     it("should not return water logs from other dates", async () => {
@@ -463,7 +464,7 @@ describe("dbService", () => {
 
       const measurements = await getAllBodyMeasurements(userId);
       expect(measurements).toHaveLength(2);
-      expect(measurements.map((m) => m.weight).sort()).toEqual([69.5, 70]);
+      expect(measurements.map((m) => m.weight).sort()).toStrictEqual([69.5, 70]);
     });
 
     it("should support optional fields", async () => {
@@ -496,6 +497,47 @@ describe("dbService", () => {
       const after = await getAllBodyMeasurements(userId);
       expect(after).toHaveLength(0);
     });
+
+    it("should update an existing body measurement", async () => {
+      const userId = UserId("bm-upd-1");
+      const id = await addBodyMeasurement({
+        userId,
+        measuredAt: ISODate("2026-05-01"),
+        weight: 70,
+        bodyFat: 18,
+      });
+
+      await updateBodyMeasurement(id, userId, { weight: 71, bodyFat: 19 });
+
+      const measurements = await getAllBodyMeasurements(userId);
+      expect(measurements).toHaveLength(1);
+      expect(measurements[0]!.weight).toBe(71);
+      expect(measurements[0]!.bodyFat).toBe(19);
+    });
+
+    it("should not update a measurement belonging to a different user", async () => {
+      const userId1 = UserId("bm-upd-2");
+      const userId2 = UserId("bm-upd-3");
+      const id = await addBodyMeasurement({
+        userId: userId1,
+        measuredAt: ISODate("2026-05-01"),
+        weight: 70,
+      });
+
+      await updateBodyMeasurement(id, userId2, { weight: 99 });
+
+      const measurements = await getAllBodyMeasurements(userId1);
+      expect(measurements[0]!.weight).toBe(70);
+    });
+
+    it("should not throw when updating a non-existent measurement", async () => {
+      const userId = UserId("bm-upd-4");
+      const nonExistentId = BodyMeasurementId(99999);
+
+      await expect(
+        updateBodyMeasurement(nonExistentId, userId, { weight: 75 }),
+      ).resolves.not.toThrow();
+    });
   });
 
   describe("step logs", () => {
@@ -518,7 +560,7 @@ describe("dbService", () => {
 
       const logs = await getDailyStepLogs(userId, today);
       expect(logs).toHaveLength(2);
-      expect(logs.map((l) => l.steps).sort()).toEqual([3000, 5000]);
+      expect(logs.map((l) => l.steps).sort()).toStrictEqual([3000, 5000]);
     });
 
     it("should retrieve all step logs across dates", async () => {
@@ -965,7 +1007,7 @@ describe("dbService", () => {
 
       const recent = await getRecentFoodItems(userId);
       const apples = recent.filter((i) => i.name === "Apple");
-      expect(apples.length).toBe(1);
+      expect(apples).toHaveLength(1);
     });
 
     it("should reject toggle favorite for non-existent food item", async () => {
@@ -1160,7 +1202,7 @@ describe("dbService", () => {
       expect(true).toBe(true);
     });
 
-    it("should not allow wrong user to update food item", async () => {
+    it("should not allow a different user to update another user's food item", async () => {
       const userId1 = UserId("original-owner");
       const userId2 = UserId("unauthorized-updater");
       const today = todayISO();

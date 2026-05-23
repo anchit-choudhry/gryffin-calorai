@@ -59,7 +59,7 @@ describe("activityLogs DB", () => {
 
     await deleteActivityLog(ActivityLogId(id as number), userId);
     const after = await getAllActivityLogs(userId);
-    expect(after.length).toBe(beforeCount - 1);
+    expect(after).toHaveLength(beforeCount - 1);
   });
 
   it("does not return logs for other users", async () => {

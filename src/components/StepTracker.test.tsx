@@ -169,7 +169,7 @@ describe("StepTracker component", () => {
     fireEvent.click(cancelButton);
 
     expect(setStepGoalMock).not.toHaveBeenCalled();
-    expect(screen.queryByText("Save")).toEqual(null);
+    expect(screen.queryByText("Save")).toBeNull();
   });
 
   it("shows custom input when Custom button is clicked", () => {
@@ -344,7 +344,7 @@ describe("quick-add step amounts", () => {
 
   it("quick amounts are sorted ascending", () => {
     const sorted = [...QUICK_STEPS].sort((a, b) => a - b);
-    expect([...QUICK_STEPS]).toEqual(sorted);
+    expect([...QUICK_STEPS]).toStrictEqual(sorted);
   });
 });
 

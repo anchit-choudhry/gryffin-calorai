@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cn, groupLogsByMeal, mapDbError, normalizeHash } from "./utils";
+import {
+  cn,
+  groupLogsByMeal,
+  ICON_BTN_CLS,
+  LABEL_MONO_CLS,
+  mapDbError,
+  normalizeHash,
+} from "./utils";
 import { FoodItemId, ISODate, type MealType, UserId } from "@/types";
 import type { FoodItem } from "../db/dbService";
 import { Dexie } from "dexie";
@@ -237,6 +244,60 @@ describe("normalizeHash", () => {
     expect(normalizeHash(" #dashboard")).toBe("#dashboard");
     expect(normalizeHash("#dashboard ")).toBe("#dashboard");
     expect(normalizeHash(" #RECIPES ")).toBe("#dashboard");
+  });
+});
+
+describe("LABEL_MONO_CLS", () => {
+  it("is a non-empty string", () => {
+    expect(typeof LABEL_MONO_CLS).toBe("string");
+    expect(LABEL_MONO_CLS.length).toBeGreaterThan(0);
+  });
+
+  it("contains font-mono", () => {
+    expect(LABEL_MONO_CLS).toContain("font-mono");
+  });
+
+  it("contains uppercase", () => {
+    expect(LABEL_MONO_CLS).toContain("uppercase");
+  });
+
+  it("contains tracking-[0.2em] for editorial spacing", () => {
+    expect(LABEL_MONO_CLS).toContain("tracking-[0.2em]");
+  });
+
+  it("contains text-ink-soft", () => {
+    expect(LABEL_MONO_CLS).toContain("text-ink-soft");
+  });
+
+  it("contains text-[10px]", () => {
+    expect(LABEL_MONO_CLS).toContain("text-[10px]");
+  });
+});
+
+describe("ICON_BTN_CLS", () => {
+  it("is a non-empty string", () => {
+    expect(typeof ICON_BTN_CLS).toBe("string");
+    expect(ICON_BTN_CLS.length).toBeGreaterThan(0);
+  });
+
+  it("contains rounded-none for editorial sharpness", () => {
+    expect(ICON_BTN_CLS).toContain("rounded-none");
+  });
+
+  it("contains ring-[3px] matching Button component focus width", () => {
+    expect(ICON_BTN_CLS).toContain("ring-[3px]");
+  });
+
+  it("contains active:scale-[0.97] for press feedback", () => {
+    expect(ICON_BTN_CLS).toContain("active:scale-[0.97]");
+  });
+
+  it("contains size-9", () => {
+    expect(ICON_BTN_CLS).toContain("size-9");
+  });
+
+  it("contains hover:bg-paper-muted", () => {
+    expect(ICON_BTN_CLS).toContain("hover:bg-paper-muted");
   });
 });
 
