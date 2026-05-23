@@ -201,7 +201,6 @@ describe("normalizeHash", () => {
 
   it("should return dashboard for invalid hash", () => {
     expect(normalizeHash("#invalid")).toBe("#dashboard");
-    expect(normalizeHash("#settings")).toBe("#dashboard");
     expect(normalizeHash("#profile")).toBe("#dashboard");
   });
 

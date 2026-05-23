@@ -49,6 +49,92 @@ export function isStepLogId(value: unknown): value is StepLogId {
   );
 }
 
+export type ActivityLogId = Brand<number, "ActivityLogId">;
+export type FastingSessionId = Brand<number, "FastingSessionId">;
+
+export const ActivityLogId = (id: number): ActivityLogId => id as ActivityLogId;
+export const FastingSessionId = (id: number): FastingSessionId => id as FastingSessionId;
+
+export function isActivityLogId(value: unknown): value is ActivityLogId {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
+}
+
+export function isFastingSessionId(value: unknown): value is FastingSessionId {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
+}
+
+export type Sex = "male" | "female";
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+export type GoalType = "lose" | "maintain" | "gain";
+
+export const ACTIVITY_LEVELS: readonly ActivityLevel[] = [
+  "sedentary",
+  "light",
+  "moderate",
+  "active",
+  "very_active",
+] as const;
+
+export const ACTIVITY_LEVEL_FACTORS: Record<ActivityLevel, number> = {
+  sedentary: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+  very_active: 1.9,
+};
+
+export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
+  sedentary: "Sedentary",
+  light: "Lightly Active",
+  moderate: "Moderately Active",
+  active: "Very Active",
+  very_active: "Extra Active",
+};
+
+export const ACTIVITY_LEVEL_DESCRIPTIONS: Record<ActivityLevel, string> = {
+  sedentary: "Little or no exercise, desk job",
+  light: "Light exercise 1-3 days/week",
+  moderate: "Moderate exercise 3-5 days/week",
+  active: "Heavy exercise 6-7 days/week",
+  very_active: "Very heavy exercise, physical job, or twice-daily training",
+};
+
+export const GOAL_OFFSETS: Record<GoalType, number> = {
+  lose: -500,
+  maintain: 0,
+  gain: 300,
+};
+
+export const GOAL_LABELS: Record<GoalType, string> = {
+  lose: "Lose Weight",
+  maintain: "Maintain Weight",
+  gain: "Gain Weight",
+};
+
+export const GOAL_DESCRIPTIONS: Record<GoalType, string> = {
+  lose: "500 kcal/day deficit - lose ~0.5 kg/week",
+  maintain: "Eat at maintenance - no change",
+  gain: "300 kcal/day surplus - gain ~0.3 kg/week",
+};
+
+export const FASTING_PRESETS: readonly { hours: number; label: string }[] = [
+  { hours: 12, label: "12:12" },
+  { hours: 14, label: "14:10" },
+  { hours: 16, label: "16:8" },
+  { hours: 18, label: "18:6" },
+  { hours: 20, label: "OMAD" },
+] as const;
+
 export type UserId = Brand<string, "UserId">;
 export type FoodItemId = Brand<number, "FoodItemId">;
 export type RecipeId = Brand<number, "RecipeId">;

@@ -1,11 +1,11 @@
 # Gryffin Calorai: Complete Application Specification
 
 **Project:** Gryffin Calorai
-**Version:** 0.0.7 (current)
+**Version:** 0.3.0 (current)
 **Type:** Single-Page Application (React/Vite SPA)
 **Status:** Active Development
-**Last Updated:** May 12, 2026
-**Analysis Scope:** src/ folder reverse-engineering + CLAUDE.md (v0.0.1 - v0.0.7)
+**Last Updated:** May 21, 2026
+**Analysis Scope:** src/ folder reverse-engineering + CLAUDE.md (v0.0.1 - v0.3.0)
 
 ---
 
@@ -19,7 +19,7 @@ visualize calorie and macro trends over time. All data remains on the user's dev
 **Core Value Proposition:** Offline-first health tracking with zero server dependency and zero data
 exposure.
 
-**Cumulative Feature Set (v0.0.1 - v0.0.7):**
+**Cumulative Feature Set (v0.0.1 - v0.3.0):**
 
 - Manual food logging with macros (protein, carbs, fat), meal types, and favorites
 - Recipe manager with dynamic ingredient composition and accurate calorie calculation
@@ -30,17 +30,24 @@ exposure.
 - Body measurements (weight, body fat, waist, chest, hips) with unit conversion
 - Body composition trend chart (LineChart; shown when >= 2 measurements)
 - Calorie distribution pie chart by meal type (7-day view)
-- Gamification achievement system - 18 achievements across 6 categories
+- Gamification achievement system - 19 achievements across 6 categories
 - Voice food logging via Web Speech API with fuzzy matching
 - Barcode scanner - camera functional; food-lookup API not yet integrated
 - Logging streak tracking - current and best
 - Weekly summary metrics
 - Progress page with 7 sections and 7/30-day toggle
+- Interactive product tour (8 steps, spotlight, coachmark cards, localStorage persistence)
+- Global keyboard shortcuts overlay with command registry
+- Intermittent fasting timer (SVG ring progress, 5 presets, browser Notification API)
+- Activity logging with MET-based calorie calculation (~60 activities)
+- TDEE/goal engine onboarding (Mifflin-St Jeor, multi-step modal, unit toggles)
+- Data export: versioned JSON backup + CSV ZIP (fflate); import with schema validation
+- Settings page (Profile, Goals, Data, About)
 - Dark mode with OS preference detection and localStorage persistence
 - ErrorBoundary for crash recovery
-- HTTP security headers: CSP, X-Frame-Options, Permissions-Policy, Referrer-Policy
+- HTTP security headers: CSP, HSTS, X-Frame-Options, COEP, COOP, CORP, Permissions-Policy
 - Code-split vendor bundles; lazy-loaded pages and BarcodeScanner
-- 11 GitHub Actions CI/CD workflows; coverage reporting
+- 17 GitHub Actions CI/CD workflows; coverage reporting
 - Editorial design system (oklch color palette, @fontsource-variable typography, responsive grid)
 - shadcn/ui Dialog, Tabs, Form, Input, Button, Card, Tooltip primitives
 - react-hook-form 7 + zod v3 validation on all form hooks
@@ -87,6 +94,13 @@ Database name: `GryffinCaloraiDB` (client-side only, no server)
 | zod (via `zod/v3`)  | 4       | Schema validation; `src/forms/schemas.ts` |
 | @hookform/resolvers | 5       | zodResolver adapter for react-hook-form   |
 
+### Utility Libraries
+
+| Technology | Version | Role                                            |
+|------------|---------|-------------------------------------------------|
+| date-fns   | 4       | `differenceInSeconds` used by `useFastingTimer` |
+| fflate     | 0.8     | Lightweight ZIP compression for CSV export      |
+
 ### Developer Tooling
 
 | Technology          | Version | Role                                             |
@@ -117,6 +131,7 @@ index.html
 - Dark mode state and persistence
 - DB initialization via `useLayoutEffect`
 - `React.lazy` + `<Suspense fallback={<PageLoading />}>` for all pages
+- `ProductTourOverlay` and `OnboardingModal` rendered at the app shell level
 
 ### Component Hierarchy
 
@@ -124,56 +139,69 @@ index.html
 <App>
   <nav>
     Logo ("C" + "Gryffin Calorai")
-    Nav links: Dashboard | Recipes | Progress
+    Nav links: Dashboard | Recipes | Progress | Settings
     Dark mode toggle button
   </nav>
   <main>
     <ErrorBoundary>
       <Suspense fallback={<PageLoading />}>
         #dashboard -> <Dashboard>  (lazy)
+          <ProductTourOverlay /> (tour overlay, renders globally)
+          <OnboardingBanner /> (shown when no TDEE profile)
           [shadcn/ui <Dialog>] Edit Log / Barcode Food / Voice Food
-          Section A — Masthead / Hero:
-            <DashboardHero /> (totalCalories, macro totals: protein/carbs/fat)
-          Section B — Week in Review:
+          Section A - Masthead / Hero:
+            <DashboardHero /> (totalCalories, macro totals, TDEE-sourced calorieGoal)
+          Section B - Week in Review:
             <WeeklySummary />
             <StreakCard />
             <WaterTracker />
             <StepTracker />
-          Section C — Recently Logged: scroll chips (up to 8; quick-re-log)
-          Section D — From the Pantry: favorites chips (quick-re-log)
-          Section E — Add to Today's Log (3-col grid):
+            <FastingTimer />
+            <ActivityLogger />
+          Section C - Recently Logged: scroll chips (up to 8; quick-re-log)
+          Section D - From the Pantry: favorites chips (quick-re-log)
+          Section E - Add to Today's Log (3-col grid):
             "01 · Write" <EditorialFrame> -> <FoodLogger />
             "02 · Scan"  <EditorialFrame> -> <Suspense> <BarcodeScanner /> (lazy)
             "03 · Speak" <EditorialFrame> -> <VoiceFoodLogger />
-          Section F — Today's Log: grouped by meal type, AnimatePresence stagger
+          Section F - Today's Log: grouped by meal type, AnimatePresence stagger
 
         #recipes  -> <Recipes>    (lazy)
           Recipe creation form (react-hook-form + zod, useFieldArray for ingredients)
           Saved recipes list with delete
 
         #progress -> <Progress>   (lazy)
-          Section 01 — Progress Tracking:
+          Section 01 - Progress Tracking:
             7-day: ComposedChart stacked bars by meal type + goal ReferenceLine
             30-day: AreaChart total calories + goal ReferenceLine
             Tabs for 7 / 30 day toggle
-          Section 02 — Body Measurements:
+          Section 02 - Body Measurements:
             <BodyMeasurements /> (log form + history table)
-          Section 03 — Macro Nutrient Trends:
+          Section 03 - Macro Nutrient Trends:
             7-day: AreaChart protein / carbs / fat
             30-day: placeholder message
-          Section 04 — Water Intake Trend:
+          Section 04 - Water Intake Trend:
             AreaChart with waterGoal reference line
-          Section 05 — Body Composition: (shown only if >= 2 measurements)
+          Section 05 - Body Composition: (shown only if >= 2 measurements)
             LineChart: bodyFat%, waist, chest, hips with cm/in unit toggle
-          Section 06 — Calorie Distribution:
+          Section 06 - Calorie Distribution:
             7-day: PieChart by meal type
             30-day: placeholder message
-          Section 07 — Achievements:
-            Grid of 18 achievement cards (locked/unlocked state)
+          Section 07 - Achievements:
+            Grid of 19 achievement cards (locked/unlocked state)
             Unlock count summary
+
+        #/settings -> <Settings>  (lazy)
+          Hash-based sub-nav: Profile | Goals | Data | About
+          Profile: <TdeeProfilePanel /> (lazy) - full TDEE edit + live preview
+          Goals: <GoalSettings /> - inline edit for water goal (ml) + step goal (steps)
+          Data: <DataExportPanel /> - JSON backup + CSV ZIP export; import with confirmation
+          About: version info + GitHub link
       </Suspense>
     </ErrorBoundary>
   </main>
+  <OnboardingModal /> (first-launch, localStorage flag)
+  <KeyboardShortcutsOverlay /> (toggleable via keyboard shortcut)
 ```
 
 ### State Management
@@ -182,19 +210,31 @@ index.html
 
 ```typescript
 interface AppState {
-  init: AppInitState         // replaces isLoading + user; 4-state machine
+  init: AppInitState         // 4-state machine
   dailyLogs: FoodItem[]      // today's food entries
   allFoodItems: FoodItem[]   // deduplicated recent items for suggestions
   recipes: Recipe[]
   favoriteFoods: FoodItem[]  // items with isFavorite = true
   dailyWaterLogs: WaterLog[]
-  dailyStepLogs: StepLog[]   // today's step entries
+  dailyStepLogs: StepLog[]
   bodyMeasurements: BodyMeasurement[]
   unlockedAchievements: UserAchievement[]
   waterGoalMl: number        // user-configurable; persisted in localStorage
   stepGoal: number           // user-configurable; persisted in localStorage
   error: string | null
   userId: UserId | null
+  // Feature 13 - TDEE
+  tdeeProfile: TdeeProfile | null
+  // Feature 10 - Activity Logging
+  dailyActivityLogs: ActivityLog[]
+  allActivityLogs: ActivityLog[]
+  // Feature 6 - Intermittent Fasting
+  activeFastingSession: FastingSession | null
+  fastingHistory: FastingSession[]
+  // Product Tour (v0.2.0)
+  tourActive: boolean
+  tourStep: number
+  tourTotalSteps: number
 }
 ```
 
@@ -210,39 +250,56 @@ type AppInitState =
 
 **Actions** (all async unless noted; errors mapped via `mapDbError`):
 
-| Action                           | DB calls / behavior                                                                                                                                                              |
-|----------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `fetchInitialData(userId)`       | getOrCreateUser, getDailyFoodLogs, getAllRecipes, getRecentFoodItems, getFavoriteFoodItems, getDailyWaterLogs, getDailyStepLogs, getAllBodyMeasurements, getUnlockedAchievements |
-| `refreshDailyLogs(userId)`       | getDailyFoodLogs                                                                                                                                                                 |
-| `addFoodLog(food)`               | addFoodItemLog -> refreshDailyLogs -> checkAndUnlockAchievements                                                                                                                 |
-| `deleteFoodLog(id)`              | deleteFoodItem(id, userId) -> refreshDailyLogs                                                                                                                                   |
-| `updateFoodLog(id, updates)`     | updateFoodItem(id, updates, userId) -> refreshDailyLogs                                                                                                                          |
-| `toggleFavorite(id, isFavorite)` | toggleFavoriteFoodItem -> fetchFavorites + fetchAllFoodItems                                                                                                                     |
-| `fetchFavorites(userId)`         | getFavoriteFoodItems                                                                                                                                                             |
-| `updateCalorieGoal(goal)`        | updateUserProfile(updatedUser, userId); updates init.user in-place                                                                                                               |
-| `fetchRecipes(userId)`           | getAllRecipes                                                                                                                                                                    |
-| `deleteRecipe(id)`               | deleteRecipe(id, userId) -> fetchRecipes                                                                                                                                         |
-| `fetchAllFoodItems(userId)`      | getRecentFoodItems                                                                                                                                                               |
-| `addWaterLog(amount)`            | constructs WaterLog -> addWaterLogToDB -> fetchDailyWaterLogs -> checkAndUnlockAchievements                                                                                      |
-| `deleteWaterLog(id)`             | deleteWaterLog(id, userId) -> fetchDailyWaterLogs                                                                                                                                |
-| `fetchDailyWaterLogs(userId)`    | getDailyWaterLogs                                                                                                                                                                |
-| `addStepLog(steps)`              | constructs StepLog -> addStepLogToDB -> fetchDailyStepLogs -> checkAndUnlockAchievements                                                                                         |
-| `deleteStepLog(id)`              | deleteStepLog(id, userId) -> fetchDailyStepLogs                                                                                                                                  |
-| `fetchDailyStepLogs(userId)`     | getDailyStepLogs                                                                                                                                                                 |
-| `addBodyMeasurement(m)`          | addBodyMeasurementToDB -> fetchBodyMeasurements -> checkAndUnlockAchievements                                                                                                    |
-| `deleteBodyMeasurement(id)`      | deleteBodyMeasurement(id, userId) -> fetchBodyMeasurements                                                                                                                       |
-| `fetchBodyMeasurements(userId)`  | getAllBodyMeasurements                                                                                                                                                           |
-| `fetchAchievements(userId)`      | getUnlockedAchievements                                                                                                                                                          |
-| `checkAndUnlockAchievements()`   | getAllFoodLogs + getAllWaterLogs + getUnlockedAchievementIds -> evaluateAchievements -> batch addUserAchievement -> getUnlockedAchievements -> toast.success per new achievement |
-| `setWaterGoalMl(ml)` (sync)      | validates [250, 10000]; persists to localStorage; sets waterGoalMl in store                                                                                                      |
-| `setStepGoal(steps)` (sync)      | validates [1000, 100000]; persists to localStorage; sets stepGoal in store                                                                                                       |
+| Action                           | DB calls / behavior                                                                                                                                                                                                                                                                        |
+|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `fetchInitialData(userId)`       | getOrCreateUser, getDailyFoodLogs, getAllRecipes, getRecentFoodItems, getFavoriteFoodItems, getDailyWaterLogs, getDailyStepLogs, getAllBodyMeasurements, getUnlockedAchievements, getTdeeProfile, getActiveFastingSession, getAllFastingSessions, getDailyActivityLogs, getAllActivityLogs |
+| `refreshDailyLogs(userId)`       | getDailyFoodLogs                                                                                                                                                                                                                                                                           |
+| `addFoodLog(food)`               | addFoodItemLog -> refreshDailyLogs -> checkAndUnlockAchievements                                                                                                                                                                                                                           |
+| `deleteFoodLog(id)`              | deleteFoodItem(id, userId) -> refreshDailyLogs                                                                                                                                                                                                                                             |
+| `updateFoodLog(id, updates)`     | updateFoodItem(id, updates, userId) -> refreshDailyLogs                                                                                                                                                                                                                                    |
+| `toggleFavorite(id, isFavorite)` | toggleFavoriteFoodItem -> fetchFavorites + fetchAllFoodItems                                                                                                                                                                                                                               |
+| `fetchFavorites(userId)`         | getFavoriteFoodItems                                                                                                                                                                                                                                                                       |
+| `updateCalorieGoal(goal)`        | updateUserProfile(updatedUser, userId); updates init.user in-place                                                                                                                                                                                                                         |
+| `fetchRecipes(userId)`           | getAllRecipes                                                                                                                                                                                                                                                                              |
+| `deleteRecipe(id)`               | deleteRecipe(id, userId) -> fetchRecipes                                                                                                                                                                                                                                                   |
+| `updateRecipe(recipe)`           | updateRecipeInDB(recipe) -> fetchRecipes                                                                                                                                                                                                                                                   |
+| `fetchAllFoodItems(userId)`      | getRecentFoodItems                                                                                                                                                                                                                                                                         |
+| `addWaterLog(amount)`            | constructs WaterLog -> addWaterLogToDB -> fetchDailyWaterLogs -> checkAndUnlockAchievements                                                                                                                                                                                                |
+| `deleteWaterLog(id)`             | deleteWaterLog(id, userId) -> fetchDailyWaterLogs                                                                                                                                                                                                                                          |
+| `fetchDailyWaterLogs(userId)`    | getDailyWaterLogs                                                                                                                                                                                                                                                                          |
+| `addStepLog(steps)`              | constructs StepLog -> addStepLogToDB -> fetchDailyStepLogs -> checkAndUnlockAchievements                                                                                                                                                                                                   |
+| `deleteStepLog(id)`              | deleteStepLog(id, userId) -> fetchDailyStepLogs                                                                                                                                                                                                                                            |
+| `fetchDailyStepLogs(userId)`     | getDailyStepLogs                                                                                                                                                                                                                                                                           |
+| `addBodyMeasurement(m)`          | addBodyMeasurementToDB -> fetchBodyMeasurements -> checkAndUnlockAchievements                                                                                                                                                                                                              |
+| `deleteBodyMeasurement(id)`      | deleteBodyMeasurement(id, userId) -> fetchBodyMeasurements                                                                                                                                                                                                                                 |
+| `fetchBodyMeasurements(userId)`  | getAllBodyMeasurements                                                                                                                                                                                                                                                                     |
+| `fetchAchievements(userId)`      | getUnlockedAchievements                                                                                                                                                                                                                                                                    |
+| `checkAndUnlockAchievements()`   | getAllFoodLogs + getAllWaterLogs + getUnlockedAchievementIds -> evaluateAchievements -> batch addUserAchievement -> getUnlockedAchievements -> toast.success per new achievement                                                                                                           |
+| `setWaterGoalMl(ml)` (sync)      | validates [250, 10000]; persists to localStorage; sets waterGoalMl in store                                                                                                                                                                                                                |
+| `setStepGoal(steps)` (sync)      | validates [1000, 100000]; persists to localStorage; sets stepGoal in store                                                                                                                                                                                                                 |
+| `fetchTdeeProfile(userId)`       | getTdeeProfile                                                                                                                                                                                                                                                                             |
+| `saveTdeeProfile(profile)`       | saveTdeeProfileToDB -> fetchTdeeProfile -> updates init.user.calorieGoal                                                                                                                                                                                                                   |
+| `fetchDailyActivityLogs(userId)` | getDailyActivityLogs                                                                                                                                                                                                                                                                       |
+| `addActivityLog(log)`            | addActivityLogToDB -> fetchDailyActivityLogs                                                                                                                                                                                                                                               |
+| `deleteActivityLog(id)`          | deleteActivityLogFromDB -> fetchDailyActivityLogs                                                                                                                                                                                                                                          |
+| `fetchFastingSessions(userId)`   | getAllFastingSessions + getActiveFastingSession                                                                                                                                                                                                                                            |
+| `startFasting(targetHours)`      | startFastingSessionInDB -> fetchFastingSessions                                                                                                                                                                                                                                            |
+| `endFasting(completed)`          | endFastingSessionInDB -> fetchFastingSessions                                                                                                                                                                                                                                              |
+| `exportData()`                   | exportAllData -> returns BackupPayload                                                                                                                                                                                                                                                     |
+| `importData(payload)`            | importBackup(payload) -> fetchInitialData -> returns ImportResult                                                                                                                                                                                                                          |
+| `startTour()` (sync)             | sets tourActive=true, tourStep=0                                                                                                                                                                                                                                                           |
+| `nextTourStep()` (sync)          | increments tourStep; calls endTour() if at last step                                                                                                                                                                                                                                       |
+| `prevTourStep()` (sync)          | decrements tourStep (min 0)                                                                                                                                                                                                                                                                |
+| `endTour()`                      | sets tourActive=false; persists tour-complete flag to localStorage                                                                                                                                                                                                                         |
+| `skipTour()`                     | sets tourActive=false; persists tour-skipped flag to localStorage                                                                                                                                                                                                                          |
+| `completeOnboarding()`           | completeOnboardingInDB -> updates init.user.hasCompletedOnboarding                                                                                                                                                                                                                         |
 
 **State initialization flow:**
 
 1. `App.tsx` `useLayoutEffect` calls `initializeDB()` then `fetchInitialData(UserId("1"))`
 2. `fetchInitialData` sets `init: { status: "loading" }` then calls `getOrCreateUser`
-3. All data slices loaded sequentially; `init: { status: "ready", user: profile }` set atomically
-4. `waterGoalMl` and `stepGoal` are initialized from localStorage before the store is created
+3. All data slices loaded; `init: { status: "ready", user: profile }` set atomically
+4. `waterGoalMl` and `stepGoal` initialized from localStorage before the store is created
 
 **Data flow:**
 
@@ -273,8 +330,8 @@ User interaction
 | `vendor-state`   | `zustand`                                                                  |
 | `vendor-form`    | `react-hook-form`, `@hookform`, `zod`                                      |
 
-All three page components and `BarcodeScanner` are `React.lazy`-loaded. `BarcodeScanner` has its own
-nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
+All four page components and `BarcodeScanner` are `React.lazy`-loaded. `BarcodeScanner` has its
+own nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
 
 ---
 
@@ -282,7 +339,7 @@ nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
 
 ### Database: `GryffinCaloraiDB` (Dexie/IndexedDB)
 
-**Current Schema Version: 9**
+**Current Schema Version: 13**
 
 #### Schema Version History
 
@@ -296,7 +353,11 @@ nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
 | v6      | `waterLogs` table                                   | -                                                 |
 | v7      | `bodyMeasurements` table                            | -                                                 |
 | v8      | `userAchievements` table                            | -                                                 |
-| v9      | `stepLogs` table (current)                          | -                                                 |
+| v9      | `stepLogs` table                                    | -                                                 |
+| v10     | (skipped/reserved)                                  | -                                                 |
+| v11     | `tdeeProfiles` table                                | -                                                 |
+| v12     | `activityLogs` table                                | -                                                 |
+| v13     | `fastingSessions` table + `BACKUP_VERSION` constant | -                                                 |
 
 ---
 
@@ -307,11 +368,12 @@ nested `<Suspense>` boundary, keeping `vendor-barcode` out of the initial load.
 
 ```typescript
 interface UserProfile {
-  id: UserId;           // "1" (hardcoded single user)
-  username: string;     // "Guest"
-  email: string;        // "guest@example.com"
-  lastLogin: string;    // ISO 8601 timestamp, updated on every getOrCreateUser() call
-  calorieGoal: number;  // default 2000 kcal; validated range [1, 99999]
+  id: UserId;                      // "1" (hardcoded single user)
+  username: string;                // "Guest"
+  email: string;                   // "guest@example.com"
+  lastLogin: string;               // ISO 8601 timestamp, updated on every getOrCreateUser() call
+  calorieGoal: number;             // default 2000 kcal; validated range [1, 99999]
+  hasCompletedOnboarding?: boolean // set to true after TDEE onboarding flow
 }
 ```
 
@@ -373,11 +435,6 @@ interface Recipe {
 
 `deleteRecipe` verifies `recipe.userId === userId` before deleting.
 
-`totalCalories` is now computed from
-`ingredients.reduce((acc, ing) => acc + ing.calories * ing.quantity * ing.serving, 0)`.
-The per-ingredient `calories` field is provided by the user when adding an ingredient via
-`useFieldArray`.
-
 ---
 
 #### Table: `waterLogs`
@@ -395,9 +452,6 @@ interface WaterLog {
   loggedAt: string;     // ISO 8601 timestamp for intra-day ordering
 }
 ```
-
-`addWaterLog(amount)` in AppState constructs the full `WaterLog` object before passing to DB.
-`deleteWaterLog` verifies `log.userId === userId` before deleting.
 
 ---
 
@@ -420,11 +474,6 @@ interface BodyMeasurement {
 }
 ```
 
-All fields except `userId` and `measuredAt` are optional. `getAllBodyMeasurements` returns records
-sorted by `measuredAt` ascending. History table displays in reverse order (newest first).
-
-`deleteBodyMeasurement` verifies `m.userId === userId` before deleting.
-
 ---
 
 #### Table: `userAchievements`
@@ -441,10 +490,6 @@ interface UserAchievement {
   unlockedAt: string;      // ISO 8601 timestamp
 }
 ```
-
-`getUnlockedAchievementIds(userId)` returns a `Set<string>` used by `evaluateAchievements` to
-skip already-earned achievements. `addUserAchievement` does not check for duplicates at the DB
-layer - deduplication is handled by the `alreadyUnlocked` set in `checkAndUnlockAchievements`.
 
 ---
 
@@ -464,8 +509,69 @@ interface StepLog {
 }
 ```
 
-`addStepLog(steps)` in AppState constructs the full `StepLog` object before passing to DB.
-`deleteStepLog` verifies `log.userId === userId` before deleting.
+---
+
+#### Table: `tdeeProfiles` (v11)
+
+**Primary key:** `++id`
+**Index:** `userId`
+
+```typescript
+interface TdeeProfile {
+  id?: number;
+  userId: UserId;
+  age: number;
+  sex: Sex;            // "male" | "female"
+  heightCm: number;
+  weightKg: number;
+  activityLevel: ActivityLevel;
+  goal: GoalType;      // "lose" | "maintain" | "gain"
+  updatedAt: string;   // ISO 8601 timestamp
+}
+```
+
+`calorieGoal` is derived from this profile at read time via `calculateTDEE()` and stored on
+`UserProfile` for quick access.
+
+---
+
+#### Table: `activityLogs` (v12)
+
+**Primary key:** `++id` (auto-increment ActivityLogId)
+**Compound index:** `[userId+dateLogged]`
+**Other indices:** `userId, dateLogged`
+
+```typescript
+interface ActivityLog {
+  id?: ActivityLogId;
+  userId: UserId;
+  activityType: string;      // matches a key in metTable.ts
+  durationMin: number;       // 1-1440 minutes
+  caloriesBurned: number;    // computed: MET * weightKg * (durationMin / 60)
+  dateLogged: ISODate;       // YYYY-MM-DD
+  loggedAt: string;          // ISO 8601 timestamp
+}
+```
+
+---
+
+#### Table: `fastingSessions` (v13)
+
+**Primary key:** `++id` (auto-increment FastingSessionId)
+**Compound index:** `[userId+startTime]`
+**Other indices:** `userId, startTime`
+
+```typescript
+interface FastingSession {
+  id?: FastingSessionId;
+  userId: UserId;
+  startTime: string;       // ISO 8601 with time (e.g. "2026-05-21T08:00:00.000Z")
+  endTime: string | null;  // null while fasting is active
+  targetHours: number;
+  dateLogged: ISODate;     // YYYY-MM-DD of startTime
+  completed: boolean;      // true when endTime >= startTime + targetHours
+}
+```
 
 ---
 
@@ -477,23 +583,36 @@ Compile-time ID safety via TypeScript intersection types. Zero runtime cost.
 // src/types/index.ts
 type Brand<T, B extends string> = T & { readonly __brand: B };
 
-export type UserId = Brand<string, "UserId">
-export type FoodItemId = Brand<number, "FoodItemId">
-export type RecipeId = Brand<number, "RecipeId">
-export type WaterLogId = Brand<number, "WaterLogId">
-export type BodyMeasurementId = Brand<number, "BodyMeasurementId">
-export type UserAchievementId = Brand<number, "UserAchievementId">
-export type StepLogId = Brand<number, "StepLogId">
-export type ISODate = Brand<string, "ISODate">
+export type UserId             = Brand<string, "UserId">
+export type FoodItemId         = Brand<number, "FoodItemId">
+export type RecipeId           = Brand<number, "RecipeId">
+export type WaterLogId         = Brand<number, "WaterLogId">
+export type BodyMeasurementId  = Brand<number, "BodyMeasurementId">
+export type UserAchievementId  = Brand<number, "UserAchievementId">
+export type StepLogId          = Brand<number, "StepLogId">
+export type ActivityLogId      = Brand<number, "ActivityLogId">
+export type FastingSessionId   = Brand<number, "FastingSessionId">
+export type ISODate            = Brand<string, "ISODate">
 ```
 
 Each branded type has a constructor function (raw cast) and a type guard (runtime validation):
 
-| Type                                                                                                           | Guard logic                                                            |
-|----------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
-| `isUserId`                                                                                                     | `typeof value === "string" && length [1, 128] && printable ASCII only` |
-| `isFoodItemId` / `isRecipeId` / `isWaterLogId` / `isBodyMeasurementId` / `isStepLogId` / `isUserAchievementId` | `typeof value === "number" && value > 0`                               |
-| `isISODate`                                                                                                    | regex `^\d{4}-\d{2}-\d{2}$` + `Date` validity check                    |
+| Type                                                                                                                                                      | Guard logic                                                            |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------|
+| `isUserId`                                                                                                                                                | `typeof value === "string" && length [1, 128] && printable ASCII only` |
+| `isFoodItemId` / `isRecipeId` / `isWaterLogId` / `isBodyMeasurementId` / `isStepLogId` / `isUserAchievementId` / `isActivityLogId` / `isFastingSessionId` | `typeof value === "number" && Number.isInteger && value > 0`           |
+| `isISODate`                                                                                                                                               | regex `^\d{4}-\d{2}-\d{2}$` + `Date` validity check                    |
+
+### Domain Types (`src/types/index.ts`)
+
+```typescript
+export type Sex           = "male" | "female";
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
+export type GoalType      = "lose" | "maintain" | "gain";
+export type WeightUnit    = "kg" | "lb";
+export type LengthUnit    = "cm" | "in";
+export type MealType      = "Breakfast" | "Lunch" | "Snacks" | "Dinner";
+```
 
 ### Utility Functions (`src/types/index.ts`)
 
@@ -510,33 +629,52 @@ Each branded type has a constructor function (raw cast) and a type guard (runtim
 | `computeStreaks(uniqueDates)`                | Returns `{ currentStreak, longestStreak }`; walks back from today (or yesterday if today has no log) for current streak; scans all sorted dates for longest run |
 | `assertDefined<T>(val, msg)`                 | Throws if `val` is `null` or `undefined`; narrows type                                                                                                          |
 
-**Utility types:**
-
-| Type               | Definition                                                     |
-|--------------------|----------------------------------------------------------------|
-| `NonEmptyArray<T>` | `[T, ...T[]]`                                                  |
-| `DeepReadonly<T>`  | Recursively makes all properties `readonly`                    |
-| `AsyncResult<T>`   | Discriminated union: idle / pending / resolved / rejected      |
-| `AppInitState`     | 4-state machine: idle / loading / ready(user) / error(message) |
-
 **Constants:**
 
-| Constant              | Value                                                   |
-|-----------------------|---------------------------------------------------------|
-| `DAILY_WATER_GOAL_ML` | `2000`                                                  |
-| `DAILY_STEP_GOAL`     | `10000`                                                 |
-| `MEAL_TYPES`          | `["Breakfast", "Lunch", "Snacks", "Dinner"]` (readonly) |
-| `DEFAULT_MEAL_TYPE`   | `"Breakfast"`                                           |
+| Constant                      | Value                                                                      |
+|-------------------------------|----------------------------------------------------------------------------|
+| `DAILY_WATER_GOAL_ML`         | `2000`                                                                     |
+| `DAILY_STEP_GOAL`             | `10000`                                                                    |
+| `MEAL_TYPES`                  | `["Breakfast", "Lunch", "Snacks", "Dinner"]` (readonly)                    |
+| `DEFAULT_MEAL_TYPE`           | `"Breakfast"`                                                              |
+| `WEIGHT_UNITS`                | `["kg", "lb"]` (readonly)                                                  |
+| `LENGTH_UNITS`                | `["cm", "in"]` (readonly)                                                  |
+| `ACTIVITY_LEVELS`             | `["sedentary", "light", "moderate", "active", "very_active"]` (readonly)   |
+| `ACTIVITY_LEVEL_FACTORS`      | Record<ActivityLevel, number> - Mifflin-St Jeor multipliers (1.2 - 1.9)    |
+| `ACTIVITY_LEVEL_LABELS`       | Record<ActivityLevel, string> - display labels                             |
+| `ACTIVITY_LEVEL_DESCRIPTIONS` | Record<ActivityLevel, string> - help text                                  |
+| `GOAL_OFFSETS`                | `{ lose: -500, maintain: 0, gain: 300 }` kcal/day                          |
+| `GOAL_LABELS`                 | Record<GoalType, string> - display labels                                  |
+| `FASTING_PRESETS`             | `[{12,"12:12"},{14,"14:10"},{16,"16:8"},{18,"18:6"},{20,"OMAD"}]` readonly |
 
 ### Utility Functions (`src/lib/utils.ts`)
 
-| Export                        | Behavior                                                                                                  |
-|-------------------------------|-----------------------------------------------------------------------------------------------------------|
-| `cn(...inputs)`               | `clsx` + `tailwind-merge` utility for className composition                                               |
-| `EDITORIAL_INPUT_CLS`         | Shared Tailwind class string for editorial-style borderless inputs                                        |
-| `groupLogsByMeal(logs)`       | Groups `FoodItem[]` by `MealType`; returns `GroupedMealLog[]` in `MEAL_TYPES` order, empty groups omitted |
-| `normalizeHash(raw)`          | Maps raw hash string to one of `"#dashboard"`, `"#recipes"`, `"#progress"`; defaults to dashboard         |
-| `mapDbError(error, fallback)` | Maps Dexie errors to user-friendly messages (QuotaExceeded, ConstraintError, DatabaseClosed)              |
+| Export                        | Behavior                                                                                                          |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `cn(...inputs)`               | `clsx` + `tailwind-merge` utility for className composition                                                       |
+| `EDITORIAL_INPUT_CLS`         | Shared Tailwind class string for editorial-style borderless inputs                                                |
+| `groupLogsByMeal(logs)`       | Groups `FoodItem[]` by `MealType`; returns `GroupedMealLog[]` in `MEAL_TYPES` order, empty groups omitted         |
+| `normalizeHash(raw)`          | Maps raw hash string to one of `"#dashboard"`, `"#recipes"`, `"#progress"`, `"#/settings"`; defaults to dashboard |
+| `mapDbError(error, fallback)` | Maps Dexie errors to user-friendly messages (QuotaExceeded, ConstraintError, DatabaseClosed)                      |
+
+### TDEE Engine (`src/lib/tdee.ts`)
+
+```typescript
+mifflinStJeorBMR(profile): number
+computeTDEE(profile): number    // BMR * ACTIVITY_LEVEL_FACTORS[activityLevel]
+computeCalorieGoal(profile): number  // TDEE + GOAL_OFFSETS[goal]
+calculateTDEE(profile): { bmr, tdee, calorieGoal }
+```
+
+### MET Table (`src/lib/metTable.ts`)
+
+Static lookup table of ~60 common activities with ACSM metabolic equivalent values.
+
+```typescript
+getMET(activityType: string): number
+```
+
+Calorie burn formula: `MET * weightKg * (durationMin / 60)`
 
 ---
 
@@ -606,9 +744,9 @@ The system shall display progress as `(totalCalories / calorieGoal) * 100`; the 
 `updateUserProfile` shall throw `"Unauthorized: cannot modify another user's profile"` if
 `profile.id !== requestingUserId`.
 
-**OBS-GOAL-005 - State update**
-`updateCalorieGoal` shall update `init.user.calorieGoal` in the Zustand store in-place without
-transitioning out of `{ status: "ready" }`.
+**OBS-GOAL-005 - Dynamic TDEE source**
+When a `tdeeProfile` exists, `calorieGoal` is derived from `calculateTDEE(profile).calorieGoal`
+and stored on `UserProfile`. Dashboard falls back to `user.calorieGoal = 2000` if no profile set.
 
 ---
 
@@ -624,7 +762,6 @@ persist it to the `recipes` table and refresh the recipe list.
 **OBS-RECIPE-002 - Calorie calculation**
 The system shall compute `totalCalories` as
 `sum(ingredient.calories * ingredient.quantity * ingredient.serving)`.
-Per-ingredient `calories` is entered by the user and validated [0, 10000].
 
 **OBS-RECIPE-003 - Ingredient management**
 `useRecipeForm` uses `react-hook-form useFieldArray` to manage a dynamic list of ingredient rows.
@@ -701,7 +838,7 @@ pre-filled with the barcode value as `prefillName`.
 
 **OBS-BARCODE-005 - Lookup not implemented**
 The barcode-to-food-lookup API is not implemented. Camera scanning is functional; the barcode
-string is not yet used to fetch nutritional data.
+string is not yet used to fetch nutritional data. Planned for v0.4 (Open Food Facts API).
 
 ---
 
@@ -719,12 +856,11 @@ The system shall pass all transcripts through `sanitizeVoiceTranscript()` before
 
 **OBS-VOICE-003 - Fuzzy match**
 When a sanitized transcript is available, the system shall call
-`fuzzyMatchFoodName(query, corpus, limit=3)` against `allFoodItems` and `favoriteFoods` using
-Levenshtein distance with threshold `max(2, floor(queryLength/4))`.
+`fuzzyMatchFoodName(query, corpus, limit=3)` against `allFoodItems` and `favoriteFoods`.
 
 **OBS-VOICE-004 - Pre-fill dialog**
-When a match is found, the system shall open a shadcn/ui `<Dialog>` with a `<FoodLogger>` pre-filled
-with the matched name. The user confirms or edits before logging.
+When a match is found, the system shall open a shadcn/ui `<Dialog>` with a `<FoodLogger>`
+pre-filled with the matched name.
 
 **OBS-VOICE-005 - Browser compatibility guard**
 Where `SpeechRecognition` is unavailable (e.g., Firefox), the system shall display a graceful
@@ -772,8 +908,8 @@ The system shall store body measurements in `bodyMeasurements` with fields: `wei
 
 **OBS-BODY-002 - Unit display**
 The system shall convert displayed weight via `kgToLb()` when the user selects "lb", and length
-measurements via `cmToIn()` when the user selects "in". Values are converted back to metric before
-DB write. Unit preference is local form state.
+measurements via `cmToIn()` when the user selects "in". Values converted back to metric before DB
+write. Unit preference is local form state.
 
 **OBS-BODY-003 - Dynamic schema**
 `useBodyForm` calls `makeBodySchema(weightUnit, lengthUnit)` to produce unit-aware validation.
@@ -796,10 +932,8 @@ When a body measurement is successfully added, `checkAndUnlockAchievements()` is
 `src/types/index.ts:computeStreaks`
 
 **OBS-STREAK-001 - Computation**
-`computeStreaks(uniqueDates)` shall:
-
-- Walk back from today (or yesterday if today has no log) to find `currentStreak`
-- Scan all sorted dates for the longest consecutive daily run (`longestStreak`)
+`computeStreaks(uniqueDates)` shall walk back from today (or yesterday if today has no log) to find
+`currentStreak`; scan all sorted dates for the longest consecutive daily run (`longestStreak`).
 
 **OBS-STREAK-002 - Display**
 The StreakCard shall display `currentStreak` labeled "Current" and `longestStreak` labeled "Best".
@@ -818,8 +952,8 @@ While `isLoading` is true from `useStreaks`, the StreakCard shall render an anim
 **Evidence:** `src/App.tsx`
 
 **OBS-DARK-001 - Init**
-On app load, dark mode state is initialized from `localStorage.getItem("darkMode")` via `JSON.parse`
-with try/catch fallback to `window.matchMedia("(prefers-color-scheme: dark)").matches`.
+On app load, dark mode state is initialized from `localStorage.getItem("darkMode")` via
+`JSON.parse` with try/catch fallback to `window.matchMedia("(prefers-color-scheme: dark)").matches`.
 
 **OBS-DARK-002 - Toggle**
 When the user clicks the toggle button, the system shall add or remove the `dark` class on
@@ -858,7 +992,7 @@ through `normalizeHash()` to determine the active page.
 
 **OBS-NAV-002 - Routes**
 `#dashboard` (default) renders `<Dashboard>`, `#recipes` renders `<Recipes>`, `#progress` renders
-`<Progress>`. Any unknown hash defaults to `#dashboard`.
+`<Progress>`, `#/settings` renders `<Settings>`. Any unknown hash defaults to `#dashboard`.
 
 **OBS-NAV-003 - No router library**
 Navigation is implemented entirely in `App.tsx` via `window.location.hash` and a `hashchange`
@@ -876,16 +1010,14 @@ The system shall store step log entries in the `stepLogs` table with `userId`, `
 `dateLogged` (YYYY-MM-DD), and `loggedAt` (ISO timestamp).
 
 **OBS-STEP-002 - Validation**
-`StepSchema` validates `steps` as an integer in range [1, 100000]. `useStepForm` uses
-`zodResolver(StepSchema)` via react-hook-form.
+`StepSchema` validates `steps` as an integer in range [1, 100000].
 
 **OBS-STEP-003 - Quick-add presets**
 The StepTracker shall provide quick-add buttons for predefined amounts (2000, 5000, 8000, 10000
 steps) via `submitStepLog(stepsOverride)` without requiring form submission.
 
 **OBS-STEP-004 - Custom amount**
-The StepTracker shall provide a "Custom" toggle that reveals a numeric input field for any valid
-step count.
+The StepTracker shall provide a "Custom" toggle that reveals a numeric input field.
 
 **OBS-STEP-005 - Daily goal**
 The StepTracker shall display today's total steps against `stepGoal` from the Zustand store
@@ -893,7 +1025,7 @@ The StepTracker shall display today's total steps against `stepGoal` from the Zu
 
 **OBS-STEP-006 - Goal editing**
 The StepTracker shall allow inline editing of `stepGoal` (range [1000, 100000]) via `setStepGoal`;
-the new goal is persisted to `localStorage("stepGoal")`.
+persisted to `localStorage("stepGoal")`.
 
 **OBS-STEP-007 - Progress hairline**
 The StepTracker shall display a thin progress bar (`h-px`) filled proportionally to
@@ -914,7 +1046,7 @@ When a step log is successfully added, `checkAndUnlockAchievements()` is called.
 `src/pages/Progress.tsx` (Section 07), `src/db/dbService.ts:userAchievements`
 
 **OBS-ACH-001 - Achievement catalog**
-The system shall maintain a catalog of 18 achievements across 6 categories in
+The system shall maintain a catalog of 19 achievements across 6 categories in
 `src/lib/achievements.ts`:
 
 | Category    | IDs                                             | Count |
@@ -944,7 +1076,7 @@ When an achievement is unlocked, the system shall display a `toast.success` mess
 re-evaluating already-earned achievements, making repeated calls safe.
 
 **OBS-ACH-006 - Progress grid**
-The Achievements section on the Progress page (Section 07) shall display all 18 achievements in a
+The Achievements section on the Progress page (Section 07) shall display all 19 achievements in a
 responsive grid. Unlocked achievements show their icon and unlock date; locked achievements show "?"
 and their description.
 
@@ -968,6 +1100,207 @@ at `waterGoalMl`.
 
 ---
 
+### Feature 17: Product Tour (v0.2.0)
+
+**Evidence:** `src/components/tour/ProductTourOverlay.tsx`, `src/components/tour/CoachmarkCard.tsx`,
+`src/components/tour/tourSteps.ts`, `src/hooks/useSpotlightRect.ts`,
+`src/state/AppState.ts` (tour slice)
+
+**OBS-TOUR-001 - Steps**
+The system shall maintain an 8-step guided tour in `tourSteps.ts`. Each step targets a DOM element
+by selector, has a title and body copy, and specifies coachmark placement (top/bottom/left/right).
+
+**OBS-TOUR-002 - Spotlight**
+`useSpotlightRect` shall read the bounding rect of the current step's target element via
+`getBoundingClientRect()` and return it as state, re-computing on window resize.
+
+**OBS-TOUR-003 - Persistence**
+When the user completes or skips the tour, the system shall persist a flag to `localStorage`
+(key: `tourCompleted` or `tourSkipped`) so the tour does not re-appear on next visit.
+
+**OBS-TOUR-004 - Tour state**
+Tour state (`tourActive`, `tourStep`, `tourTotalSteps`) lives in the Zustand store. Actions:
+`startTour`, `nextTourStep`, `prevTourStep`, `endTour`, `skipTour`.
+
+**OBS-TOUR-005 - Scroll into view**
+Before rendering each step's spotlight, the system shall scroll the target element into view if it
+is outside the current viewport.
+
+---
+
+### Feature 18: Keyboard Shortcuts (v0.2.0)
+
+**Evidence:** `src/hooks/useKeyboardShortcuts.ts`,
+`src/components/KeyboardShortcutsOverlay.tsx`
+
+**OBS-KBD-001 - Registry**
+`useKeyboardShortcuts` shall maintain a command registry mapping key combinations to actions
+(e.g., `?` -> toggle shortcuts help, `t` -> start tour, `d`/`r`/`p` -> navigate pages).
+
+**OBS-KBD-002 - Overlay**
+When the user presses `?`, the system shall toggle `KeyboardShortcutsOverlay`, which displays all
+registered commands in a shadcn/ui `<Dialog>`.
+
+**OBS-KBD-003 - Scope guard**
+Keyboard shortcuts shall be disabled when focus is inside an input, textarea, or select element
+to avoid interfering with form entry.
+
+---
+
+### Feature 19: Activity Logging (v0.3.0)
+
+**Evidence:** `src/components/ActivityLogger.tsx`, `src/hooks/useActivityForm.ts`,
+`src/lib/metTable.ts`, `src/db/dbService.ts:activityLogs`
+
+**OBS-ACTIVITY-001 - Storage**
+The system shall store activity log entries in the `activityLogs` table with `userId`,
+`activityType`, `durationMin`, `caloriesBurned`, `dateLogged`, and `loggedAt`.
+
+**OBS-ACTIVITY-002 - MET calorie formula**
+`useActivityForm` shall compute
+`caloriesBurned = getMET(activityType) * weightKg * (durationMin / 60)`.
+`weightKg` is read from `tdeeProfile.weightKg` if available; falls back to 70 kg.
+
+**OBS-ACTIVITY-003 - Validation**
+`ActivitySchema` validates `activityType` (non-empty string) and `durationMin` (integer [1, 1440]).
+
+**OBS-ACTIVITY-004 - Searchable dropdown**
+`ActivityLogger` shall render a searchable dropdown listing all ~60 activities from `metTable.ts`.
+
+**OBS-ACTIVITY-005 - Live calorie preview**
+While the user types duration, `ActivityLogger` shall display a live calorie burn estimate computed
+from the selected activity and current duration field value.
+
+**OBS-ACTIVITY-006 - Delete with undo**
+When the user deletes an activity log, the system shall display an undo toast with a short TTL
+that re-inserts the entry if activated before expiry.
+
+---
+
+### Feature 20: Intermittent Fasting (v0.3.0)
+
+**Evidence:** `src/components/FastingTimer.tsx`, `src/hooks/useFastingTimer.ts`,
+`src/db/dbService.ts:fastingSessions`
+
+**OBS-FASTING-001 - Storage**
+The system shall store fasting sessions in the `fastingSessions` table with `userId`, `startTime`
+(ISO 8601 with time), `endTime` (null while active), `targetHours`, `dateLogged`, and `completed`.
+
+**OBS-FASTING-002 - Timer**
+`useFastingTimer` shall use `setInterval` + `date-fns differenceInSeconds` to compute elapsed
+seconds since `startTime`; update state every second while a fast is active.
+
+**OBS-FASTING-003 - SVG ring**
+`FastingTimer` shall render an SVG ring showing elapsed time as a proportion of `targetHours`;
+the arc length is capped at 100% when the target is exceeded.
+
+**OBS-FASTING-004 - Presets**
+`FastingTimer` shall display 5 preset buttons from `FASTING_PRESETS`:
+12:12, 14:10, 16:8, 18:6, OMAD (20 hours).
+
+**OBS-FASTING-005 - Browser Notification**
+When a fast reaches its `targetHours`, the system shall fire a browser `Notification`
+(if permission was granted at fast start) notifying the user the target has been reached.
+
+**OBS-FASTING-006 - Active session persistence**
+The active fasting session is persisted to Dexie on start and end. On app reload,
+`getActiveFastingSession` restores an in-progress fast; the timer resumes from the stored
+`startTime`.
+
+---
+
+### Feature 21: TDEE / Goal Engine + Onboarding (v0.3.0)
+
+**Evidence:** `src/lib/tdee.ts`, `src/components/OnboardingModal.tsx`,
+`src/components/OnboardingBanner.tsx`, `src/hooks/useOnboarding.ts`,
+`src/components/settings/TdeeProfilePanel.tsx`, `src/components/settings/GoalSettings.tsx`
+
+**OBS-TDEE-001 - Formula**
+`mifflinStJeorBMR(profile)` shall compute BMR using Mifflin-St Jeor:
+
+- Male: `10 * weightKg + 6.25 * heightCm - 5 * age + 5`
+- Female: `10 * weightKg + 6.25 * heightCm - 5 * age - 161`
+
+`computeTDEE(profile)` = BMR * `ACTIVITY_LEVEL_FACTORS[activityLevel]`.
+`computeCalorieGoal(profile)` = TDEE + `GOAL_OFFSETS[goal]` (-500/0/+300 kcal).
+
+**OBS-TDEE-002 - Onboarding modal**
+When `user.hasCompletedOnboarding` is false (or undefined), the system shall display
+`OnboardingModal` on first launch. Modal persists a flag to `localStorage` on completion.
+
+**OBS-TDEE-003 - Multi-step form**
+`useOnboarding` shall manage 6 onboarding steps: age, sex, height, weight, activity level, goal.
+`nextStep`/`prevStep`/`goToStep` navigate between them. Unit toggles (kg/lb, cm/in) auto-convert
+entered values when switched.
+
+**OBS-TDEE-004 - Onboarding banner**
+`OnboardingBanner` shall display a persistent prompt when `tdeeProfile` is null in AppState,
+directing the user to complete setup.
+
+**OBS-TDEE-005 - Settings panel**
+`TdeeProfilePanel` (in Settings > Profile) shall show a live preview of computed BMR, TDEE, and
+daily calorie goal that updates as the user edits any field.
+
+**OBS-TDEE-006 - Goals settings**
+`GoalSettings` (in Settings > Goals) shall provide inline Save/Cancel edit for `waterGoalMl` and
+`stepGoal`, each field independently editable.
+
+---
+
+### Feature 22: Data Export / Import (v0.3.0)
+
+**Evidence:** `src/components/DataExportPanel.tsx`, `src/hooks/useDataExport.ts`,
+`src/hooks/useDataImport.ts`, `src/forms/schemas.ts:BackupSchema`
+
+**OBS-EXPORT-001 - JSON backup**
+`downloadJSON` shall serialize all Dexie tables to a versioned JSON object (`BACKUP_VERSION = 1`)
+and trigger a Blob URL download with filename `gryffin-backup-YYYY-MM-DDTHH:mm:ss.json`.
+
+**OBS-EXPORT-002 - CSV ZIP**
+`downloadCSVZip` shall use `fflate zipSync` to produce a ZIP file containing:
+`foodItems.csv`, `waterLogs.csv`, `stepLogs.csv`, `bodyMeasurements.csv`,
+`activityLogs.csv`, `fastingSessions.csv`.
+Filename: `gryffin-csv-YYYY-MM-DD.zip`.
+
+**OBS-EXPORT-003 - Shared loading state**
+`useDataExport` shall expose a shared `isExporting` boolean covering both `downloadJSON` and
+`downloadCSVZip` to prevent concurrent exports.
+
+**OBS-IMPORT-001 - File picker**
+`useDataImport` shall use a hidden `<input type="file">` to accept a `.json` file.
+
+**OBS-IMPORT-002 - Schema validation**
+The parsed JSON shall be validated against `BackupSchema` (zod); invalid or wrong-version files
+shall display an error toast and abort.
+
+**OBS-IMPORT-003 - Confirmation flow**
+Before writing to Dexie, `useDataImport` shall set `pendingPayload` and show a confirmation
+dialog summarizing what will be merged.
+
+**OBS-IMPORT-004 - Upsert semantics**
+`importData(payload)` shall upsert all tables (last-write-wins conflict resolution) and return
+an `ImportResult` with row counts per table.
+
+---
+
+### Feature 23: Settings Page (v0.3.0)
+
+**Evidence:** `src/pages/Settings.tsx`, `src/components/settings/TdeeProfilePanel.tsx`,
+`src/components/settings/GoalSettings.tsx`
+
+**OBS-SETTINGS-001 - Hash navigation**
+The Settings page is accessible via hash `#/settings`; sub-sections use a secondary hash-based
+tab bar within the page (Profile / Goals / Data / About).
+
+**OBS-SETTINGS-002 - Lazy loading**
+`TdeeProfilePanel` is lazy-loaded within Settings to keep the initial settings bundle lean.
+
+**OBS-SETTINGS-003 - Version display**
+The About section shall display the current app version (`0.3.0`) and a link to the GitHub
+repository.
+
+---
+
 ## 6. Non-Functional Requirements
 
 ### Security
@@ -976,36 +1309,26 @@ at `waterGoalMl`.
 
 #### HTTP Security Headers
 
-| Layer          | Where applied                                                                                       |
-|----------------|-----------------------------------------------------------------------------------------------------|
-| Dev server     | `vite.config.ts` `server.headers` - CSP excluded (blocks Vite Fast Refresh inline script)           |
-| Preview server | `vite.config.ts` `preview.headers` - full CSP applied                                               |
-| Static hosting | `public/_headers` (Cloudflare Pages / Netlify)                                                      |
-| index.html     | `<meta http-equiv="Content-Security-Policy">` - stripped in dev by `strip-csp-meta-dev` Vite plugin |
+| Layer          | Where applied                                                               |
+|----------------|-----------------------------------------------------------------------------|
+| Dev server     | `vite.config.ts` `server.headers` - CSP excluded (blocks Vite Fast Refresh) |
+| Preview server | `vite.config.ts` `preview.headers` - full header set applied                |
+| Static hosting | `public/_headers` (Cloudflare Pages / Netlify)                              |
+| index.html     | `<meta http-equiv="Content-Security-Policy">` - stripped in dev             |
 
-**Full CSP directive:**
+**Full header set (v0.3.0):**
 
-```
-default-src 'self';
-script-src 'self';
-style-src 'self' 'unsafe-inline';
-img-src 'self' data:;
-font-src 'self';
-connect-src 'self';
-worker-src 'self';
-frame-ancestors 'none';
-base-uri 'self';
-form-action 'self';
-```
-
-**Other headers:**
-
-| Header                   | Value                                              |
-|--------------------------|----------------------------------------------------|
-| `X-Frame-Options`        | `DENY`                                             |
-| `X-Content-Type-Options` | `nosniff`                                          |
-| `Referrer-Policy`        | `strict-origin-when-cross-origin`                  |
-| `Permissions-Policy`     | `camera=(self), microphone=(self), geolocation=()` |
+| Header                         | Value                                                                                                                                                                                                              |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `Content-Security-Policy`      | default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' |
+| `X-Frame-Options`              | `DENY`                                                                                                                                                                                                             |
+| `X-Content-Type-Options`       | `nosniff`                                                                                                                                                                                                          |
+| `Referrer-Policy`              | `strict-origin-when-cross-origin`                                                                                                                                                                                  |
+| `Permissions-Policy`           | `camera=(self), microphone=(self), geolocation=()`                                                                                                                                                                 |
+| `Strict-Transport-Security`    | `max-age=31536000; includeSubDomains; preload`                                                                                                                                                                     |
+| `Cross-Origin-Opener-Policy`   | `same-origin`                                                                                                                                                                                                      |
+| `Cross-Origin-Embedder-Policy` | `require-corp`                                                                                                                                                                                                     |
+| `Cross-Origin-Resource-Policy` | `same-origin`                                                                                                                                                                                                      |
 
 #### Database Security
 
@@ -1019,6 +1342,7 @@ form-action 'self';
 | All voice transcripts sanitized via `sanitizeVoiceTranscript()` before use                                            | `types/index.ts` |
 | All barcode scan results sanitized via `sanitizeBarcodeInput()` before use                                            | `types/index.ts` |
 | Error messages use `mapDbError()` to avoid leaking Dexie internals                                                    | `AppState.ts`    |
+| Backup import validated against `BackupSchema` (zod) before any DB write                                              | `schemas.ts`     |
 
 **Known gaps:**
 
@@ -1029,22 +1353,25 @@ form-action 'self';
 
 ### Performance
 
-| Observation                                                                  | Evidence                                  |
-|------------------------------------------------------------------------------|-------------------------------------------|
-| `getDailyFoodLogs` uses compound index `[userId+dateLogged]`                 | `dbService.ts`                            |
-| `getDailyWaterLogs` uses compound index `[userId+dateLogged]`                | `dbService.ts`                            |
-| `getDailyStepLogs` uses compound index `[userId+dateLogged]`                 | `dbService.ts`                            |
-| `getAllBodyMeasurements` uses `where("userId")` index                        | `dbService.ts`                            |
-| Build output compressed with Gzip and Brotli                                 | `vite.config.ts` vite-plugin-compression2 |
-| 9 vendor chunks keep per-page JS payloads small                              | `vite.config.ts` manualChunks             |
-| `@zxing` deferred until BarcodeScanner is rendered                           | `Dashboard.tsx` lazy Suspense             |
-| `motion/react` `useReducedMotion` hook disables animations for accessibility | `Dashboard.tsx`, `Progress.tsx`           |
+| Observation                                                                  | Evidence         |
+|------------------------------------------------------------------------------|------------------|
+| `getDailyFoodLogs` uses compound index `[userId+dateLogged]`                 | `dbService.ts`   |
+| `getDailyWaterLogs` uses compound index `[userId+dateLogged]`                | `dbService.ts`   |
+| `getDailyStepLogs` uses compound index `[userId+dateLogged]`                 | `dbService.ts`   |
+| `getDailyActivityLogs` uses compound index `[userId+dateLogged]`             | `dbService.ts`   |
+| `fastingSessions` queried via compound index `[userId+startTime]`            | `dbService.ts`   |
+| `getAllBodyMeasurements` uses `where("userId")` index                        | `dbService.ts`   |
+| Build output compressed with Gzip and Brotli                                 | `vite.config.ts` |
+| 9 vendor chunks keep per-page JS payloads small                              | `vite.config.ts` |
+| `@zxing` deferred until BarcodeScanner is rendered                           | `Dashboard.tsx`  |
+| `TdeeProfilePanel` lazy-loaded within Settings                               | `Settings.tsx`   |
+| `motion/react` `useReducedMotion` hook disables animations for accessibility | `Dashboard.tsx`  |
 
 ### Offline Capability
 
 - All data stored in `GryffinCaloraiDB` (IndexedDB) - persists across browser restarts
-- No network requests in normal operation
-- No service worker in v0.0.7
+- No network requests in normal operation (barcode lookup API pending)
+- No service worker in v0.3.0 (planned for v0.4)
 
 ### Error Handling
 
@@ -1055,21 +1382,28 @@ form-action 'self';
 | DB helpers                | No-op on ownership mismatch; throw on actual DB errors                          |
 | DB init                   | Production: throws on schema conflict. Dev: auto-recovers with delete + re-open |
 | Forms                     | react-hook-form + zod; field-level `<FormMessage />` errors; sonner for toast   |
+| Import validation         | `BackupSchema.safeParse` before any Dexie write; error toast on failure         |
 
 ### Testing
 
-| Module                                                 | Test file                                 | Status                    |
-|--------------------------------------------------------|-------------------------------------------|---------------------------|
-| `dbService.ts`                                         | `src/db/dbService.test.ts`                | Implemented               |
-| `AppState.ts`                                          | `src/state/AppState.test.ts`              | Implemented               |
-| `src/types/index.ts`                                   | `src/types/index.test.ts`                 | Implemented               |
-| `useVoiceCapture`                                      | `src/hooks/useVoiceCapture.test.ts`       | Implemented               |
-| `VoiceFoodLogger`                                      | `src/components/VoiceFoodLogger.test.tsx` | Implemented               |
-| `PageLoading`                                          | `src/components/PageLoading.test.tsx`     | Implemented               |
-| `src/lib/achievements.ts`                              | `src/lib/achievements.test.ts`            | Implemented               |
-| `useStepForm`                                          | `src/hooks/useStepForm.test.ts`           | Implemented               |
-| `StepTracker`                                          | `src/components/StepTracker.test.tsx`     | Implemented               |
-| `BodyMeasurements`, `StreakCard`, remaining components | -                                         | In progress (target >80%) |
+| Module                 | Test file                                 | Status      |
+|------------------------|-------------------------------------------|-------------|
+| `dbService.ts`         | `src/db/dbService.test.ts`                | Implemented |
+| `activityLogs` (DB)    | `src/db/activityLogs.test.ts`             | Implemented |
+| `fastingSessions` (DB) | `src/db/fastingSessions.test.ts`          | Implemented |
+| `tdeeProfiles` (DB)    | `src/db/tdeeProfiles.test.ts`             | Implemented |
+| `AppState.ts`          | `src/state/AppState.test.ts`              | Implemented |
+| `src/types/index.ts`   | `src/types/index.test.ts`                 | Implemented |
+| `src/lib/tdee.ts`      | `src/lib/tdee.test.ts`                    | Implemented |
+| `src/lib/metTable.ts`  | `src/lib/metTable.test.ts`                | Implemented |
+| `useActivityForm`      | `src/hooks/useActivityForm.test.ts`       | Implemented |
+| `useFastingTimer`      | `src/hooks/useFastingTimer.test.ts`       | Implemented |
+| `useOnboarding`        | `src/hooks/useOnboarding.test.ts`         | Implemented |
+| `useDataExport`        | `src/hooks/useDataExport.test.ts`         | Implemented |
+| `useDataImport`        | `src/hooks/useDataImport.test.ts`         | Implemented |
+| `ActivityLogger`       | `src/components/ActivityLogger.test.tsx`  | Implemented |
+| `FastingTimer`         | `src/components/FastingTimer.test.tsx`    | Implemented |
+| `OnboardingModal`      | `src/components/OnboardingModal.test.tsx` | Implemented |
 
 **DB test pattern:**
 
@@ -1089,76 +1423,64 @@ vi.mock("../db/dbService", () => ({ getOrCreateUser: vi.fn(async () => ({...})),
 
 ## 7. User Flows and Scenarios
 
-### Scenario 1: First-Time User
+### Scenario 1: First-Time User (with Onboarding)
 
 1. User opens application at `/#dashboard`
-2. `initializeDB()` creates `GryffinCaloraiDB` at schema v9
-3. `getOrCreateUser("1", "Guest", "guest@example.com")` creates the user with `calorieGoal = 2000`
-4. Dashboard loads with all empty state; `init: { status: "ready", user }` in AppState
-5. User can immediately log food, water, or steps
+2. `initializeDB()` creates `GryffinCaloraiDB` at schema v13
+3. `getOrCreateUser("1", "Guest", "guest@example.com")` creates user with `calorieGoal = 2000`
+4. `tdeeProfile` is null -> `OnboardingModal` appears (localStorage flag not set)
+5. User completes 6-step onboarding; `saveTdeeProfile` writes to `tdeeProfiles` table
+6. `calorieGoal` on Dashboard now reflects TDEE-computed target
 
 ### Scenario 2: Logging Food (Manual)
 
 1. User fills `FoodLogger` form (name, calories, macros, meal type)
 2. `useFoodForm.submitFoodLog()` invokes react-hook-form `handleSubmit` -> zod validation
-3. Valid: `addFoodLog(food)` action calls `addFoodItemLog` -> `refreshDailyLogs` ->
+3. Valid: `addFoodLog(food)` -> `addFoodItemLog` -> `refreshDailyLogs` ->
    `checkAndUnlockAchievements`
 4. `dailyLogs` in AppState updates; Dashboard totals recalculate via `useMemo`
 5. `toast.success` shown; form resets
 
-### Scenario 3: Voice Logging
+### Scenario 3: Starting a Fast
 
-1. User clicks mic button in `VoiceFoodLogger`
-2. `useVoiceCapture` starts `SpeechRecognition` session
-3. User speaks; transcript sanitized via `sanitizeVoiceTranscript()`
-4. `fuzzyMatchFoodName(query, allFoodItems.concat(favoriteFoods))` finds candidates
-5. Parent `Dashboard` receives `onTranscriptMatched(name)` callback; opens Voice Food `<Dialog>`
-6. `<FoodLogger prefillName={name}>` pre-fills the form; user confirms or edits
-7. Proceeds through same `addFoodLog()` path as manual logging
+1. User selects "16:8" preset on `FastingTimer` widget
+2. `startFasting(16)` calls `startFastingSessionInDB` with `startTime = new Date().toISOString()`
+3. Browser `Notification.requestPermission()` called; stored in session
+4. `setInterval` fires every second; elapsed computed via `date-fns differenceInSeconds`
+5. SVG ring arc updates live; when elapsed >= 16 hours, browser Notification fires
+6. User clicks "End Fast" -> `endFasting(true)` writes `endTime` and `completed: true` to Dexie
 
-### Scenario 4: Tracking Water
+### Scenario 4: Logging an Activity
 
-1. User clicks a quick-add button (e.g., 250 ml) on `WaterTracker`
-2. `submitWaterLog(250)` validates via `WaterSchema.safeParse`
-3. `addWaterLog(250)` action constructs `WaterLog` with `loggedAt: new Date().toISOString()`
-4. `addWaterLogToDB(log)` inserts; `fetchDailyWaterLogs()` refreshes `dailyWaterLogs`
-5. Progress bar recalculates: `sum(dailyWaterLogs.amount) / waterGoalMl * 100`
-6. `checkAndUnlockAchievements()` fires - e.g., unlocks "First Sip" or "Hydration Hero"
+1. User searches and selects "Running" in `ActivityLogger` dropdown
+2. User enters 30 minutes
+3. Live preview shows `getMET("Running") * 70kg * 0.5hr = ~315 kcal`
+4. `submitActivityLog` -> `addActivityLog` writes to `activityLogs`
+5. Dashboard activity summary updates
 
-### Scenario 5: Tracking Steps
+### Scenario 5: Exporting Data
 
-1. User clicks a quick-add button (e.g., 10000 steps) on `StepTracker`
-2. `submitStepLog(10000)` validates via `StepSchema.safeParse`
-3. `addStepLog(10000)` action constructs `StepLog`; inserts; refreshes `dailyStepLogs`
-4. Progress hairline updates: `totalSteps / stepGoal * 100`, capped at 100%
-5. `checkAndUnlockAchievements()` fires
+1. User navigates to Settings > Data
+2. Clicks "Export JSON Backup"
+3. `downloadJSON` calls `exportAllData` -> serializes all Dexie tables
+4. Blob URL download triggers; file named `gryffin-backup-2026-05-21T...json`
 
 ### Scenario 6: Earning an Achievement
 
 1. User logs food every day for 7 consecutive days
 2. On day 7, after `addFoodLog`, `checkAndUnlockAchievements()` is called
-3. `getAllFoodLogs` + `getAllWaterLogs` + `getUnlockedAchievementIds` fetched in parallel
-4. `evaluateAchievements(params, alreadyUnlocked)` computes `currentStreak >= 7` as true
-5. `newIds = ["streak_7"]`; `addUserAchievement({ userId, achievementId: "streak_7", ... })` written
-6. `getUnlockedAchievements` refreshes `unlockedAchievements` in store
-7. `toast.success("🔥 Achievement Unlocked: Week Warrior")`
+3. `getAllFoodLogs + getAllWaterLogs + getUnlockedAchievementIds` fetched in parallel
+4. `evaluateAchievements(params, alreadyUnlocked)` computes `longestStreak >= 7` as true
+5. `addUserAchievement({ userId, achievementId: "streak_7", ... })` written
+6. `toast.success("🔥 Achievement Unlocked: Week Warrior")`
 
-### Scenario 7: Progress Review
+### Scenario 7: Using the Product Tour
 
-1. User navigates to `#progress`
-2. `useProgressData(7)` and `useWaterHistoryData(7)` fetch all logs in parallel
-3. Section 01: 7-day stacked bar chart renders with meal-type colors
-4. Section 04: Water intake trend AreaChart renders
-5. User toggles to "30 days"; hooks re-run with `days=30`
-6. Section 03 and 06 show placeholder messages (7-day only)
-7. Section 07: Achievements grid shows unlocked/locked states
-
-### Scenario 8: Dark Mode Persistence
-
-1. User clicks dark mode toggle
-2. `document.documentElement.classList.add("dark")` and `localStorage.setItem("darkMode", "true")`
-3. On next page load: `JSON.parse(localStorage.getItem("darkMode"))` restores `true`;
-   `useLayoutEffect` applies the class before first paint
+1. On first visit, `ProductTourOverlay` activates (localStorage flag not set)
+2. Step 1 targets `DashboardHero`; spotlight animates around the element
+3. User clicks "Next" repeatedly through all 8 steps
+4. On last step, `endTour()` writes `tourCompleted: true` to localStorage
+5. Tour does not appear on subsequent visits
 
 ---
 
@@ -1166,14 +1488,17 @@ vi.mock("../db/dbService", () => ({ getOrCreateUser: vi.fn(async () => ({...})),
 
 ### Zod Schemas (`src/forms/schemas.ts`)
 
-| Schema                                | Key validations                                                              |
-|---------------------------------------|------------------------------------------------------------------------------|
-| `FoodFormSchema`                      | name[1-100], calories[0-10000], servingSize[1-100], protein/carbs/fat[0-500] |
-| `makeBodySchema(weightUnit, lenUnit)` | weight>0, bodyFat[1-99], waist/chest/hips>0; unit-aware max                  |
-| `RecipeFormSchema`                    | recipeName[1-100], description[1-500], ingredients[>=1]                      |
-| `IngredientSchema`                    | foodItemId>0, calories[0-10000], quantity/serving[1-999]                     |
-| `WaterSchema`                         | amount integer [1, 5000] ml                                                  |
-| `StepSchema`                          | steps integer [1, 100000]                                                    |
+| Schema                                | Key validations                                                                             |
+|---------------------------------------|---------------------------------------------------------------------------------------------|
+| `FoodFormSchema`                      | name[1-100], calories[0-10000], servingSize[1-100], protein/carbs/fat[0-500]                |
+| `makeBodySchema(weightUnit, lenUnit)` | weight>0, bodyFat[1-99], waist/chest/hips>0; unit-aware max                                 |
+| `RecipeFormSchema`                    | recipeName[1-100], description[1-500 printable ASCII], ingredients[>=1]                     |
+| `IngredientSchema`                    | foodItemId>0, calories[0-10000], quantity/serving[1-999]                                    |
+| `WaterSchema`                         | amount integer [1, 5000] ml                                                                 |
+| `StepSchema`                          | steps integer [1, 100000]                                                                   |
+| `TdeeProfileSchema`                   | age int [13,120], sex enum, heightDisplay>0, weightDisplay>0, activityLevel enum, goal enum |
+| `ActivitySchema`                      | activityType non-empty string, durationMin int [1, 1440]                                    |
+| `BackupSchema`                        | version literal 1, exportedAt string, userId string, tables: BackupTableSchema              |
 
 ### DB Service Exports (`src/db/dbService.ts`)
 
@@ -1181,42 +1506,29 @@ vi.mock("../db/dbService", () => ({ getOrCreateUser: vi.fn(async () => ({...})),
 
 ```typescript
 initializeDB(): Promise<void>
-clearDatabase()
-:
-Promise<void>  // dev only
+clearDatabase(): Promise<void>  // dev only
 ```
 
 **User:**
 
 ```typescript
 getOrCreateUser(userId, username, email): Promise<UserProfile>
-updateUserProfile(profile, requestingUserId)
-:
-Promise<void>  // throws on mismatch
+updateUserProfile(profile, requestingUserId): Promise<void>  // throws on mismatch
+completeOnboarding(userId): Promise<void>
 ```
 
 **Food Items:**
 
 ```typescript
 addFoodItemLog(foodLog: FoodItem): Promise<FoodItemId>
-getDailyFoodLogs(userId, date)
-:
-Promise<FoodItem[]>      // compound index
-getAllFoodLogs(userId)
-:
-Promise<FoodItem[]>
-getRecentFoodItems(userId)
-:
-Promise<FoodItem[]>           // deduped by name
+getDailyFoodLogs(userId, date): Promise<FoodItem[]>
+getAllFoodLogs(userId): Promise<FoodItem[]>
+getRecentFoodItems(userId): Promise<FoodItem[]>  // deduped by name
 getFoodItemById(id, userId): Promise<FoodItem | undefined>
-deleteFoodItem(id, userId)
-:
-Promise<void>
+deleteFoodItem(id, userId): Promise<void>
 toggleFavoriteFoodItem(id, isFavorite, userId): Promise<void>
 getFavoriteFoodItems(userId): Promise<FoodItem[]>
-updateFoodItem(id, updates, userId)
-:
-Promise<void>
+updateFoodItem(id, updates, userId): Promise<void>
 ```
 
 **Recipes:**
@@ -1224,24 +1536,17 @@ Promise<void>
 ```typescript
 saveRecipe(recipe): Promise<RecipeId>
 getAllRecipes(userId): Promise<Recipe[]>
-deleteRecipe(id, userId)
-:
-Promise<void>
+deleteRecipe(id, userId): Promise<void>
+updateRecipe(recipe): Promise<void>
 ```
 
 **Water Logs:**
 
 ```typescript
 addWaterLog(log: WaterLog): Promise<WaterLogId>
-getDailyWaterLogs(userId, date)
-:
-Promise<WaterLog[]>   // compound index
-getAllWaterLogs(userId)
-:
-Promise<WaterLog[]>
-deleteWaterLog(id, userId)
-:
-Promise<void>
+getDailyWaterLogs(userId, date): Promise<WaterLog[]>
+getAllWaterLogs(userId): Promise<WaterLog[]>
+deleteWaterLog(id, userId): Promise<void>
 ```
 
 **Body Measurements:**
@@ -1249,44 +1554,56 @@ Promise<void>
 ```typescript
 addBodyMeasurement(m: BodyMeasurement): Promise<BodyMeasurementId>
 getAllBodyMeasurements(userId): Promise<BodyMeasurement[]>  // sorted by measuredAt asc
-deleteBodyMeasurement(id, userId)
-:
-Promise<void>
+deleteBodyMeasurement(id, userId): Promise<void>
 ```
 
 **User Achievements:**
 
 ```typescript
-addUserAchievement(a
-:
-UserAchievement
-):
-Promise<UserAchievementId>
-getUnlockedAchievements(userId)
-:
-Promise<UserAchievement[]>
-getUnlockedAchievementIds(userId)
-:
-Promise<Set<string>>
+addUserAchievement(a: UserAchievement): Promise<UserAchievementId>
+getUnlockedAchievements(userId): Promise<UserAchievement[]>
+getUnlockedAchievementIds(userId): Promise<Set<string>>
 ```
 
 **Step Logs:**
 
 ```typescript
-addStepLog(log
-:
-StepLog
-):
-Promise<StepLogId>
-getDailyStepLogs(userId, date)
-:
-Promise<StepLog[]>    // compound index
-getAllStepLogs(userId)
-:
-Promise<StepLog[]>
-deleteStepLog(id, userId)
-:
-Promise<void>
+addStepLog(log: StepLog): Promise<StepLogId>
+getDailyStepLogs(userId, date): Promise<StepLog[]>
+getAllStepLogs(userId): Promise<StepLog[]>
+deleteStepLog(id, userId): Promise<void>
+```
+
+**TDEE Profiles:**
+
+```typescript
+getTdeeProfile(userId): Promise<TdeeProfile | undefined>
+saveTdeeProfile(profile: Omit<TdeeProfile, "id">): Promise<void>
+```
+
+**Activity Logs:**
+
+```typescript
+addActivityLog(log: ActivityLog): Promise<ActivityLogId>
+getDailyActivityLogs(userId, date): Promise<ActivityLog[]>
+getAllActivityLogs(userId): Promise<ActivityLog[]>
+deleteActivityLog(id, userId): Promise<void>
+```
+
+**Fasting Sessions:**
+
+```typescript
+startFastingSession(session: Omit<FastingSession, "id">): Promise<FastingSessionId>
+endFastingSession(id, endTime, completed): Promise<void>
+getActiveFastingSession(userId): Promise<FastingSession | undefined>
+getAllFastingSessions(userId): Promise<FastingSession[]>
+```
+
+**Export / Import:**
+
+```typescript
+exportAllData(userId): Promise<BackupPayload>
+importBackup(payload: BackupPayload): Promise<ImportResult>
 ```
 
 ### Custom Hooks
@@ -1294,72 +1611,19 @@ Promise<void>
 **`useFoodForm(initialFood?)`** - `src/hooks/useFoodForm.ts`
 
 ```typescript
-{
-  form: UseFormReturn<FoodFormValues>,  // react-hook-form instance
-    isLoading
-:
-  boolean,
-    isEditMode
-:
-  boolean,
-  submitFoodLog(): Promise<boolean>,
-  resetForm(): void
-}
+{ form, isLoading, isEditMode, submitFoodLog(): Promise<boolean>, resetForm(): void }
 ```
 
 **`useRecipeForm(userId)`** - `src/hooks/useRecipeForm.ts`
 
 ```typescript
-{
-  form: UseFormReturn<RecipeFormValues>,
-    fields
-:
-  FieldArrayWithId[],
-    append(ingredient)
-:
-  void,
-    remove(index)
-:
-  void,
-    isLoading
-:
-  boolean,
-    saveRecipeForm()
-:
-  Promise<boolean>
-}
+{ form, fields, append(ingredient), remove(index), isLoading, saveRecipeForm(): Promise<boolean> }
 ```
 
 **`useProgressData(days: 7 | 30)`** - `src/hooks/useProgressData.ts`
 
 ```typescript
-{
-  labels: string[],        // MM-DD format
-    data
-:
-  number[],          // total calories per day
-    mealTypeData
-:
-  {
-    Breakfast, Lunch, Snacks, Dinner
-  :
-    number[]
-  }
-|
-  null,  // 7-day only
-    macroData
-:
-  {
-    protein, carbs, fat
-  :
-    number[]
-  }
-|
-  null,                   // 7-day only
-    isLoading
-:
-  boolean
-}
+{ labels: string[], data: number[], mealTypeData: {...} | null, macroData: {...} | null, isLoading }
 ```
 
 **`useWaterHistoryData(days: 7 | 30)`** - `src/hooks/useWaterHistoryData.ts`
@@ -1371,53 +1635,19 @@ Promise<void>
 **`useWaterForm()`** - `src/hooks/useWaterForm.ts`
 
 ```typescript
-{
-  form: UseFormReturn<WaterFormValues>,
-    isLoading
-:
-  boolean,
-    submitWaterLog(amountOverride ? : number)
-:
-  Promise<boolean>
-}
+{ form, isLoading, submitWaterLog(amountOverride?: number): Promise<boolean> }
 ```
 
 **`useBodyForm()`** - `src/hooks/useBodyForm.ts`
 
 ```typescript
-{
-  form: UseFormReturn<BodyFormValues>,
-    weightUnit
-:
-  WeightUnit,
-    setWeightUnit(unit)
-:
-  void,
-    lengthUnit
-:
-  LengthUnit,
-    setLengthUnit(unit)
-:
-  void,
-    isLoading
-:
-  boolean,
-  submitMeasurement(): Promise<boolean>
-}
+{ form, weightUnit, setWeightUnit, lengthUnit, setLengthUnit, isLoading, submitMeasurement(): Promise<boolean> }
 ```
 
 **`useStepForm()`** - `src/hooks/useStepForm.ts`
 
 ```typescript
-{
-  form: UseFormReturn<StepFormValues>,
-    isLoading
-:
-  boolean,
-    submitStepLog(stepsOverride ? : number)
-:
-  Promise<boolean>
-}
+{ form, isLoading, submitStepLog(stepsOverride?: number): Promise<boolean> }
 ```
 
 **`useStreaks()`** - `src/hooks/useStreaks.ts`
@@ -1435,13 +1665,49 @@ Promise<void>
 **`useVoiceCapture()`** - `src/hooks/useVoiceCapture.ts`
 
 ```typescript
-{ transcript: string, isListening: boolean, startListening(), stopListening(), isSupported: boolean }
+{ transcript, isListening, startListening(), stopListening(), isSupported: boolean }
 ```
 
 **`useBarcodeScanner()`** - `src/hooks/useBarcodeScanner.ts`
 
 ```typescript
-{ scannedCode: string | null, isScanning: boolean, startScanning(), stopScanning(), error: string | null }
+{ scannedCode: string | null, isScanning, startScanning(), stopScanning(), error: string | null }
+```
+
+**`useFastingTimer()`** - `src/hooks/useFastingTimer.ts`
+
+```typescript
+{ elapsedSeconds, isActive, startFasting(targetHours), endFasting(completed), activeSession }
+```
+
+**`useActivityForm()`** - `src/hooks/useActivityForm.ts`
+
+```typescript
+{ form, caloriesBurned: number, isLoading, submitActivityLog(): Promise<boolean> }
+```
+
+**`useOnboarding()`** - `src/hooks/useOnboarding.ts`
+
+```typescript
+{ form, step, totalSteps, nextStep(), prevStep(), goToStep(n), weightUnit, lengthUnit, submit(): Promise<void> }
+```
+
+**`useDataExport()`** - `src/hooks/useDataExport.ts`
+
+```typescript
+{ downloadJSON(): Promise<void>, downloadCSVZip(): Promise<void>, isExporting: boolean }
+```
+
+**`useDataImport()`** - `src/hooks/useDataImport.ts`
+
+```typescript
+{ openFilePicker(), pendingPayload, confirmImport(), cancelImport(), isImporting: boolean }
+```
+
+**`useSpotlightRect()`** - `src/hooks/useSpotlightRect.ts` (or `src/components/tour/`)
+
+```typescript
+{ rect: DOMRect | null }  // bounding rect of current tour step's target element
 ```
 
 ---
@@ -1458,8 +1724,8 @@ pnpm build  # -> dist/ (index.html + assets/ gzip + brotli compressed)
 
 The app deploys at `/${packageJson.name}/` (sub-path; configured in `vite.config.ts` `base`).
 
-**Static hosting security headers** are provided via `public/_headers` (copied to `dist/` on
-build), covering Cloudflare Pages and Netlify automatically.
+**Static hosting security headers** are provided via `public/_headers` (Cloudflare Pages and
+Netlify).
 
 **Dev server:** CSP is intentionally excluded from dev headers because `@vitejs/plugin-react`
 injects an inline `<script type="module">` for Fast Refresh that `script-src 'self'` would block.
@@ -1467,28 +1733,36 @@ injects an inline `<script type="module">` for Fast Refresh that `script-src 'se
 ### Deployment Checklist
 
 - [ ] `pnpm build` succeeds with no TypeScript errors
+- [ ] `pnpm audit` passes (no high/critical CVEs)
 - [ ] `pnpm lint:fix` passes
 - [ ] `pnpm test` passes with coverage report
 - [ ] Deployed over HTTPS
 - [ ] `public/_headers` present in `dist/` or equivalent host config
 - [ ] IndexedDB persists across sessions
 - [ ] Dark mode toggle works
+- [ ] Onboarding modal appears on first load
+- [ ] Fasting timer resumes after page reload if a session was active
 
 ---
 
 ## 10. Known Limitations and Technical Debt
 
-### Pending Features
+### Pending Features (v0.4 Roadmap)
 
-| Feature                            | Status                                                              |
-|------------------------------------|---------------------------------------------------------------------|
-| Barcode food-lookup API            | Camera works; API not integrated (`connect-src` placeholder in CSP) |
-| Macro breakdown display in recipes | Not rendered on recipe card                                         |
-| Multi-user auth                    | Single hardcoded user `UserId("1")`                                 |
-| PWA / service worker               | No offline sync or install prompt                                   |
-| Advanced filtering and search      | Not implemented                                                     |
-| Food log pagination                | All items loaded at once via `getAllFoodLogs`                       |
-| WCAG 2.1 full compliance           | Pending audit                                                       |
+| Feature                                   | Status                                                             |
+|-------------------------------------------|--------------------------------------------------------------------|
+| Barcode food-lookup API (Open Food Facts) | Camera works; API not integrated; `connect-src` placeholder in CSP |
+| Recurring meal logging (copy-yesterday)   | Not started                                                        |
+| Micronutrient tracking (~25 nutrients)    | Not started                                                        |
+| Diet profiles + restriction flags         | Not started                                                        |
+| PWA + service worker                      | Not started; prereq for reminders                                  |
+| Body Measurements UI refresh              | Charts done; edit/delete UI pending                                |
+| Projected weight timeline card            | TDEE engine exists; UI pending                                     |
+| Per-table conflict counts on import       | Merge summary shown; per-table row counts not displayed            |
+| Multi-user auth                           | Single hardcoded user `UserId("1")`                                |
+| Advanced filtering and search             | Not implemented                                                    |
+| Food log pagination                       | All items loaded at once via `getAllFoodLogs`                      |
+| WCAG 2.1 full compliance                  | Pending audit                                                      |
 
 ### Technical Debt
 
@@ -1498,45 +1772,36 @@ injects an inline `<script type="module">` for Fast Refresh that `script-src 'se
 | `getAllFoodLogs` and `getRecentFoodItems` use `where("userId")` - not compound index | Low      | `dbService.ts`                 |
 | No schema migration tests                                                            | Low      | `dbService.test.ts`            |
 | No optimistic updates                                                                | Low      | `AppState.ts`                  |
-| Component test coverage <80% for many components                                     | Medium   | `src/components/`              |
+| Achievement `[userId+achievementId]` index not enforced as unique at DB level        | Low      | `dbService.ts`                 |
 
 ---
 
-## 11. v0.0.8 Roadmap
-
-| Item                                                           | Status      |
-|----------------------------------------------------------------|-------------|
-| Step Tracking (Feature 14 - StepLog, StepTracker, useStepForm) | Done        |
-| Gamification achievement system (Feature 15 - 18 achievements) | Done        |
-| Macro nutrient breakdown display for recipes                   | Pending     |
-| Component test coverage >80%                                   | In progress |
-| Advanced filtering and search (date range, meal type filters)  | Pending     |
-
----
-
-## 12. Uncertainties and Questions
+## 11. Uncertainties and Questions
 
 - **Recipe calories UI:** The `calories` field on each ingredient row requires the user to manually
   enter the per-unit calorie value. Should this be auto-populated from `allFoodItems` when a food
   item is selected?
-- **Calorie goal UI:** Are there min/max range constraints shown to the user, or is the [1, 99999]
-  validation silent?
-- **Barcode API choice:** The CSP comment references `connect-src 'self'` with a note that the
-  barcode API origin should be added when integrated. Has a specific API (e.g., Open Food Facts)
-  been decided?
-- **`getRecentFoodItems` deduplication:** Deduplication by name (most recent per name) - is this
-  the intended behavior for the ingredient selector corpus in recipes?
+- **Barcode API choice:** Open Food Facts confirmed for v0.4 MVP; USDA FoodData Central as
+  secondary source for whole foods (richer micronutrient data). CSP `connect-src` must be updated
+  when integrated.
+- **`getRecentFoodItems` deduplication:** Deduplication by name (most recent per name) - intended
+  for ingredient selector corpus in recipes?
 - **Achievement deduplication at DB level:** `addUserAchievement` does not check for duplicates;
   the `[userId+achievementId]` compound index exists but is not enforced as unique. Could lead to
-  duplicate rows if `checkAndUnlockAchievements` is called concurrently.
-- **PWA architecture:** Service worker requires a build-time decision on caching strategy. Is it
-  in scope for v0.0.8 or later?
+  duplicate rows if `checkAndUnlockAchievements` is called concurrently. (Still open.)
+- **PWA caching strategy:** Network-first for API calls, cache-first for assets - confirmed
+  approach for v0.4. `vite-plugin-pwa` (Workbox) is the planned integration.
+- **TDEE profile migration:** When the user changes their TDEE profile, historical calorie goals
+  are not retroactively updated. Is that the intended behavior?
 
 ---
 
-**Document Generated:** May 12, 2026
-**Analysis Method:** Reverse-engineering from src/ folder and CLAUDE.md (v0.0.1 - v0.0.7)
+**Document Generated:** May 21, 2026
+**Analysis Method:** Reverse-engineering from src/ folder, CLAUDE.md, and release notes
+(v0.0.1 - v0.3.0)
 **Source References:** src/types/index.ts, src/db/dbService.ts, src/state/AppState.ts,
-src/lib/achievements.ts, src/lib/utils.ts, src/forms/schemas.ts, src/App.tsx,
-src/pages/Dashboard.tsx, src/pages/Progress.tsx, src/hooks/*.ts, src/components/StepTracker.tsx,
-vite.config.ts, package.json, CLAUDE.md
+src/lib/achievements.ts, src/lib/tdee.ts, src/lib/metTable.ts, src/lib/utils.ts,
+src/forms/schemas.ts, src/App.tsx, src/pages/Dashboard.tsx, src/pages/Progress.tsx,
+src/pages/Settings.tsx, src/hooks/*.ts, src/components/FastingTimer.tsx,
+src/components/ActivityLogger.tsx, src/components/tour/*, vite.config.ts, package.json,
+CLAUDE.md, release-notes/0.3.0.md

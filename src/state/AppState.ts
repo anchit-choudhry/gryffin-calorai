@@ -2,33 +2,50 @@ import { create } from "zustand";
 import { toast } from "sonner";
 import { mapDbError } from "../lib/utils";
 import {
+  type ActivityLog,
+  addActivityLog as addActivityLogToDB,
   addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
   addStepLog as addStepLogToDB,
   addUserAchievement as addUserAchievementToDB,
   addWaterLog as addWaterLogToDB,
+  type BackupPayload,
   type BodyMeasurement,
   completeOnboarding as completeOnboardingInDB,
+  deleteActivityLog as deleteActivityLogFromDB,
   deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
   deleteRecipe as deleteRecipeFromDB,
   deleteStepLog as deleteStepLogFromDB,
   deleteWaterLog as deleteWaterLogFromDB,
+  endFastingSession as endFastingSessionInDB,
+  exportAllData,
+  type FastingSession,
   type FoodItem,
+  getActiveFastingSession,
+  getAllActivityLogs,
   getAllBodyMeasurements,
+  getAllFastingSessions,
   getAllFoodLogs,
   getAllRecipes,
   getAllWaterLogs,
+  getDailyActivityLogs,
   getDailyFoodLogs,
   getDailyStepLogs,
   getDailyWaterLogs,
   getFavoriteFoodItems,
   getOrCreateUser,
   getRecentFoodItems,
+  getTdeeProfile,
   getUnlockedAchievementIds,
   getUnlockedAchievements,
+  importBackup,
+  type ImportResult,
   type Recipe,
+  saveTdeeProfile as saveTdeeProfileToDB,
+  startFastingSession as startFastingSessionInDB,
   type StepLog,
+  type TdeeProfile,
   toggleFavoriteFoodItem,
   updateFoodItem,
   updateRecipe as updateRecipeInDB,
@@ -37,6 +54,7 @@ import {
   type WaterLog,
 } from "../db/dbService";
 import type {
+  ActivityLogId,
   AppInitState,
   BodyMeasurementId,
   FoodItemId,
@@ -48,6 +66,7 @@ import type {
 import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
 import { TOUR_TOTAL_STEPS } from "../components/tour/tourSteps";
 import { ACHIEVEMENTS, evaluateAchievements } from "../lib/achievements";
+import { computeCalorieGoal, computeTDEE, mifflinStJeorBMR } from "../lib/tdee";
 
 export interface AppState {
   init: AppInitState;
@@ -63,6 +82,25 @@ export interface AppState {
   stepGoal: number;
   error: string | null;
   userId: UserId | null;
+  // Feature 13 - TDEE
+  tdeeProfile: TdeeProfile | null;
+  fetchTdeeProfile: (userId: UserId) => Promise<void>;
+  saveTdeeProfile: (profile: Omit<TdeeProfile, "id" | "userId" | "updatedAt">) => Promise<void>;
+  // Feature 10 - Activity
+  dailyActivityLogs: ActivityLog[];
+  allActivityLogs: ActivityLog[];
+  fetchDailyActivityLogs: (userId: UserId) => Promise<void>;
+  addActivityLog: (log: Omit<ActivityLog, "id">) => Promise<void>;
+  deleteActivityLog: (id: ActivityLogId) => Promise<void>;
+  // Feature 6 - Fasting
+  activeFastingSession: FastingSession | null;
+  fastingHistory: FastingSession[];
+  fetchFastingSessions: (userId: UserId) => Promise<void>;
+  startFasting: (targetHours: number) => Promise<void>;
+  endFasting: (completed: boolean) => Promise<void>;
+  // Feature 19 - Export/Import
+  exportData: () => Promise<BackupPayload | null>;
+  importData: (payload: BackupPayload) => Promise<ImportResult | null>;
   fetchInitialData: (userId: UserId) => Promise<void>;
   refreshDailyLogs: (userId: UserId) => Promise<void>;
   fetchAchievements: (userId: UserId) => Promise<void>;
@@ -112,6 +150,11 @@ export const useAppState = create<AppState>((set, get) => ({
   dailyStepLogs: [],
   bodyMeasurements: [],
   unlockedAchievements: [],
+  tdeeProfile: null,
+  dailyActivityLogs: [],
+  allActivityLogs: [],
+  activeFastingSession: null,
+  fastingHistory: [],
   waterGoalMl: (() => {
     const stored = localStorage.getItem("waterGoalMl");
     if (stored) {
@@ -139,14 +182,36 @@ export const useAppState = create<AppState>((set, get) => ({
     try {
       const profile = await getOrCreateUser(userId, "Guest", "guest@example.com");
 
-      const logs = await getDailyFoodLogs(userId, todayISO());
-      const recipeList = await getAllRecipes(userId);
-      const recentItems = await getRecentFoodItems(userId);
-      const favorites = await getFavoriteFoodItems(userId);
-      const waterLogsToday = await getDailyWaterLogs(userId, todayISO());
-      const stepLogsToday = await getDailyStepLogs(userId, todayISO());
-      const measurements = await getAllBodyMeasurements(userId);
-      const achievements = await getUnlockedAchievements(userId);
+      const today = todayISO();
+      const [
+        logs,
+        recipeList,
+        recentItems,
+        favorites,
+        waterLogsToday,
+        stepLogsToday,
+        measurements,
+        achievements,
+        tdeeProfileData,
+        activityLogsToday,
+        allActivityLogsData,
+        activeSession,
+        allSessions,
+      ] = await Promise.all([
+        getDailyFoodLogs(userId, today),
+        getAllRecipes(userId),
+        getRecentFoodItems(userId),
+        getFavoriteFoodItems(userId),
+        getDailyWaterLogs(userId, today),
+        getDailyStepLogs(userId, today),
+        getAllBodyMeasurements(userId),
+        getUnlockedAchievements(userId),
+        getTdeeProfile(userId),
+        getDailyActivityLogs(userId, today),
+        getAllActivityLogs(userId),
+        getActiveFastingSession(userId),
+        getAllFastingSessions(userId),
+      ]);
       set({
         init: { status: "ready", user: profile },
         dailyLogs: logs,
@@ -157,6 +222,11 @@ export const useAppState = create<AppState>((set, get) => ({
         dailyStepLogs: stepLogsToday,
         bodyMeasurements: measurements,
         unlockedAchievements: achievements,
+        tdeeProfile: tdeeProfileData ?? null,
+        dailyActivityLogs: activityLogsToday,
+        allActivityLogs: allActivityLogsData,
+        activeFastingSession: activeSession ?? null,
+        fastingHistory: allSessions,
       });
     } catch (error) {
       if (import.meta.env.DEV) console.error("Error fetching initial app data:", error);
@@ -513,6 +583,165 @@ export const useAppState = create<AppState>((set, get) => ({
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("Achievement check failed:", err);
+    }
+  },
+
+  // Feature 13 - TDEE
+  fetchTdeeProfile: async (userId: UserId) => {
+    try {
+      const profile = await getTdeeProfile(userId);
+      set({ tdeeProfile: profile ?? null });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching TDEE profile:", error);
+    }
+  },
+
+  saveTdeeProfile: async (profileData: Omit<TdeeProfile, "id" | "userId" | "updatedAt">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const profile: TdeeProfile = {
+        ...profileData,
+        userId: state.userId,
+        updatedAt: new Date().toISOString(),
+      };
+      await saveTdeeProfileToDB(profile);
+      set({ tdeeProfile: profile });
+      const bmr = mifflinStJeorBMR(profile.sex, profile.weightKg, profile.heightCm, profile.age);
+      const tdee = computeTDEE(bmr, profile.activityLevel);
+      const goal = computeCalorieGoal(tdee, profile.goal);
+      await get().updateCalorieGoal(goal);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save TDEE profile");
+      if (import.meta.env.DEV) console.error("Error saving TDEE profile:", error);
+      set({ error: message });
+    }
+  },
+
+  // Feature 10 - Activity
+  fetchDailyActivityLogs: async (userId: UserId) => {
+    try {
+      const logs = await getDailyActivityLogs(userId, todayISO());
+      set({ dailyActivityLogs: logs, error: null });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to fetch activity logs");
+      if (import.meta.env.DEV) console.error("Error fetching activity logs:", error);
+      set({ error: message });
+    }
+  },
+
+  addActivityLog: async (log: Omit<ActivityLog, "id">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await addActivityLogToDB({ ...log, userId: state.userId });
+      const [daily, all] = await Promise.all([
+        getDailyActivityLogs(state.userId, todayISO()),
+        getAllActivityLogs(state.userId),
+      ]);
+      set({ dailyActivityLogs: daily, allActivityLogs: all });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to add activity log");
+      if (import.meta.env.DEV) console.error("Error adding activity log:", error);
+      set({ error: message });
+      throw error;
+    }
+  },
+
+  deleteActivityLog: async (id: ActivityLogId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteActivityLogFromDB(id, state.userId);
+      const [daily, all] = await Promise.all([
+        getDailyActivityLogs(state.userId, todayISO()),
+        getAllActivityLogs(state.userId),
+      ]);
+      set({ dailyActivityLogs: daily, allActivityLogs: all });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete activity log");
+      if (import.meta.env.DEV) console.error("Error deleting activity log:", error);
+      set({ error: message });
+    }
+  },
+
+  // Feature 6 - Fasting
+  fetchFastingSessions: async (userId: UserId) => {
+    try {
+      const [active, all] = await Promise.all([
+        getActiveFastingSession(userId),
+        getAllFastingSessions(userId),
+      ]);
+      set({ activeFastingSession: active ?? null, fastingHistory: all });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching fasting sessions:", error);
+    }
+  },
+
+  startFasting: async (targetHours: number) => {
+    const state = get();
+    if (!state.userId) return;
+    if (state.activeFastingSession) {
+      toast.error("A fasting session is already active. End it first.");
+      return;
+    }
+    try {
+      const session: FastingSession = {
+        userId: state.userId,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        targetHours,
+        dateLogged: todayISO(),
+        completed: false,
+      };
+      await startFastingSessionInDB(session);
+      await get().fetchFastingSessions(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to start fasting session");
+      if (import.meta.env.DEV) console.error("Error starting fast:", error);
+      set({ error: message });
+    }
+  },
+
+  endFasting: async (completed: boolean) => {
+    const state = get();
+    if (!state.userId || !state.activeFastingSession?.id) return;
+    try {
+      await endFastingSessionInDB(state.activeFastingSession.id, state.userId, completed);
+      await get().fetchFastingSessions(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to end fasting session");
+      if (import.meta.env.DEV) console.error("Error ending fast:", error);
+      set({ error: message });
+    }
+  },
+
+  // Feature 19 - Export/Import
+  exportData: async () => {
+    const state = get();
+    if (!state.userId) return null;
+    try {
+      return await exportAllData(state.userId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to export data");
+      if (import.meta.env.DEV) console.error("Error exporting data:", error);
+      set({ error: message });
+      return null;
+    }
+  },
+
+  importData: async (payload: BackupPayload) => {
+    const state = get();
+    if (!state.userId) return null;
+    try {
+      const result = await importBackup(payload, state.userId);
+      await get().fetchInitialData(state.userId);
+      return result;
+    } catch (error) {
+      const message = mapDbError(error, "Failed to import data");
+      if (import.meta.env.DEV) console.error("Error importing data:", error);
+      set({ error: message });
+      return null;
     }
   },
 

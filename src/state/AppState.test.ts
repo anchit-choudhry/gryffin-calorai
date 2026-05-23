@@ -3,7 +3,9 @@ import { useAppState } from "./AppState";
 import type { Recipe } from "../db/dbService";
 import * as dbService from "../db/dbService";
 import {
+  ActivityLogId,
   BodyMeasurementId,
+  FastingSessionId,
   FoodItemId,
   ISODate,
   RecipeId,
@@ -33,6 +35,11 @@ describe("AppState", () => {
       userId: null,
       waterGoalMl: 2000,
       stepGoal: 10000,
+      tdeeProfile: null,
+      dailyActivityLogs: [],
+      allActivityLogs: [],
+      activeFastingSession: null,
+      fastingHistory: [],
     });
     vi.clearAllMocks();
     localStorage.clear();
@@ -87,6 +94,34 @@ describe("AppState", () => {
     vi.mocked(dbService.addUserAchievement).mockResolvedValue(UserAchievementId(1));
     vi.mocked(achievements.evaluateAchievements).mockReturnValue([]);
     (achievements as unknown as { ACHIEVEMENTS: achievements.Achievement[] }).ACHIEVEMENTS = [];
+
+    vi.mocked(dbService.getTdeeProfile).mockResolvedValue(undefined);
+    vi.mocked(dbService.saveTdeeProfile).mockResolvedValue(undefined);
+    vi.mocked(dbService.getDailyActivityLogs).mockResolvedValue([]);
+    vi.mocked(dbService.getAllActivityLogs).mockResolvedValue([]);
+    vi.mocked(dbService.addActivityLog).mockResolvedValue(ActivityLogId(1));
+    vi.mocked(dbService.deleteActivityLog).mockResolvedValue(undefined);
+    vi.mocked(dbService.getActiveFastingSession).mockResolvedValue(null);
+    vi.mocked(dbService.getAllFastingSessions).mockResolvedValue([]);
+    vi.mocked(dbService.startFastingSession).mockResolvedValue(FastingSessionId(1));
+    vi.mocked(dbService.endFastingSession).mockResolvedValue(undefined);
+    vi.mocked(dbService.exportAllData).mockResolvedValue({
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      userId: UserId("test"),
+      tables: {
+        foodItems: [],
+        recipes: [],
+        waterLogs: [],
+        bodyMeasurements: [],
+        userAchievements: [],
+        stepLogs: [],
+        tdeeProfile: null,
+        activityLogs: [],
+        fastingSessions: [],
+      },
+    });
+    vi.mocked(dbService.importBackup).mockResolvedValue({ imported: { foodItems: 0 }, skipped: 0 });
   });
 
   afterEach(() => {
@@ -1177,6 +1212,297 @@ describe("AppState", () => {
 
       await useAppState.getState().checkAndUnlockAchievements();
       expect(vi.mocked(dbService).addUserAchievement).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("TDEE Profile", () => {
+    const userId = UserId("tdee-state-user");
+
+    it("fetchTdeeProfile sets tdeeProfile from DB", async () => {
+      const profile = {
+        id: 1,
+        userId,
+        age: 30,
+        sex: "male" as const,
+        heightCm: 175,
+        weightKg: 70,
+        activityLevel: "moderate" as const,
+        goal: "maintain" as const,
+        updatedAt: new Date().toISOString(),
+      };
+      vi.mocked(dbService.getTdeeProfile).mockResolvedValueOnce(profile);
+      useAppState.setState({ userId });
+
+      await useAppState.getState().fetchTdeeProfile(userId);
+
+      expect(useAppState.getState().tdeeProfile).toEqual(profile);
+    });
+
+    it("fetchTdeeProfile sets null when no profile", async () => {
+      vi.mocked(dbService.getTdeeProfile).mockResolvedValueOnce(undefined);
+      useAppState.setState({ userId });
+
+      await useAppState.getState().fetchTdeeProfile(userId);
+
+      expect(useAppState.getState().tdeeProfile).toBeNull();
+    });
+
+    it("saveTdeeProfile persists and updates calorie goal", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.updateUserProfile).mockResolvedValue(undefined);
+
+      await useAppState.getState().saveTdeeProfile({
+        age: 28,
+        sex: "female",
+        heightCm: 162,
+        weightKg: 58,
+        activityLevel: "light",
+        goal: "maintain",
+      });
+
+      expect(dbService.saveTdeeProfile).toHaveBeenCalled();
+      expect(useAppState.getState().tdeeProfile).not.toBeNull();
+      expect(useAppState.getState().tdeeProfile?.age).toBe(28);
+    });
+
+    it("saveTdeeProfile does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().saveTdeeProfile({
+        age: 28,
+        sex: "female",
+        heightCm: 162,
+        weightKg: 58,
+        activityLevel: "light",
+        goal: "maintain",
+      });
+
+      expect(dbService.saveTdeeProfile).not.toHaveBeenCalled();
+    });
+
+    it("saveTdeeProfile sets error on DB failure", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.saveTdeeProfile).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().saveTdeeProfile({
+        age: 28,
+        sex: "female",
+        heightCm: 162,
+        weightKg: 58,
+        activityLevel: "light",
+        goal: "maintain",
+      });
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+  });
+
+  describe("Activity Logs", () => {
+    const userId = UserId("activity-state-user");
+
+    it("fetchDailyActivityLogs populates dailyActivityLogs", async () => {
+      const log = {
+        id: ActivityLogId(1),
+        userId,
+        activityType: "Running (6 mph)",
+        durationMin: 30,
+        caloriesBurned: 360,
+        dateLogged: ISODate("2026-05-20"),
+        loggedAt: new Date().toISOString(),
+      };
+      vi.mocked(dbService.getDailyActivityLogs).mockResolvedValueOnce([log]);
+      useAppState.setState({ userId });
+
+      await useAppState.getState().fetchDailyActivityLogs(userId);
+
+      expect(useAppState.getState().dailyActivityLogs).toHaveLength(1);
+      expect(useAppState.getState().dailyActivityLogs[0]?.activityType).toBe("Running (6 mph)");
+    });
+
+    it("addActivityLog calls DB and refreshes lists", async () => {
+      useAppState.setState({ userId });
+
+      await useAppState.getState().addActivityLog({
+        userId,
+        activityType: "Walking (moderate, 3 mph)",
+        durationMin: 20,
+        caloriesBurned: 85,
+        dateLogged: ISODate("2026-05-20"),
+        loggedAt: new Date().toISOString(),
+      });
+
+      expect(dbService.addActivityLog).toHaveBeenCalled();
+    });
+
+    it("addActivityLog does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().addActivityLog({
+        userId: UserId("other"),
+        activityType: "Running (6 mph)",
+        durationMin: 30,
+        caloriesBurned: 360,
+        dateLogged: ISODate("2026-05-20"),
+        loggedAt: new Date().toISOString(),
+      });
+
+      expect(dbService.addActivityLog).not.toHaveBeenCalled();
+    });
+
+    it("deleteActivityLog calls DB and refreshes lists", async () => {
+      useAppState.setState({ userId });
+
+      await useAppState.getState().deleteActivityLog(ActivityLogId(1));
+
+      expect(dbService.deleteActivityLog).toHaveBeenCalledWith(ActivityLogId(1), userId);
+    });
+
+    it("deleteActivityLog does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().deleteActivityLog(ActivityLogId(1));
+
+      expect(dbService.deleteActivityLog).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Fasting Sessions", () => {
+    const userId = UserId("fasting-state-user");
+
+    it("fetchFastingSessions sets active and history", async () => {
+      const session = {
+        id: FastingSessionId(1),
+        userId,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        targetHours: 16,
+        dateLogged: ISODate("2026-05-20"),
+        completed: false,
+      };
+      vi.mocked(dbService.getActiveFastingSession).mockResolvedValueOnce(session);
+      vi.mocked(dbService.getAllFastingSessions).mockResolvedValueOnce([session]);
+      useAppState.setState({ userId });
+
+      await useAppState.getState().fetchFastingSessions(userId);
+
+      expect(useAppState.getState().activeFastingSession).toEqual(session);
+      expect(useAppState.getState().fastingHistory).toHaveLength(1);
+    });
+
+    it("startFasting creates session and fetches", async () => {
+      useAppState.setState({ userId, activeFastingSession: null });
+
+      await useAppState.getState().startFasting(16);
+
+      expect(dbService.startFastingSession).toHaveBeenCalled();
+    });
+
+    it("startFasting does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().startFasting(16);
+
+      expect(dbService.startFastingSession).not.toHaveBeenCalled();
+    });
+
+    it("startFasting shows toast if session already active", async () => {
+      const session = {
+        id: FastingSessionId(1),
+        userId,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        targetHours: 16,
+        dateLogged: ISODate("2026-05-20"),
+        completed: false,
+      };
+      useAppState.setState({ userId, activeFastingSession: session });
+
+      await useAppState.getState().startFasting(18);
+
+      expect(dbService.startFastingSession).not.toHaveBeenCalled();
+    });
+
+    it("endFasting calls DB and clears active session", async () => {
+      const session = {
+        id: FastingSessionId(1),
+        userId,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        targetHours: 16,
+        dateLogged: ISODate("2026-05-20"),
+        completed: false,
+      };
+      useAppState.setState({ userId, activeFastingSession: session });
+
+      await useAppState.getState().endFasting(true);
+
+      expect(dbService.endFastingSession).toHaveBeenCalledWith(FastingSessionId(1), userId, true);
+    });
+
+    it("endFasting does nothing when no active session", async () => {
+      useAppState.setState({ userId, activeFastingSession: null });
+
+      await useAppState.getState().endFasting(false);
+
+      expect(dbService.endFastingSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Export / Import", () => {
+    const userId = UserId("export-state-user");
+
+    it("exportData returns payload from DB", async () => {
+      useAppState.setState({ userId });
+
+      const result = await useAppState.getState().exportData();
+
+      expect(result).not.toBeNull();
+      expect(dbService.exportAllData).toHaveBeenCalledWith(userId);
+    });
+
+    it("exportData returns null when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      const result = await useAppState.getState().exportData();
+
+      expect(result).toBeNull();
+    });
+
+    it("importData calls importBackup and re-fetches data", async () => {
+      useAppState.setState({ userId });
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        userId: "export-state-user",
+        tables: {
+          foodItems: [],
+          recipes: [],
+          waterLogs: [],
+          bodyMeasurements: [],
+          userAchievements: [],
+          stepLogs: [],
+          tdeeProfile: null,
+          activityLogs: [],
+          fastingSessions: [],
+        },
+      };
+
+      const result = await useAppState
+        .getState()
+        .importData(payload as import("../db/dbService").BackupPayload);
+
+      expect(result).not.toBeNull();
+      expect(dbService.importBackup).toHaveBeenCalled();
+    });
+
+    it("importData returns null when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      const result = await useAppState
+        .getState()
+        .importData({} as import("../db/dbService").BackupPayload);
+
+      expect(result).toBeNull();
     });
   });
 });

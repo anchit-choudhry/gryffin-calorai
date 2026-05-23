@@ -5,9 +5,9 @@
 # ── Supply-chain & Security ──────────────────────────────────────────────────
 
 # Delay installing newly-published package versions.
-# Default is 1440 min (1 day); 10080 = 7 days gives the community more time to
+# Default is 1440 min (1 day); 7200 = 5 days gives the community time to
 # detect and pull a compromised release before it lands in your tree.
-minimumReleaseAge: 10080
+minimumReleaseAge: 7200
 
 # Ownership-change / provenance downgrade protection.
 # "no-downgrade" fails the install if a package's trust level drops vs. any
@@ -29,6 +29,11 @@ blockExoticSubdeps: true
 overrides:
   react-redux: "9.1.0"
   reselect: "5.1.0"
+
+# Verify the integrity of every package in the content-addressable store before
+# linking it into node_modules. Guards against store corruption or tampering
+# between installs (pnpm v11 default is true; explicit here for auditability).
+verifyStoreIntegrity: true
 
 # Build-script allowlist - no packages in this project need postinstall
 # scripts, so the list stays empty. strictDepBuilds: true (pnpm v11 default)

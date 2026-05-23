@@ -1,6 +1,13 @@
 // src/App.tsx
 import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, LayoutDashboard, Moon, Sun, TrendingUp } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  Moon,
+  Settings as SettingsIcon,
+  Sun,
+  TrendingUp,
+} from "lucide-react";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
@@ -16,6 +23,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
 const Progress = lazy(() => import("./pages/Progress"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 const MOCK_USER_ID = UserId("1");
 const BOTTOM_NAV_HASHES = ["#dashboard", "#recipes", "#progress"] as const;
@@ -86,6 +94,8 @@ function App() {
         return <Recipes />;
       case "#progress":
         return <Progress />;
+      case "#settings":
+        return <Settings />;
       case "#dashboard":
       default:
         return <Dashboard />;
@@ -191,6 +201,7 @@ function App() {
                   {navLink("#dashboard", "Dashboard")}
                   {navLink("#recipes", "Recipes")}
                   {navLink("#progress", "Progress")}
+                  {navLink("#settings", "Settings")}
                 </div>
                 <button
                   onClick={toggleDarkMode}
@@ -227,6 +238,7 @@ function App() {
                 { hash: "#dashboard", label: "Dashboard", Icon: LayoutDashboard },
                 { hash: "#recipes", label: "Recipes", Icon: BookOpen },
                 { hash: "#progress", label: "Progress", Icon: TrendingUp },
+                { hash: "#settings", label: "Settings", Icon: SettingsIcon },
               ] as const
             ).map(({ hash, label, Icon }) => {
               const isActive = currentPath === hash;

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils.ts";
 import { motionTokens } from "@/lib/motionVariants";
+import { useFastingTimer } from "@/hooks/useFastingTimer";
 
 interface Props {
   totalCalories: number;
@@ -16,30 +17,36 @@ interface Props {
 }
 
 function DashboardHero({ totalCalories, totals }: Props) {
-  const { init, updateCalorieGoal, bodyMeasurements } = useAppState();
+  const { init, updateCalorieGoal, bodyMeasurements, dailyActivityLogs, activeFastingSession } =
+    useAppState();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(
     init.status === "ready" ? init.user.calorieGoal : 2000,
   );
+  const [showNet, setShowNet] = useState(false);
   const shouldReduceMotion = useReducedMotion();
   const count = useMotionValue(0);
   const displayCount = useTransform(count, (v) => Math.round(v).toLocaleString());
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
+  const { formattedRemaining: fastingRemaining, isComplete: fastingComplete } = useFastingTimer();
+  const totalBurned = dailyActivityLogs.reduce((sum, l) => sum + l.caloriesBurned, 0);
+  const netCalories = Math.max(0, totalCalories - totalBurned);
+  const displayCalories = showNet ? netCalories : totalCalories;
 
   useEffect(() => {
     if (shouldReduceMotion) {
-      count.set(totalCalories);
+      count.set(displayCalories);
       return;
     }
-    const controls = animate(count, totalCalories, {
+    const controls = animate(count, displayCalories, {
       duration: motionTokens.durEntrance,
       ease: motionTokens.easeOutExpo,
     });
     return () => controls.stop();
-  }, [totalCalories, shouldReduceMotion, count]);
+  }, [displayCalories, shouldReduceMotion, count]);
 
-  const ratio = Math.min(1, totalCalories / (calorieGoal || 1));
-  const isOver = totalCalories > calorieGoal;
+  const ratio = Math.min(1, displayCalories / (calorieGoal || 1));
+  const isOver = displayCalories > calorieGoal;
   const today = useMemo(() => new Date(), []);
 
   const greeting = useMemo(() => {
@@ -66,14 +73,38 @@ function DashboardHero({ totalCalories, totals }: Props) {
 
       {/* Hero numeral */}
       <div className="col-span-12 md:col-span-8 md:col-start-2">
-        <div className="flex items-start">
-          <motion.span
-            className="font-display font-light text-[clamp(72px,11vw,180px)] leading-[0.85] tabular-nums tracking-tight text-ink"
-            data-testid="hero-kcal"
-          >
-            {displayCount}
-          </motion.span>
-          <span className="font-sans text-xs text-ink-soft self-start mt-3 ml-3">kcal</span>
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="flex items-start">
+            <motion.span
+              className="font-display font-light text-[clamp(72px,11vw,180px)] leading-[0.85] tabular-nums tracking-tight text-ink"
+              data-testid="hero-kcal"
+            >
+              {displayCount}
+            </motion.span>
+            <span className="font-sans text-xs text-ink-soft self-start mt-3 ml-3">kcal</span>
+          </div>
+          <div className="flex flex-col gap-2 self-center mt-2">
+            {totalBurned > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowNet((v) => !v)}
+                className="font-mono text-[10px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors border border-rule px-2 py-1"
+              >
+                {showNet ? "Consumed" : "Net"}
+              </button>
+            )}
+            {activeFastingSession && (
+              <span
+                className={cn(
+                  "font-mono text-[10px] px-2 py-1 border",
+                  fastingComplete ? "border-persimmon text-persimmon" : "border-rule text-ink-soft",
+                )}
+              >
+                {activeFastingSession.targetHours}h fast:{" "}
+                {fastingComplete ? "complete!" : fastingRemaining}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -93,11 +124,11 @@ function DashboardHero({ totalCalories, totals }: Props) {
           <span className="text-xs text-ink-soft">{Math.round(ratio * 100)}% of goal</span>
           {isOver ? (
             <span className="text-xs text-persimmon">
-              Over by {(totalCalories - calorieGoal).toLocaleString()} kcal
+              Over by {(displayCalories - calorieGoal).toLocaleString()} kcal
             </span>
           ) : (
             <span className="text-xs text-ink-soft">
-              {Math.max(0, calorieGoal - totalCalories).toLocaleString()} remaining
+              {Math.max(0, calorieGoal - displayCalories).toLocaleString()} remaining
             </span>
           )}
         </div>

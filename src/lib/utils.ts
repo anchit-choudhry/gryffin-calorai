@@ -24,8 +24,8 @@ export function groupLogsByMeal(logs: FoodItem[]): GroupedMealLog[] {
   })).filter((group) => group.items.length > 0);
 }
 
-const VALID_HASHES = new Set(["#dashboard", "#recipes", "#progress"] as const);
-export type ValidHash = "#dashboard" | "#recipes" | "#progress";
+const VALID_HASHES = new Set(["#dashboard", "#recipes", "#progress", "#settings"] as const);
+export type ValidHash = "#dashboard" | "#recipes" | "#progress" | "#settings";
 
 export function normalizeHash(raw: string): ValidHash {
   const h = raw.toLowerCase();

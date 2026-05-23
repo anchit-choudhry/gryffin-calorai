@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   Bar,
+  BarChart,
   CartesianGrid,
   Cell,
   ComposedChart,
@@ -47,7 +48,14 @@ const Progress = () => {
     data: waterData,
     isLoading: waterLoading,
   } = useWaterHistoryData(days);
-  const { init, waterGoalMl, bodyMeasurements, unlockedAchievements } = useAppState();
+  const {
+    init,
+    waterGoalMl,
+    bodyMeasurements,
+    unlockedAchievements,
+    allActivityLogs,
+    fastingHistory,
+  } = useAppState();
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
   const shouldReduceMotion = useReducedMotion();
 
@@ -144,6 +152,38 @@ const Progress = () => {
     ? {}
     : { variants: pageVariants, initial: "hidden", animate: "show" };
   const sv = useSectionMotion();
+
+  const activityChartData = useMemo(() => {
+    return labels.map((label, i) => {
+      const dayStr = label;
+      const dayLogs = allActivityLogs.filter(
+        (l) =>
+          new Date(l.dateLogged).toLocaleDateString("en-US", { month: "short", day: "numeric" }) ===
+          dayStr,
+      );
+      return {
+        label: dayStr,
+        burned: dayLogs.reduce((sum, l) => sum + l.caloriesBurned, 0),
+        consumed: data[i] ?? 0,
+      };
+    });
+  }, [labels, allActivityLogs, data]);
+
+  const fastingChartData = useMemo(() => {
+    return labels.map((label) => {
+      const sessions = fastingHistory.filter(
+        (s) =>
+          new Date(s.dateLogged).toLocaleDateString("en-US", { month: "short", day: "numeric" }) ===
+          label,
+      );
+      const completed = sessions.filter((s) => s.completed).length;
+      const totalHours = sessions.reduce((sum, s) => {
+        if (!s.endTime) return sum;
+        return sum + (new Date(s.endTime).getTime() - new Date(s.startTime).getTime()) / 3600000;
+      }, 0);
+      return { label, completed, totalHours: Math.round(totalHours * 10) / 10 };
+    });
+  }, [labels, fastingHistory]);
 
   const isCaloriesEmpty = chartData.every((d) => d.calories === 0);
   const isMacroEmpty =
@@ -589,7 +629,85 @@ const Progress = () => {
           </motion.section>
         )}
 
-        {/* Section H - Achievements */}
+        {/* Section H - Activity */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" title="Activity" accent />
+          <div
+            className="col-span-12"
+            role="figure"
+            aria-label={`Activity calories burned for the last ${days} days`}
+          >
+            <EditorialChartCard
+              label="Calories Burned vs Consumed"
+              height={300}
+              raised
+              isLoading={isLoading}
+              isEmpty={activityChartData.every((d) => d.burned === 0 && d.consumed === 0)}
+              emptyMessage="Log activities on the Dashboard to see your burn trend."
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={activityChartData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis dataKey="label" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend content={<ChartLegend />} />
+                  <Bar dataKey="burned" name="Burned" fill={chartTheme.chart3} opacity={0.8} />
+                  <Line
+                    type="monotone"
+                    dataKey="consumed"
+                    name="Consumed"
+                    stroke={chartTheme.chart1}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </EditorialChartCard>
+          </div>
+        </motion.section>
+
+        {/* Section I - Fasting History */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" title="Fasting History" />
+          <div
+            className="col-span-12"
+            role="figure"
+            aria-label={`Fasting history for the last ${days} days`}
+          >
+            <EditorialChartCard
+              label="Fasting Hours"
+              height={250}
+              raised
+              isLoading={false}
+              isEmpty={fastingChartData.every((d) => d.totalHours === 0)}
+              emptyMessage="Start a fasting session on the Dashboard to track your windows."
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={fastingChartData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <XAxis dataKey="label" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar
+                    dataKey="totalHours"
+                    name="Hours Fasted"
+                    fill={chartTheme.chart4}
+                    opacity={0.8}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </EditorialChartCard>
+          </div>
+        </motion.section>
+
+        {/* Section J - Achievements */}
         <motion.section
           data-tour-id="progress-achievements"
           className="col-span-12 grid grid-cols-12 gap-6"

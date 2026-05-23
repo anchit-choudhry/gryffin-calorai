@@ -1,18 +1,25 @@
 // src/db/dbService.ts
 import { Dexie, type Table } from "dexie";
 import type {
+  ActivityLevel,
+  ActivityLogId,
   BodyMeasurementId,
+  FastingSessionId,
   FoodItemId,
+  GoalType,
   ISODate,
   MealType,
   RecipeId,
+  Sex,
   StepLogId,
   UserAchievementId,
   UserId,
   WaterLogId,
 } from "@/types";
 import {
+  ActivityLogId as makeActivityLogId,
   BodyMeasurementId as makeBodyMeasurementId,
+  FastingSessionId as makeFastingSessionId,
   FoodItemId as makeFoodItemId,
   RecipeId as makeRecipeId,
   StepLogId as makeStepLogId,
@@ -91,6 +98,38 @@ export interface StepLog {
   steps: number;
   dateLogged: ISODate;
   loggedAt: string; // ISO timestamp for intra-day ordering
+}
+
+export interface TdeeProfile {
+  id?: number;
+  userId: UserId;
+  age: number;
+  sex: Sex;
+  heightCm: number;
+  weightKg: number;
+  activityLevel: ActivityLevel;
+  goal: GoalType;
+  updatedAt: string;
+}
+
+export interface ActivityLog {
+  id?: ActivityLogId;
+  userId: UserId;
+  activityType: string;
+  durationMin: number;
+  caloriesBurned: number;
+  dateLogged: ISODate;
+  loggedAt: string;
+}
+
+export interface FastingSession {
+  id?: FastingSessionId;
+  userId: UserId;
+  startTime: string;
+  endTime: string | null;
+  targetHours: number;
+  dateLogged: ISODate;
+  completed: boolean;
 }
 
 // 1. Initialize Dexie Database
@@ -238,6 +277,48 @@ db.version(10)
       });
   });
 
+// 11. Version 11: add tdeeProfiles table
+db.version(11).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+});
+
+// 12. Version 12: add activityLogs table
+db.version(12).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+});
+
+// 13. Version 13: add fastingSessions table
+db.version(13).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -246,6 +327,9 @@ export const waterLogs: Table<WaterLog> = db.table("waterLogs");
 export const bodyMeasurements: Table<BodyMeasurement> = db.table("bodyMeasurements");
 export const userAchievements: Table<UserAchievement> = db.table("userAchievements");
 export const stepLogs: Table<StepLog> = db.table("stepLogs");
+export const tdeeProfiles: Table<TdeeProfile> = db.table("tdeeProfiles");
+export const activityLogs: Table<ActivityLog> = db.table("activityLogs");
+export const fastingSessions: Table<FastingSession> = db.table("fastingSessions");
 
 export const initializeDB = async () => {
   try {
@@ -473,4 +557,185 @@ export const deleteStepLog = async (id: StepLogId, userId: UserId): Promise<void
   const log = await stepLogs.get(id);
   if (!log || log.userId !== userId) return;
   await stepLogs.delete(id);
+};
+
+// --- TDEE Profile CRUD ---
+
+export const getTdeeProfile = async (userId: UserId): Promise<TdeeProfile | undefined> => {
+  return tdeeProfiles.where("userId").equals(userId).first();
+};
+
+export const saveTdeeProfile = async (profile: TdeeProfile): Promise<void> => {
+  const existing = await getTdeeProfile(profile.userId);
+  if (existing?.id !== undefined) {
+    await tdeeProfiles.put({ ...profile, id: existing.id });
+  } else {
+    await tdeeProfiles.add(profile);
+  }
+};
+
+// --- Activity Log CRUD ---
+
+export const addActivityLog = async (log: ActivityLog): Promise<ActivityLogId> => {
+  const id = await activityLogs.add(log);
+  return makeActivityLogId(id);
+};
+
+export const getDailyActivityLogs = async (
+  userId: UserId,
+  date: ISODate,
+): Promise<ActivityLog[]> => {
+  return activityLogs.where("[userId+dateLogged]").equals([userId, date]).toArray();
+};
+
+export const getAllActivityLogs = async (userId: UserId): Promise<ActivityLog[]> => {
+  return activityLogs.where("userId").equals(userId).toArray();
+};
+
+export const deleteActivityLog = async (id: ActivityLogId, userId: UserId): Promise<void> => {
+  const log = await activityLogs.get(id);
+  if (!log || log.userId !== userId) return;
+  await activityLogs.delete(id);
+};
+
+// --- Fasting Session CRUD ---
+
+export const startFastingSession = async (session: FastingSession): Promise<FastingSessionId> => {
+  const id = await fastingSessions.add(session);
+  return makeFastingSessionId(id);
+};
+
+export const endFastingSession = async (
+  id: FastingSessionId,
+  userId: UserId,
+  completed: boolean,
+): Promise<void> => {
+  const session = await fastingSessions.get(id);
+  if (!session || session.userId !== userId) return;
+  await fastingSessions.update(id, {
+    endTime: new Date().toISOString(),
+    completed,
+  });
+};
+
+export const getActiveFastingSession = async (userId: UserId): Promise<FastingSession | null> => {
+  return (
+    (await fastingSessions
+      .where("userId")
+      .equals(userId)
+      .filter((s) => s.endTime === null)
+      .first()) ?? null
+  );
+};
+
+export const getAllFastingSessions = async (userId: UserId): Promise<FastingSession[]> => {
+  return fastingSessions.where("userId").equals(userId).toArray();
+};
+
+// --- Data Export / Import ---
+
+export interface BackupPayload {
+  version: number;
+  exportedAt: string;
+  userId: string;
+  tables: {
+    foodItems: FoodItem[];
+    recipes: Recipe[];
+    waterLogs: WaterLog[];
+    bodyMeasurements: BodyMeasurement[];
+    userAchievements: UserAchievement[];
+    stepLogs: StepLog[];
+    tdeeProfile: TdeeProfile | null;
+    activityLogs: ActivityLog[];
+    fastingSessions: FastingSession[];
+  };
+}
+
+export const BACKUP_VERSION = 1;
+
+export const exportAllData = async (userId: UserId): Promise<BackupPayload> => {
+  const [
+    foodItemsData,
+    recipesData,
+    waterLogsData,
+    bodyMeasurementsData,
+    userAchievementsData,
+    stepLogsData,
+    tdeeProfileData,
+    activityLogsData,
+    fastingSessionsData,
+  ] = await Promise.all([
+    getAllFoodLogs(userId),
+    getAllRecipes(userId),
+    getAllWaterLogs(userId),
+    getAllBodyMeasurements(userId),
+    userAchievements.where("userId").equals(userId).toArray(),
+    getAllStepLogs(userId),
+    getTdeeProfile(userId),
+    getAllActivityLogs(userId),
+    getAllFastingSessions(userId),
+  ]);
+
+  return {
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    userId,
+    tables: {
+      foodItems: foodItemsData,
+      recipes: recipesData,
+      waterLogs: waterLogsData,
+      bodyMeasurements: bodyMeasurementsData,
+      userAchievements: userAchievementsData,
+      stepLogs: stepLogsData,
+      tdeeProfile: tdeeProfileData ?? null,
+      activityLogs: activityLogsData,
+      fastingSessions: fastingSessionsData,
+    },
+  };
+};
+
+export interface ImportResult {
+  imported: Record<string, number>;
+  skipped: number;
+}
+
+export const importBackup = async (
+  payload: BackupPayload,
+  userId: UserId,
+): Promise<ImportResult> => {
+  const result: ImportResult = { imported: {}, skipped: 0 };
+  const t = payload.tables;
+
+  const addAll = async <T extends { id?: unknown }>(table: Table<T>, rows: T[], label: string) => {
+    let count = 0;
+    for (const row of rows) {
+      try {
+        const { id: _, ...rest } = row as T & { id?: unknown };
+        await table.add({ ...rest, userId } as unknown as T);
+        count++;
+      } catch {
+        result.skipped++;
+      }
+    }
+    result.imported[label] = count;
+  };
+
+  await addAll(foodItems, t.foodItems, "foodItems");
+  await addAll(recipes, t.recipes, "recipes");
+  await addAll(waterLogs, t.waterLogs, "waterLogs");
+  await addAll(bodyMeasurements, t.bodyMeasurements, "bodyMeasurements");
+  await addAll(stepLogs, t.stepLogs, "stepLogs");
+  await addAll(activityLogs, t.activityLogs, "activityLogs");
+  await addAll(fastingSessions, t.fastingSessions, "fastingSessions");
+
+  if (t.tdeeProfile) {
+    try {
+      await saveTdeeProfile({ ...t.tdeeProfile, userId, id: undefined });
+      result.imported["tdeeProfile"] = 1;
+    } catch {
+      result.skipped++;
+    }
+  }
+
+  return result;
 };

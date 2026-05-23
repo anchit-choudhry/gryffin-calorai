@@ -173,7 +173,7 @@ describe("useProgressData", () => {
     const { result } = renderHook(() => useProgressData(7));
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.macroData).not.toBeNull();
     });
 
     const macros = result.current.macroData;

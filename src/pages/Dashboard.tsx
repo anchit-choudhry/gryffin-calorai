@@ -8,6 +8,11 @@ import WeeklySummary from "../components/WeeklySummary";
 import WaterTracker from "../components/WaterTracker";
 import StepTracker from "../components/StepTracker";
 import StreakCard from "../components/StreakCard";
+import ActivityTracker from "../components/ActivityTracker";
+import ActivityLogger from "../components/ActivityLogger";
+import FastingTimer from "../components/FastingTimer";
+import OnboardingBanner from "../components/OnboardingBanner";
+import OnboardingModal from "../components/OnboardingModal";
 import { useAppState } from "../state/AppState";
 import { todayISO } from "@/types";
 import type { FoodItem } from "../db/dbService";
@@ -31,7 +36,11 @@ const Dashboard = () => {
     addFoodLog,
     userId,
     allFoodItems,
+    tdeeProfile,
   } = useAppState();
+
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
 
   const handleDeleteWithUndo = useCallback(
     async (id: Parameters<typeof deleteFoodLog>[0]) => {
@@ -123,12 +132,21 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
+      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+
       <motion.main
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
         variants={shouldReduceMotion ? undefined : pageVariants}
         initial={shouldReduceMotion ? undefined : "hidden"}
         animate={shouldReduceMotion ? undefined : "show"}
       >
+        {/* Onboarding banner */}
+        {showBanner && (
+          <AnimatePresence>
+            <OnboardingBanner onOpenModal={() => setOnboardingOpen(true)} />
+          </AnimatePresence>
+        )}
+
         {/* Section A — Masthead / Hero */}
         <motion.section
           data-tour-id="dashboard-hero"
@@ -159,6 +177,18 @@ const Dashboard = () => {
           </div>
           <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <StepTracker />
+          </div>
+          <div
+            data-tour-id="dashboard-activity-tile"
+            className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised"
+          >
+            <ActivityTracker />
+          </div>
+          <div
+            data-tour-id="dashboard-fasting"
+            className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised"
+          >
+            <FastingTimer />
           </div>
         </motion.section>
 
@@ -253,6 +283,18 @@ const Dashboard = () => {
             <EditorialFrame label="Speak">
               <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
             </EditorialFrame>
+          </div>
+        </motion.section>
+
+        {/* Section G — Activity Logging */}
+        <motion.section
+          data-tour-id="dashboard-activity"
+          className="col-span-12 grid grid-cols-12 gap-6"
+          {...sv}
+        >
+          <SectionHeader className="col-span-12" title="Log Activity" accent />
+          <div className="col-span-12 lg:col-span-6">
+            <ActivityLogger />
           </div>
         </motion.section>
 

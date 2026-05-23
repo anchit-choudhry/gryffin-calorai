@@ -1,4 +1,10 @@
-# Gryffin Calorai: React + Chart.js + TypeScript + Vite
+# Gryffin Calorai: React + Recharts + TypeScript + Vite
+
+Offline-first calorie tracking app with activity logging, intermittent fasting, recipe management,
+and comprehensive progress analytics.
+
+**Tech Stack:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
+CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • lucide-react
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)

@@ -20,8 +20,8 @@ const StepTracker = () => {
   const pct = Math.min(100, Math.round((totalSteps / stepGoal) * 100));
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-3">
+    <div className="overflow-hidden">
+      <div className="flex justify-between items-center mb-3 min-w-0">
         <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft">
           Step Count
         </h3>
@@ -63,10 +63,12 @@ const StepTracker = () => {
               setGoalInput(stepGoal);
               setEditingGoal(true);
             }}
-            className="flex items-center gap-1 font-mono text-[10px] tabular-nums text-ink hover:text-persimmon transition-colors group rounded-none h-auto p-0"
+            className="flex items-center gap-1 font-mono text-[10px] tabular-nums text-ink hover:text-persimmon transition-colors group rounded-none h-auto p-0 min-w-0"
           >
-            <Pencil className="size-3 opacity-60 group-hover:opacity-100" />
-            {totalSteps.toLocaleString()} / {stepGoal.toLocaleString()} steps
+            <Pencil className="size-3 opacity-60 group-hover:opacity-100 shrink-0" />
+            <span className="truncate">
+              {totalSteps.toLocaleString()} / {stepGoal.toLocaleString()} steps
+            </span>
           </Button>
         )}
       </div>
@@ -74,13 +76,13 @@ const StepTracker = () => {
       {/* Progress bar */}
       <div className="relative w-full h-[3px] bg-rule mb-4">
         <div
-          className="absolute left-0 top-0 h-full bg-ink transition-all"
+          className="absolute left-0 top-0 h-full bg-persimmon transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
 
       {/* Quick-add buttons */}
-      <div className="flex gap-2 flex-wrap mb-3">
+      <div className="flex gap-1 flex-wrap mb-3 overflow-hidden">
         {QUICK_STEPS.map((steps) => (
           <Button
             key={steps}
@@ -90,7 +92,7 @@ const StepTracker = () => {
               if (ok) toast.success(`+${steps.toLocaleString()} steps logged`);
             }}
             disabled={isLoading}
-            className="font-mono text-[10px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-3 py-1.5"
+            className="font-mono text-[9px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-2 py-1 flex-shrink-0"
           >
             +{steps.toLocaleString()}
           </Button>
@@ -98,7 +100,7 @@ const StepTracker = () => {
         <Button
           variant="outline"
           onClick={() => setShowCustom((v) => !v)}
-          className="font-mono text-[10px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-3 py-1.5"
+          className="font-mono text-[9px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-2 py-1 flex-shrink-0"
         >
           Custom
         </Button>
@@ -135,10 +137,12 @@ const StepTracker = () => {
 
       {/* Today's log */}
       {dailyStepLogs.length === 0 && (
-        <p className="font-mono text-[10px] text-ink-soft/60 mt-2">No entries yet today.</p>
+        <p className="font-mono text-[10px] text-ink-soft/60 mt-2 truncate">
+          No entries yet today.
+        </p>
       )}
       {dailyStepLogs.length > 0 && (
-        <ul className="mt-2 space-y-1 max-h-28 overflow-y-auto divide-y divide-rule">
+        <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto divide-y divide-rule">
           {[...dailyStepLogs].reverse().map((log) => (
             <li
               key={log.id}

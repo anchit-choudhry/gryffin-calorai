@@ -147,3 +147,58 @@ export const StepSchema = z.object({
 });
 
 export type StepFormValues = z.infer<typeof StepSchema>;
+
+// TDEE profile schema - stores values in display units; conversion happens in the hook
+export const TdeeProfileSchema = z.object({
+  age: z
+    .number({ invalid_type_error: "Age must be a number" })
+    .int("Age must be a whole number")
+    .min(13, "Must be at least 13")
+    .max(120, "Must be at most 120"),
+  sex: z.enum(["male", "female"] as const),
+  // stored in display units; hook converts to metric before saving
+  heightDisplay: z
+    .number({ invalid_type_error: "Height must be a number" })
+    .min(1, "Height required")
+    .max(10000, "Invalid height"),
+  weightDisplay: z
+    .number({ invalid_type_error: "Weight must be a number" })
+    .min(1, "Weight required")
+    .max(10000, "Invalid weight"),
+  activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"] as const),
+  goal: z.enum(["lose", "maintain", "gain"] as const),
+});
+
+export type TdeeProfileFormValues = z.infer<typeof TdeeProfileSchema>;
+
+// Activity logging schema
+export const ActivitySchema = z.object({
+  activityType: z.string().min(1, "Select an activity"),
+  durationMin: z
+    .number({ invalid_type_error: "Duration must be a number" })
+    .int("Duration must be a whole number")
+    .min(1, "Must be at least 1 minute")
+    .max(1440, "Cannot exceed 1440 minutes"),
+});
+
+export type ActivityFormValues = z.infer<typeof ActivitySchema>;
+
+// Backup import schema (structural validation only; value ranges not re-checked)
+export const BackupTableSchema = z.object({
+  foodItems: z.array(z.record(z.unknown())),
+  recipes: z.array(z.record(z.unknown())),
+  waterLogs: z.array(z.record(z.unknown())),
+  bodyMeasurements: z.array(z.record(z.unknown())),
+  userAchievements: z.array(z.record(z.unknown())),
+  stepLogs: z.array(z.record(z.unknown())),
+  tdeeProfile: z.record(z.unknown()).nullable(),
+  activityLogs: z.array(z.record(z.unknown())),
+  fastingSessions: z.array(z.record(z.unknown())),
+});
+
+export const BackupSchema = z.object({
+  version: z.literal(1),
+  exportedAt: z.string(),
+  userId: z.string(),
+  tables: BackupTableSchema,
+});

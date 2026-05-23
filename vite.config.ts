@@ -20,6 +20,14 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Restrict camera/microphone to this origin; disable geolocation entirely.
   "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
+  // HSTS: enforce HTTPS for 1 year, include subdomains, allow preload submission.
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+  // Isolate the browsing context so cross-origin documents can't access window.opener.
+  "Cross-Origin-Opener-Policy": "same-origin",
+  // Require cross-origin resources to opt in via CORP/CORS before being loaded.
+  "Cross-Origin-Embedder-Policy": "require-corp",
+  // Prevent this origin's resources from being loaded cross-origin without opt-in.
+  "Cross-Origin-Resource-Policy": "same-origin",
 };
 
 // CSP is excluded from dev server headers: @vitejs/plugin-react injects its Fast Refresh
@@ -42,6 +50,8 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/clsx", "vendor-ui"],
   ["node_modules/tailwind-merge", "vendor-ui"],
   ["node_modules/motion", "vendor-motion"],
+  ["node_modules/date-fns", "vendor-date"],
+  ["node_modules/fflate", "vendor-state"],
   ["node_modules/zustand", "vendor-state"],
   ["node_modules/react-hook-form", "vendor-form"],
   ["node_modules/@hookform", "vendor-form"],

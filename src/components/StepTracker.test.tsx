@@ -226,6 +226,53 @@ describe("StepTracker component", () => {
 
     expect(deleteStepLogMock).toHaveBeenCalledWith(1);
   });
+
+  it("calls submitStepLog when Add button is clicked after setting custom value", async () => {
+    const submitStepLogMock = vi.fn().mockResolvedValue(true);
+    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
+      form: {
+        register: vi.fn(() => ({})),
+        getValues: vi.fn(() => 1500),
+        setValue: vi.fn(),
+      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
+      isLoading: false,
+      submitStepLog: submitStepLogMock,
+    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+
+    render(<StepTracker />);
+    const customButton = screen.getByText("Custom");
+    fireEvent.click(customButton);
+
+    const addButton = screen.getByText("Add");
+    fireEvent.click(addButton);
+
+    expect(submitStepLogMock).toHaveBeenCalledWith(1500);
+  });
+
+  it("hides custom input after successful submission", async () => {
+    const submitStepLogMock = vi.fn().mockResolvedValue(true);
+    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
+      form: {
+        register: vi.fn(() => ({})),
+        getValues: vi.fn(() => 1500),
+        setValue: vi.fn(),
+      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
+      isLoading: false,
+      submitStepLog: submitStepLogMock,
+    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+
+    render(<StepTracker />);
+    const customButton = screen.getByText("Custom");
+    fireEvent.click(customButton);
+
+    const customInput = screen.getByLabelText("Custom step count");
+    expect(customInput).toBeDefined();
+
+    const addButton = screen.getByText("Add");
+    fireEvent.click(addButton);
+
+    expect(submitStepLogMock).toHaveBeenCalled();
+  });
 });
 
 describe("step count aggregation", () => {
