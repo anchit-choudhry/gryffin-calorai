@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { useAppState } from "@/state/AppState.ts";
+import { useAppState } from "@/state/AppState";
 import { computeMacroTargets } from "@/lib/tdee";
 import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils.ts";
+import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils";
 import { motionTokens } from "@/lib/motionVariants";
 import { useFastingTimer } from "@/hooks/useFastingTimer";
 

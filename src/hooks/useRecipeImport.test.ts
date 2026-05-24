@@ -287,6 +287,68 @@ describe("useRecipeImport", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("importFromUrl rejects non-URL strings without fetching", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useRecipeImport(foods));
+    act(() => result.current.setUrl("not a url at all"));
+    await act(async () => result.current.importFromUrl());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toBeTruthy();
+  });
+
+  it("importFromUrl rejects javascript: protocol", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useRecipeImport(foods));
+    act(() => result.current.setUrl("javascript:alert(1)"));
+    await act(async () => result.current.importFromUrl());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toMatch(/http/i);
+  });
+
+  it("importFromUrl rejects data: protocol", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useRecipeImport(foods));
+    act(() => result.current.setUrl("data:text/html,<h1>hi</h1>"));
+    await act(async () => result.current.importFromUrl());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toMatch(/http/i);
+  });
+
+  it("importFromUrl rejects URLs with embedded credentials", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useRecipeImport(foods));
+    act(() => result.current.setUrl("https://user:pass@example.com/recipe"));
+    await act(async () => result.current.importFromUrl());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toMatch(/credential/i);
+  });
+
+  it.each([
+    "https://localhost/secret",
+    "https://127.0.0.1/admin",
+    "http://10.0.0.1/internal",
+    "http://192.168.1.1/router",
+    "http://172.16.0.1/private",
+    "http://169.254.169.254/latest/meta-data",
+  ])("importFromUrl rejects blocked host %s without fetching", async (blockedUrl) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    const { result } = renderHook(() => useRecipeImport(foods));
+    act(() => result.current.setUrl(blockedUrl));
+    await act(async () => result.current.importFromUrl());
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.error).toBeTruthy();
+  });
+
   it("importFromUrl sets isLoading to false after completion", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,

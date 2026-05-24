@@ -187,6 +187,96 @@ describe("useDataImport", () => {
     expect(mockClick).toHaveBeenCalled();
   });
 
+  it("shows error toast when file exceeds 50 MB", async () => {
+    const { result } = renderHook(() => useDataImport());
+
+    const file = makeFile(JSON.stringify(validPayload));
+    Object.defineProperty(file, "size", { value: 51 * 1024 * 1024, configurable: true });
+    const event = {
+      target: { files: [file], value: "" },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      await result.current.handleFileChange(event);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith("Backup file exceeds the 50 MB size limit.");
+    expect(result.current.pendingPayload).toBeNull();
+  });
+
+  it("shows error toast when a food item has out-of-range calories", async () => {
+    const { result } = renderHook(() => useDataImport());
+
+    const badPayload = {
+      ...validPayload,
+      tables: {
+        ...validPayload.tables,
+        foodItems: [
+          {
+            name: "Test",
+            calories: 99999,
+            servingSize: 1,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+            dateLogged: "2026-01-01",
+            isFavorite: false,
+            mealType: "Breakfast",
+          },
+        ],
+      },
+    };
+    const file = makeFile(JSON.stringify(badPayload));
+    const event = {
+      target: { files: [file], value: "" },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      await result.current.handleFileChange(event);
+    });
+
+    expect(toast.error).toHaveBeenCalled();
+    expect(result.current.pendingPayload).toBeNull();
+  });
+
+  it("strips extra fields from food items so they do not appear in pendingPayload", async () => {
+    const { result } = renderHook(() => useDataImport());
+
+    const payloadWithExtras = {
+      ...validPayload,
+      tables: {
+        ...validPayload.tables,
+        foodItems: [
+          {
+            name: "Banana",
+            calories: 100,
+            servingSize: 1,
+            protein: 1,
+            carbs: 24,
+            fat: 0,
+            dateLogged: "2026-05-20",
+            isFavorite: false,
+            mealType: "Breakfast",
+            __proto__: {},
+            injectedField: "MALICIOUS",
+          },
+        ],
+      },
+    };
+    const file = makeFile(JSON.stringify(payloadWithExtras));
+    const event = {
+      target: { files: [file], value: "" },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      await result.current.handleFileChange(event);
+    });
+
+    expect(result.current.pendingPayload).not.toBeNull();
+    const item = result.current.pendingPayload!.tables.foodItems[0]!;
+    expect(item).not.toHaveProperty("injectedField");
+  });
+
   it("no file does nothing", async () => {
     const { result } = renderHook(() => useDataImport());
 

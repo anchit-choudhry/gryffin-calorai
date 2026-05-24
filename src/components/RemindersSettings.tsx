@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { useAppState } from "@/state/AppState";
-import { REMINDER_LABELS, REMINDER_TYPES } from "@/types";
 import type { ReminderType } from "@/types";
+import { REMINDER_LABELS, REMINDER_TYPES } from "@/types";
 import type { Reminder } from "@/db/dbService";
 import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

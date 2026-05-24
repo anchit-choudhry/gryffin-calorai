@@ -40,6 +40,12 @@ import EditorialChartCard from "../components/charts/EditorialChartCard";
 import ProgressHero from "../components/progress/ProgressHero";
 import ProjectedWeightCard from "../components/progress/ProjectedWeightCard";
 
+const AXIS_TICK_STYLE = {
+  fill: "var(--ink-soft)",
+  fontSize: chartTheme.axisFontSize,
+  fontFamily: chartTheme.axisFontFamily,
+} as const;
+
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
   const [displayUnit, setDisplayUnit] = useState<"cm" | "in">("cm");
@@ -144,16 +150,17 @@ const Progress = () => {
     };
   }, [data, macroData, calorieGoal]);
 
-  const axisTickStyle = {
-    fill: "var(--ink-soft)",
-    fontSize: chartTheme.axisFontSize,
-    fontFamily: chartTheme.axisFontFamily,
-  };
-
-  const motionProps = shouldReduceMotion
-    ? {}
-    : { variants: pageVariants, initial: "hidden", animate: "show" };
+  const motionProps = useMemo(
+    () =>
+      shouldReduceMotion ? {} : { variants: pageVariants, initial: "hidden", animate: "show" },
+    [shouldReduceMotion],
+  );
   const sv = useSectionMotion();
+
+  const unlockedMap = useMemo(
+    () => new Map(unlockedAchievements.map((ua) => [ua.achievementId, ua])),
+    [unlockedAchievements],
+  );
 
   const activityChartData = useMemo(() => {
     return labels.map((label, i) => {
@@ -252,8 +259,8 @@ const Progress = () => {
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                    <XAxis dataKey="label" tick={axisTickStyle} />
-                    <YAxis tick={axisTickStyle} />
+                    <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                    <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend content={<ChartLegend />} />
                     <ReferenceLine
@@ -274,8 +281,8 @@ const Progress = () => {
                 ) : (
                   <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                    <XAxis dataKey="label" tick={axisTickStyle} />
-                    <YAxis tick={axisTickStyle} />
+                    <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                    <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend content={<ChartLegend />} />
                     <ReferenceLine
@@ -360,9 +367,9 @@ const Progress = () => {
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                    <XAxis dataKey="label" tick={axisTickStyle} />
+                    <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                     <YAxis
-                      tick={axisTickStyle}
+                      tick={AXIS_TICK_STYLE}
                       label={{
                         value: "(g)",
                         angle: -90,
@@ -449,9 +456,9 @@ const Progress = () => {
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                  <XAxis dataKey="label" tick={axisTickStyle} />
+                  <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                   <YAxis
-                    tick={axisTickStyle}
+                    tick={AXIS_TICK_STYLE}
                     label={{
                       value: "(ml)",
                       angle: -90,
@@ -539,8 +546,8 @@ const Progress = () => {
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                    <XAxis dataKey="label" tick={axisTickStyle} />
-                    <YAxis tick={axisTickStyle} />
+                    <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                    <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
                     <Legend content={<ChartLegend />} />
                     {bodyChartData.some((d) => d.bodyFat !== undefined) && (
@@ -663,8 +670,8 @@ const Progress = () => {
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                  <XAxis dataKey="label" tick={axisTickStyle} />
-                  <YAxis tick={axisTickStyle} />
+                  <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                  <YAxis tick={AXIS_TICK_STYLE} />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend content={<ChartLegend />} />
                   <Bar dataKey="burned" name="Burned" fill={chartTheme.chart3} opacity={0.8} />
@@ -704,8 +711,8 @@ const Progress = () => {
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
-                  <XAxis dataKey="label" tick={axisTickStyle} />
-                  <YAxis tick={axisTickStyle} />
+                  <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                  <YAxis tick={AXIS_TICK_STYLE} />
                   <Tooltip content={<ChartTooltip />} />
                   <Bar
                     dataKey="totalHours"
@@ -728,12 +735,8 @@ const Progress = () => {
           <SectionHeader className="col-span-12" title="Achievements" accent />
           <div className="col-span-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {ACHIEVEMENTS.map((achievement) => {
-              const isUnlocked = unlockedAchievements.some(
-                (ua) => ua.achievementId === achievement.id,
-              );
-              const unlockedEntry = unlockedAchievements.find(
-                (ua) => ua.achievementId === achievement.id,
-              );
+              const isUnlocked = unlockedMap.has(achievement.id);
+              const unlockedEntry = unlockedMap.get(achievement.id);
 
               return (
                 <motion.div

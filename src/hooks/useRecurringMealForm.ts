@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { RecurringMealSchema, type RecurringMealFormValues } from "@/forms/schemas";
+import { type RecurringMealFormValues, RecurringMealSchema } from "@/forms/schemas";
 import { useAppState } from "@/state/AppState";
 import { DAY_NAMES } from "@/types";
 

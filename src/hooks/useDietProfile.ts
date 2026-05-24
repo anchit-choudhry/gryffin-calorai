@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DietProfileSchema, type DietProfileFormValues } from "@/forms/schemas";
+import { type DietProfileFormValues, DietProfileSchema } from "@/forms/schemas";
 import { useAppState } from "@/state/AppState";
 import type { DietPreset, RestrictionFlag } from "@/types";
 

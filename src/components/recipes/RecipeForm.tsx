@@ -75,6 +75,9 @@ const RecipeForm: FC<Props> = ({ initialRecipe, onSuccess }) => {
             Imported: &ldquo;{importedRecipe.name}&rdquo; - review and save below.
           </p>
         )}
+        <p className="text-[10px] font-mono text-ink-soft/50">
+          Recipe URLs are fetched via corsproxy.io, a third-party service.
+        </p>
       </div>
 
       <Form {...form}>

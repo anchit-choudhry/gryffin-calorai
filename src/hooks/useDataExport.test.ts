@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { useDataExport } from "./useDataExport";
+import { toCSV, useDataExport } from "./useDataExport";
 import * as appState from "../state/AppState";
 
 vi.mock("../state/AppState");
@@ -104,6 +104,31 @@ describe("useDataExport", () => {
 
     expect(exportingDuringCall).toBe(true);
     expect(result.current.isExporting).toBe(false);
+  });
+
+  it("toCSV returns empty string for empty array", () => {
+    expect(toCSV([])).toBe("");
+  });
+
+  it("toCSV produces correct header and value rows", () => {
+    const csv = toCSV([{ name: "Apple", calories: 95 }]);
+    expect(csv).toBe("name,calories\nApple,95");
+  });
+
+  it("toCSV neutralizes formula-injection characters with a quoted tab prefix", () => {
+    const rows = [{ a: "=NOW()" }, { a: "+cmd" }, { a: "-cmd" }, { a: "@SUM" }];
+    const lines = toCSV(rows).split("\n");
+    // Values are always double-quoted when tab-prefixed so spreadsheets cannot evaluate them.
+    expect(lines[1]).toBe('"\t=NOW()"');
+    expect(lines[2]).toBe('"\t+cmd"');
+    expect(lines[3]).toBe('"\t-cmd"');
+    expect(lines[4]).toBe('"\t@SUM"');
+  });
+
+  it("toCSV wraps values containing commas or quotes in double quotes", () => {
+    const csv = toCSV([{ a: 'say "hello"', b: "a,b" }]);
+    const [, dataLine] = csv.split("\n");
+    expect(dataLine).toBe('"say ""hello""","a,b"');
   });
 
   it("does nothing when exportData returns null", async () => {

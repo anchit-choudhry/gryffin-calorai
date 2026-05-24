@@ -13,40 +13,29 @@ export const BodyMeasurementId = (id: number): BodyMeasurementId => id as BodyMe
 export const UserAchievementId = (id: number): UserAchievementId => id as UserAchievementId;
 export const StepLogId = (id: number): StepLogId => id as StepLogId;
 
-export function isWaterLogId(value: unknown): value is WaterLogId {
+function isPositiveIntegerId(value: unknown): boolean {
   return (
     typeof value === "number" &&
     Number.isInteger(value) &&
     value > 0 &&
     value <= Number.MAX_SAFE_INTEGER
   );
+}
+
+export function isWaterLogId(value: unknown): value is WaterLogId {
+  return isPositiveIntegerId(value);
 }
 
 export function isBodyMeasurementId(value: unknown): value is BodyMeasurementId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isUserAchievementId(value: unknown): value is UserAchievementId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isStepLogId(value: unknown): value is StepLogId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export type ActivityLogId = Brand<number, "ActivityLogId">;
@@ -62,48 +51,23 @@ export const RecurringMealId = (id: number): RecurringMealId => id as RecurringM
 export const ReminderId = (id: number): ReminderId => id as ReminderId;
 
 export function isActivityLogId(value: unknown): value is ActivityLogId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isFastingSessionId(value: unknown): value is FastingSessionId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isDietProfileId(value: unknown): value is DietProfileId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isRecurringMealId(value: unknown): value is RecurringMealId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 export function isReminderId(value: unknown): value is ReminderId {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value > 0 &&
-    value <= Number.MAX_SAFE_INTEGER
-  );
+  return isPositiveIntegerId(value);
 }
 
 // --- Feature 17: Reminders ---

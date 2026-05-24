@@ -1,10 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { useAppState } from "@/state/AppState";
 import RemindersSettings from "./RemindersSettings";
-import { REMINDER_LABELS } from "@/types";
+import { REMINDER_LABELS, ReminderId, UserId } from "@/types";
 import type { Reminder } from "@/db/dbService";
-import { ReminderId, UserId } from "@/types";
 
 vi.mock("@/state/AppState");
 

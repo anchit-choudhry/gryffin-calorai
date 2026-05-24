@@ -4,6 +4,7 @@ import {
   checkFoodNameRestrictions,
   computeStreaks,
   fuzzyMatchFoodName,
+  getTodayDayIndex,
   isBodyMeasurementId,
   isDietProfileId,
   isFoodItemId,
@@ -16,7 +17,6 @@ import {
   isUserId,
   isWaterLogId,
   isWeightUnit,
-  getTodayDayIndex,
   sanitizeBarcodeInput,
   sanitizeVoiceTranscript,
 } from "./index";

@@ -1,22 +1,22 @@
-import { useState, useCallback, useEffect } from "react";
 import type { FC } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { Trash2, Plus, Clock, RepeatIcon } from "lucide-react";
+import { Clock, Plus, RepeatIcon, Trash2 } from "lucide-react";
 import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAppState } from "@/state/AppState";
-import { useRecurringMealForm, DAY_NAMES } from "@/hooks/useRecurringMealForm";
-import { EDITORIAL_INPUT_CLS, cn } from "@/lib/utils";
+import { DAY_NAMES, useRecurringMealForm } from "@/hooks/useRecurringMealForm";
+import { cn, EDITORIAL_INPUT_CLS } from "@/lib/utils";
 import { MEAL_TYPES } from "@/types";
 import type { RecurringMeal } from "@/db/dbService";
 import { motionTokens } from "@/lib/motionVariants";
@@ -36,23 +36,28 @@ const RecurringMeals: FC = () => {
   // Prompt on mount if recurring meals exist for today
   useEffect(() => {
     checkAndPromptRecurringMeals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [checkAndPromptRecurringMeals]);
 
-  const handleDelete = async (meal: RecurringMeal) => {
-    if (!meal.id) return;
-    await deleteRecurringMeal(meal.id);
-    toast("Recurring meal removed", { description: meal.name });
-  };
+  const handleDelete = useCallback(
+    async (meal: RecurringMeal) => {
+      if (!meal.id) return;
+      await deleteRecurringMeal(meal.id);
+      toast("Recurring meal removed", { description: meal.name });
+    },
+    [deleteRecurringMeal],
+  );
 
-  const dayMaskValue = form.watch("dayMask") as number;
+  const dayMaskValue = form.watch("dayMask");
 
-  const toggleDay = (index: number) => {
-    const bit = 1 << index;
-    form.setValue("dayMask", (dayMaskValue ?? 0) ^ bit, { shouldDirty: true });
-  };
+  const toggleDay = useCallback(
+    (index: number) => {
+      const bit = 1 << index;
+      form.setValue("dayMask", (dayMaskValue ?? 0) ^ bit, { shouldDirty: true });
+    },
+    [form, dayMaskValue],
+  );
 
-  const addFoodFromRecent = () => {
+  const addFoodFromRecent = useCallback(() => {
     const recent = allFoodItems[0];
     if (!recent) return;
     const current = form.getValues("foods") ?? [];
@@ -68,7 +73,7 @@ const RecurringMeals: FC = () => {
         mealType: form.getValues("mealType"),
       },
     ]);
-  };
+  }, [allFoodItems, form]);
 
   if (!userId) return null;
 

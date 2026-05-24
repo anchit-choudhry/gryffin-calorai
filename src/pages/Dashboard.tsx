@@ -42,6 +42,8 @@ const Dashboard = () => {
 
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
+  const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
+  const closeOnboarding = useCallback(() => setOnboardingOpen(false), []);
 
   const handleDeleteWithUndo = useCallback(
     async (id: Parameters<typeof deleteFoodLog>[0]) => {
@@ -80,6 +82,25 @@ const Dashboard = () => {
   const closeEditLog = useCallback(() => setEditingLog(null), []);
   const closeBarcodeFood = useCallback(() => setBarcodeFood(null), []);
   const closeVoiceFood = useCallback(() => setVoiceFood(null), []);
+
+  const handleQuickAdd = useCallback(
+    async (item: FoodItem) => {
+      if (!userId) return;
+      await addFoodLog({
+        userId,
+        name: item.name,
+        calories: item.calories,
+        servingSize: item.servingSize,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        dateLogged: todayISO(),
+        isFavorite: false,
+        mealType: item.mealType,
+      });
+    },
+    [userId, addFoodLog],
+  );
 
   const sv = useSectionMotion();
   const hasFavorites = favoriteFoods.length > 0;
@@ -133,7 +154,7 @@ const Dashboard = () => {
         </DialogContent>
       </Dialog>
 
-      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      <OnboardingModal open={onboardingOpen} onClose={closeOnboarding} />
 
       <motion.main
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
@@ -144,7 +165,7 @@ const Dashboard = () => {
         {/* Onboarding banner */}
         {showBanner && (
           <AnimatePresence>
-            <OnboardingBanner onOpenModal={() => setOnboardingOpen(true)} />
+            <OnboardingBanner onOpenModal={openOnboarding} />
           </AnimatePresence>
         )}
 
@@ -201,22 +222,7 @@ const Dashboard = () => {
               {recentFoods.map((item) => (
                 <button
                   key={item.id ?? item.name}
-                  onClick={async () => {
-                    if (userId) {
-                      await addFoodLog({
-                        userId,
-                        name: item.name,
-                        calories: item.calories,
-                        servingSize: item.servingSize,
-                        protein: item.protein,
-                        carbs: item.carbs,
-                        fat: item.fat,
-                        dateLogged: todayISO(),
-                        isFavorite: false,
-                        mealType: item.mealType,
-                      });
-                    }
-                  }}
+                  onClick={() => void handleQuickAdd(item)}
                   className="shrink-0 border border-rule px-4 py-2 text-sm text-ink-soft hover:bg-paper-muted hover:text-ink hover:border-ink transition-colors snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 >
                   {item.name} · {item.calories} kcal
@@ -234,22 +240,7 @@ const Dashboard = () => {
               {favoriteFoods.map((fav) => (
                 <button
                   key={fav.id}
-                  onClick={async () => {
-                    if (userId) {
-                      await addFoodLog({
-                        userId,
-                        name: fav.name,
-                        calories: fav.calories,
-                        servingSize: fav.servingSize,
-                        protein: fav.protein,
-                        carbs: fav.carbs,
-                        fat: fav.fat,
-                        dateLogged: todayISO(),
-                        isFavorite: false,
-                        mealType: fav.mealType,
-                      });
-                    }
-                  }}
+                  onClick={() => void handleQuickAdd(fav)}
                   className="shrink-0 border-b-2 border-ink px-4 py-2 text-sm text-ink hover:bg-ink hover:text-paper transition-colors snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                 >
                   {fav.name} · {fav.calories} kcal

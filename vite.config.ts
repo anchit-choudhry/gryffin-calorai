@@ -15,7 +15,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   // frame-ancestors is intentionally omitted from the <meta> CSP in index.html because
   // browsers ignore it there (W3C spec). It is enforced only via this HTTP header.
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://corsproxy.io; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
   "X-Frame-Options": "DENY",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { FoodItem } from "../db/dbService";
 import { fuzzyMatchFoodName } from "@/types";
 
@@ -28,6 +28,24 @@ type UseRecipeImportReturn = {
 };
 
 const CORS_PROXY = "https://corsproxy.io/?url=";
+
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (h === "localhost") return true;
+  if (h === "[::1]" || h === "::1") return true;
+  const parts = h.split(".");
+  if (parts.length === 4) {
+    const a = Number(parts[0]);
+    const b = Number(parts[1]);
+    if (a === 127) return true;
+    if (a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 0) return true;
+  }
+  return false;
+}
 
 function findRecipeNode(parsed: unknown): Record<string, unknown> | null {
   if (typeof parsed !== "object" || parsed === null) return null;
@@ -98,15 +116,35 @@ export function useRecipeImport(foodItems: readonly FoodItem[]): UseRecipeImport
   const [error, setError] = useState<string | null>(null);
   const [importedRecipe, setImportedRecipe] = useState<ParsedRecipe | null>(null);
 
-  const importFromUrl = async () => {
+  const importFromUrl = useCallback(async () => {
     if (!url.trim()) return;
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url.trim());
+    } catch {
+      setError("Enter a valid URL (e.g. https://example.com/recipe).");
+      return;
+    }
+    if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+      setError("Only http:// and https:// URLs are supported.");
+      return;
+    }
+    if (parsedUrl.username || parsedUrl.password) {
+      setError("URLs with embedded credentials are not supported.");
+      return;
+    }
+    if (isBlockedHost(parsedUrl.hostname)) {
+      setError("Only publicly accessible URLs are supported.");
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
     setImportedRecipe(null);
 
     try {
-      const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+      const proxyUrl = `${CORS_PROXY}${encodeURIComponent(parsedUrl.href)}`;
       const response = await fetch(proxyUrl);
 
       if (!response.ok) {
@@ -115,26 +153,26 @@ export function useRecipeImport(foodItems: readonly FoodItem[]): UseRecipeImport
       }
 
       const html = await response.text();
-      const parsed = parseRecipeFromHtml(html, foodItems);
+      const result = parseRecipeFromHtml(html, foodItems);
 
-      if (!parsed) {
+      if (!result) {
         setError("No recipe data found on this page. Make sure the URL points to a recipe page.");
         return;
       }
 
-      setImportedRecipe(parsed);
+      setImportedRecipe(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import recipe");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [url, foodItems]);
 
-  const clearImport = () => {
+  const clearImport = useCallback(() => {
     setUrl("");
     setError(null);
     setImportedRecipe(null);
-  };
+  }, []);
 
   return { url, setUrl, isLoading, error, importedRecipe, importFromUrl, clearImport };
 }

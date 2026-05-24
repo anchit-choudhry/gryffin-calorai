@@ -7,22 +7,29 @@ function todayStr() {
   return new Date().toISOString().split("T")[0]!;
 }
 
-function toCSV(rows: Record<string, unknown>[]): string {
+export function toCSV(rows: unknown[]): string {
   if (rows.length === 0) return "";
-  const headers = Object.keys(rows[0]!);
+  const first = rows[0] as Record<string, unknown>;
+  const headers = Object.keys(first);
   const lines = [
     headers.join(","),
-    ...rows.map((row) =>
-      headers
+    ...rows.map((row) => {
+      const record = row as Record<string, unknown>;
+      return headers
         .map((h) => {
-          const val = row[h];
+          const val = record[h];
           const s = val === null || val === undefined ? "" : String(val);
-          return s.includes(",") || s.includes('"') || s.includes("\n")
-            ? `"${s.replace(/"/g, '""')}"`
-            : s;
+          // Neutralize spreadsheet formula injection: prefix with tab and always quote so
+          // Excel/Calc/Sheets cannot evaluate the value as a formula regardless of whitespace
+          // stripping behavior.
+          const injected = /^[=+\-@\t\r]/.test(s);
+          const safe = injected ? `\t${s}` : s;
+          return injected || safe.includes(",") || safe.includes('"') || safe.includes("\n")
+            ? `"${safe.replace(/"/g, '""')}"`
+            : safe;
         })
-        .join(","),
-    ),
+        .join(",");
+    }),
   ];
   return lines.join("\n");
 }
@@ -56,16 +63,12 @@ export function useDataExport() {
       if (!payload) return;
       const t = payload.tables;
       const files: Record<string, Uint8Array> = {
-        "foodItems.csv": strToU8(toCSV(t.foodItems as unknown as Record<string, unknown>[])),
-        "waterLogs.csv": strToU8(toCSV(t.waterLogs as unknown as Record<string, unknown>[])),
-        "stepLogs.csv": strToU8(toCSV(t.stepLogs as unknown as Record<string, unknown>[])),
-        "bodyMeasurements.csv": strToU8(
-          toCSV(t.bodyMeasurements as unknown as Record<string, unknown>[]),
-        ),
-        "activityLogs.csv": strToU8(toCSV(t.activityLogs as unknown as Record<string, unknown>[])),
-        "fastingSessions.csv": strToU8(
-          toCSV(t.fastingSessions as unknown as Record<string, unknown>[]),
-        ),
+        "foodItems.csv": strToU8(toCSV(t.foodItems)),
+        "waterLogs.csv": strToU8(toCSV(t.waterLogs)),
+        "stepLogs.csv": strToU8(toCSV(t.stepLogs)),
+        "bodyMeasurements.csv": strToU8(toCSV(t.bodyMeasurements)),
+        "activityLogs.csv": strToU8(toCSV(t.activityLogs)),
+        "fastingSessions.csv": strToU8(toCSV(t.fastingSessions)),
       };
       const zipped = zipSync(files);
       const blob = new Blob([new Uint8Array(zipped)], { type: "application/zip" });

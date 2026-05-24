@@ -3,8 +3,8 @@ import { useEffect } from "react";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { DIET_PRESETS, RESTRICTION_FLAGS } from "@/types";
 import type { DietPreset, RestrictionFlag } from "@/types";
+import { DIET_PRESETS, RESTRICTION_FLAGS } from "@/types";
 import { useDietProfile } from "@/hooks/useDietProfile";
 import { useAppState } from "@/state/AppState";
 

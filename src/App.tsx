@@ -1,5 +1,14 @@
 // src/App.tsx
-import { lazy, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   BookOpen,
   LayoutDashboard,
@@ -54,7 +63,7 @@ function App() {
     }
   }, [darkMode]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const setupApp = async () => {
       await initializeDB();
       await useAppState.getState().fetchInitialData(MOCK_USER_ID);
@@ -73,23 +82,15 @@ function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const toggleDarkMode = useMemo(
-    () => () => {
-      setDarkMode((prev: boolean) => {
-        const isDark = !prev;
-        if (isDark) {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-        localStorage.setItem("darkMode", JSON.stringify(isDark));
-        return isDark;
-      });
-    },
-    [],
-  );
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode((prev: boolean) => {
+      const isDark = !prev;
+      localStorage.setItem("darkMode", JSON.stringify(isDark));
+      return isDark;
+    });
+  }, []);
 
-  const renderPage = () => {
+  const page = useMemo(() => {
     switch (currentPath) {
       case "#recipes":
         return <Recipes />;
@@ -101,7 +102,7 @@ function App() {
       default:
         return <Dashboard />;
     }
-  };
+  }, [currentPath]);
 
   const kbHandlers = useMemo(
     () => ({
@@ -219,7 +220,7 @@ function App() {
 
         <main id="main" className="pb-[calc(4rem+var(--safe-bottom))] md:pb-0">
           <ErrorBoundary>
-            <Suspense fallback={<DashboardSkeleton />}>{renderPage()}</Suspense>
+            <Suspense fallback={<DashboardSkeleton />}>{page}</Suspense>
           </ErrorBoundary>
         </main>
 

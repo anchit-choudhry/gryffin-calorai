@@ -1,4 +1,4 @@
-import { AlertTriangle, Download, Upload } from "lucide-react";
+import { AlertTriangle, Download, Lock, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDataExport } from "../hooks/useDataExport";
 import { useDataImport } from "../hooks/useDataImport";
@@ -18,6 +18,15 @@ const DataExportPanel = () => {
 
   return (
     <div className="space-y-6">
+      {/* Data storage notice */}
+      <div className="flex gap-3 border border-rule p-4">
+        <Lock className="size-3 mt-0.5 shrink-0 text-ink-soft" />
+        <p className="font-sans text-xs text-ink-soft leading-relaxed">
+          All health data is stored locally in your browser without encryption. Do not use this app
+          on shared or public computers. Export and store your backup files securely.
+        </p>
+      </div>
+
       {/* Export */}
       <div>
         <h3 className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft mb-3">

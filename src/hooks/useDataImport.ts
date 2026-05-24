@@ -1,12 +1,14 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BackupSchema } from "../forms/schemas";
+import { BackupSchema, type ParsedBackup } from "../forms/schemas";
 import { useAppState } from "../state/AppState";
 import { BACKUP_VERSION, type BackupPayload } from "../db/dbService";
 
+const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
+
 export function useDataImport() {
   const [isImporting, setIsImporting] = useState(false);
-  const [pendingPayload, setPendingPayload] = useState<unknown>(null);
+  const [pendingPayload, setPendingPayload] = useState<ParsedBackup | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { importData } = useAppState();
 
@@ -18,6 +20,10 @@ export function useDataImport() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (file.size > MAX_BACKUP_BYTES) {
+      toast.error("Backup file exceeds the 50 MB size limit.");
+      return;
+    }
     try {
       const text = await file.text();
       const parsed: unknown = JSON.parse(text);
@@ -40,12 +46,10 @@ export function useDataImport() {
 
   const confirmImport = useCallback(async () => {
     if (!pendingPayload) return;
-    const result = BackupSchema.safeParse(pendingPayload);
-    if (!result.success) return;
     setIsImporting(true);
     setPendingPayload(null);
     try {
-      const importResult = await importData(result.data as unknown as BackupPayload);
+      const importResult = await importData(pendingPayload as unknown as BackupPayload);
       if (importResult) {
         const total = Object.values(importResult.imported).reduce((a, b) => a + b, 0);
         toast.success(

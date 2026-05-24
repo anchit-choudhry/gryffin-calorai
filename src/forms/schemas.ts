@@ -248,22 +248,105 @@ export const ReminderSchema = z.object({
 
 export type ReminderFormValues = z.infer<typeof ReminderSchema>;
 
-// Backup import schema (structural validation only; value ranges not re-checked)
+// Per-table backup row schemas - enforce critical value ranges on imported data
+
+const BackupFoodItemRowSchema = z.object({
+  name: z.string().max(100),
+  calories: z.number().min(0).max(10_000),
+  servingSize: z.number().min(0).max(100),
+  protein: z.number().min(0).max(500),
+  carbs: z.number().min(0).max(500),
+  fat: z.number().min(0).max(500),
+  dateLogged: z.string().max(10),
+  isFavorite: z.boolean(),
+  mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"]).optional(),
+});
+
+const BackupIngredientRowSchema = z.object({
+  foodItemId: z.number().min(1),
+  quantity: z.number().min(0).max(999),
+  serving: z.number().min(0).max(999),
+});
+
+const BackupRecipeRowSchema = z.object({
+  name: z.string().max(100),
+  description: z.string().max(500),
+  ingredients: z.array(BackupIngredientRowSchema).max(50),
+  totalCalories: z.number().min(0).max(100_000),
+  createdBy: z.number().int().min(1),
+  dateCreated: z.string().max(30),
+});
+
+const BackupWaterLogRowSchema = z.object({
+  amount: z.number().min(1).max(5_000),
+  dateLogged: z.string().max(10),
+  loggedAt: z.string().max(30),
+});
+
+const BackupBodyMeasurementRowSchema = z.object({
+  measuredAt: z.string().max(10),
+  weight: z.number().min(0).max(500).optional(),
+  bodyFat: z.number().min(0).max(100).optional(),
+  waist: z.number().min(0).max(500).optional(),
+  chest: z.number().min(0).max(500).optional(),
+  hips: z.number().min(0).max(500).optional(),
+});
+
+const BackupUserAchievementRowSchema = z.object({
+  achievementId: z.string().max(100),
+  unlockedAt: z.string().max(30),
+});
+
+const BackupStepLogRowSchema = z.object({
+  steps: z.number().min(0).max(100_000),
+  dateLogged: z.string().max(10),
+  loggedAt: z.string().max(30),
+});
+
+const BackupTdeeProfileRowSchema = z.object({
+  age: z.number().min(13).max(120),
+  sex: z.enum(["male", "female"]),
+  heightCm: z.number().min(50).max(300),
+  weightKg: z.number().min(10).max(500),
+  targetWeightKg: z.number().min(0).max(500).optional(),
+  activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
+  goal: z.enum(["lose", "maintain", "gain"]),
+  updatedAt: z.string().max(30),
+});
+
+const BackupActivityLogRowSchema = z.object({
+  activityType: z.string().max(100),
+  durationMin: z.number().min(1).max(1_440),
+  caloriesBurned: z.number().min(0).max(5_000),
+  dateLogged: z.string().max(10),
+  loggedAt: z.string().max(30),
+});
+
+const BackupFastingSessionRowSchema = z.object({
+  startTime: z.string().max(30),
+  endTime: z.string().max(30).nullable(),
+  targetHours: z.number().min(0).max(24),
+  dateLogged: z.string().max(10),
+  completed: z.boolean(),
+});
+
 export const BackupTableSchema = z.object({
-  foodItems: z.array(z.record(z.unknown())),
-  recipes: z.array(z.record(z.unknown())),
-  waterLogs: z.array(z.record(z.unknown())),
-  bodyMeasurements: z.array(z.record(z.unknown())),
-  userAchievements: z.array(z.record(z.unknown())),
-  stepLogs: z.array(z.record(z.unknown())),
-  tdeeProfile: z.record(z.unknown()).nullable(),
-  activityLogs: z.array(z.record(z.unknown())),
-  fastingSessions: z.array(z.record(z.unknown())),
+  foodItems: z.array(BackupFoodItemRowSchema).max(50_000),
+  recipes: z.array(BackupRecipeRowSchema).max(1_000),
+  waterLogs: z.array(BackupWaterLogRowSchema).max(50_000),
+  bodyMeasurements: z.array(BackupBodyMeasurementRowSchema).max(5_000),
+  userAchievements: z.array(BackupUserAchievementRowSchema).max(500),
+  stepLogs: z.array(BackupStepLogRowSchema).max(50_000),
+  tdeeProfile: BackupTdeeProfileRowSchema.nullable(),
+  activityLogs: z.array(BackupActivityLogRowSchema).max(50_000),
+  fastingSessions: z.array(BackupFastingSessionRowSchema).max(10_000),
 });
 
 export const BackupSchema = z.object({
   version: z.literal(1),
-  exportedAt: z.string(),
-  userId: z.string(),
+  exportedAt: z.string().max(40),
+  userId: z.string().min(1).max(128),
   tables: BackupTableSchema,
 });
+
+export type ParsedBackup = z.infer<typeof BackupSchema>;
