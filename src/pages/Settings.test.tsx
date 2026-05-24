@@ -4,6 +4,8 @@ import Settings from "./Settings";
 import * as appState from "../state/AppState";
 import { UserId } from "@/types";
 
+const mockUseReducedMotion = vi.hoisted(() => vi.fn(() => true));
+
 vi.mock("../state/AppState");
 vi.mock("motion/react", () => ({
   motion: {
@@ -17,7 +19,7 @@ vi.mock("motion/react", () => ({
       <header {...props}>{children}</header>
     ),
   },
-  useReducedMotion: () => true,
+  useReducedMotion: () => mockUseReducedMotion(),
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 vi.mock("../lib/motionVariants", () => ({
@@ -36,6 +38,12 @@ vi.mock("../components/DataExportPanel", () => ({
 vi.mock("../components/dashboard/SectionHeader", () => ({
   default: ({ title }: { title: string }) => <h2>{title}</h2>,
 }));
+vi.mock("../components/DietProfileEditor", () => ({
+  default: () => <div data-testid="diet-profile-editor">DietProfileEditor</div>,
+}));
+vi.mock("../components/RemindersSettings", () => ({
+  default: () => <div data-testid="reminders-settings">RemindersSettings</div>,
+}));
 
 const setupMocks = () => {
   vi.mocked(appState).useAppState.mockReturnValue({
@@ -51,15 +59,25 @@ const setupMocks = () => {
 };
 
 describe("Settings", () => {
-  it("renders Profile, Goals, Data, and About sections", async () => {
+  it("renders Profile, Diet, Goals, Reminders, Data, and About sections", async () => {
     setupMocks();
     await act(async () => {
       render(<Settings />);
     });
     expect(screen.getByText("Profile")).toBeTruthy();
+    expect(screen.getByText("Diet")).toBeTruthy();
     expect(screen.getByText("Goals")).toBeTruthy();
+    expect(screen.getByText("Reminders")).toBeTruthy();
     expect(screen.getByText("Data")).toBeTruthy();
     expect(screen.getByText("About")).toBeTruthy();
+  });
+
+  it("renders DietProfileEditor component", async () => {
+    setupMocks();
+    await act(async () => {
+      render(<Settings />);
+    });
+    expect(screen.getByTestId("diet-profile-editor")).toBeTruthy();
   });
 
   it("renders GoalSettings component", async () => {
@@ -94,5 +112,15 @@ describe("Settings", () => {
     const link = screen.getByRole("link", { name: /View on GitHub/i });
     expect(link).toBeTruthy();
     expect(link).toHaveProperty("target", "_blank");
+  });
+
+  it("renders with motion variants when reduced motion is disabled", async () => {
+    mockUseReducedMotion.mockReturnValue(false);
+    setupMocks();
+    await act(async () => {
+      render(<Settings />);
+    });
+    expect(screen.getByText("Settings")).toBeTruthy();
+    mockUseReducedMotion.mockReturnValue(true);
   });
 });

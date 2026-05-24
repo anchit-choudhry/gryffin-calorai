@@ -21,6 +21,7 @@ import DashboardHero from "../components/dashboard/DashboardHero";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import EditorialFrame from "../components/dashboard/EditorialFrame";
 import LogEntry from "../components/dashboard/LogEntry";
+import RecurringMeals from "../components/RecurringMeals";
 import { motionTokens, pageVariants, useSectionMotion } from "../lib/motionVariants";
 import { groupLogsByMeal } from "../lib/utils";
 
@@ -284,6 +285,11 @@ const Dashboard = () => {
               <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
             </EditorialFrame>
           </div>
+        </motion.section>
+
+        {/* Section F.5 — Recurring Meals */}
+        <motion.section className="col-span-12 lg:col-span-4" {...sv}>
+          <RecurringMeals />
         </motion.section>
 
         {/* Section G — Activity Logging */}

@@ -171,6 +171,22 @@ describe("useDataImport", () => {
     expect(mockImport).not.toHaveBeenCalled();
   });
 
+  it("openFilePicker calls click on the input ref when assigned", () => {
+    const { result } = renderHook(() => useDataImport());
+    const mockClick = vi.fn();
+    Object.defineProperty(result.current.fileInputRef, "current", {
+      value: { click: mockClick },
+      writable: true,
+      configurable: true,
+    });
+
+    act(() => {
+      result.current.openFilePicker();
+    });
+
+    expect(mockClick).toHaveBeenCalled();
+  });
+
   it("no file does nothing", async () => {
     const { result } = renderHook(() => useDataImport());
 

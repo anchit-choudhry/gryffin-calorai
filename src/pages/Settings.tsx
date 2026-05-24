@@ -4,10 +4,12 @@ import { pageVariants, useSectionMotion } from "../lib/motionVariants";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import GoalSettings from "../components/settings/GoalSettings";
 import DataExportPanel from "../components/DataExportPanel";
+import DietProfileEditor from "../components/DietProfileEditor";
+import RemindersSettings from "../components/RemindersSettings";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "0.4.0";
 
 const Settings = () => {
   const shouldReduceMotion = useReducedMotion();
@@ -25,7 +27,7 @@ const Settings = () => {
         <motion.header className="col-span-12 border-b border-rule pb-8" {...sv}>
           <h1 className="font-display text-4xl font-light text-ink">Settings</h1>
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft mt-2">
-            Profile · Goals · Data · About
+            Profile · Diet · Goals · Reminders · Data · About
           </p>
         </motion.header>
 
@@ -41,7 +43,15 @@ const Settings = () => {
           </div>
         </motion.section>
 
-        {/* Section 2 - Goals */}
+        {/* Section 2 - Diet */}
+        <motion.section className="col-span-12 lg:col-span-8" {...sv}>
+          <SectionHeader title="Diet" />
+          <div className="mt-6">
+            <DietProfileEditor />
+          </div>
+        </motion.section>
+
+        {/* Section 3 - Goals */}
         <motion.section className="col-span-12 lg:col-span-4" {...sv}>
           <SectionHeader title="Goals" />
           <div className="mt-6">
@@ -49,7 +59,15 @@ const Settings = () => {
           </div>
         </motion.section>
 
-        {/* Section 3 - Data */}
+        {/* Section - Reminders */}
+        <motion.section className="col-span-12 lg:col-span-8" {...sv}>
+          <SectionHeader title="Reminders" />
+          <div className="mt-6">
+            <RemindersSettings />
+          </div>
+        </motion.section>
+
+        {/* Section - Data */}
         <motion.section className="col-span-12 lg:col-span-8" {...sv}>
           <SectionHeader title="Data" />
           <div className="mt-6">

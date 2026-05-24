@@ -1,5 +1,5 @@
-import type { ActivityLevel, GoalType } from "@/types";
-import { ACTIVITY_LEVEL_FACTORS, GOAL_OFFSETS } from "@/types";
+import type { ActivityLevel, DietPreset, GoalType } from "@/types";
+import { ACTIVITY_LEVEL_FACTORS, DIET_PRESETS, GOAL_OFFSETS } from "@/types";
 
 export function mifflinStJeorBMR(
   sex: "male" | "female",
@@ -17,6 +17,18 @@ export function computeTDEE(bmr: number, activityLevel: ActivityLevel): number {
 
 export function computeCalorieGoal(tdee: number, goal: GoalType): number {
   return Math.max(1200, tdee + GOAL_OFFSETS[goal]);
+}
+
+export function computeMacroTargets(
+  calorieGoal: number,
+  preset: DietPreset,
+): { protein: number; carbs: number; fat: number } {
+  const { macros } = DIET_PRESETS[preset];
+  return {
+    protein: Math.round((calorieGoal * macros.protein) / 100 / 4),
+    carbs: Math.round((calorieGoal * macros.carbs) / 100 / 4),
+    fat: Math.round((calorieGoal * macros.fat) / 100 / 9),
+  };
 }
 
 // Returns null when target equals current or deficit is zero

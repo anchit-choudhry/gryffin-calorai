@@ -188,6 +188,66 @@ export const ActivitySchema = z.object({
 
 export type ActivityFormValues = z.infer<typeof ActivitySchema>;
 
+// Diet profile schema (feature 15)
+export const DietProfileSchema = z.object({
+  preset: z.enum([
+    "generic",
+    "keto",
+    "paleo",
+    "vegan",
+    "vegetarian",
+    "mediterranean",
+    "high_protein",
+    "low_sodium",
+    "low_carb",
+  ] as const),
+  restrictions: z.array(
+    z.enum(["gluten", "dairy", "nuts", "soy", "eggs", "shellfish", "alcohol", "pork"] as const),
+  ),
+});
+
+export type DietProfileFormValues = z.infer<typeof DietProfileSchema>;
+
+// Recurring meal schema (feature 7)
+export const RecurringMealSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(80, "Name must be 80 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]+$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation",
+    ),
+  dayMask: z.number().int().min(1, "Select at least one day").max(127, "Invalid day mask"),
+  mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"] as const),
+  scheduledTime: z.string().regex(/^\d{2}:\d{2}$/, "Enter a valid time (HH:MM)"),
+  foods: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        calories: z.number().min(0).max(10000),
+        servingSize: z.number().min(1).max(100),
+        protein: z.number().min(0).max(500),
+        carbs: z.number().min(0).max(500),
+        fat: z.number().min(0).max(500),
+        mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"] as const),
+      }),
+    )
+    .min(1, "Add at least one food item"),
+});
+
+export type RecurringMealFormValues = z.infer<typeof RecurringMealSchema>;
+
+// Reminder schema (feature 17)
+export const ReminderSchema = z.object({
+  type: z.enum(["log_meal", "drink_water", "weigh_in", "log_steps", "fasting_check"] as const),
+  time: z.string().regex(/^\d{2}:\d{2}$/, "Enter a valid time (HH:MM)"),
+  daysOfWeek: z.number().int().min(1, "Select at least one day").max(127, "Invalid day mask"),
+  enabled: z.boolean(),
+});
+
+export type ReminderFormValues = z.infer<typeof ReminderSchema>;
+
 // Backup import schema (structural validation only; value ranges not re-checked)
 export const BackupTableSchema = z.object({
   foodItems: z.array(z.record(z.unknown())),

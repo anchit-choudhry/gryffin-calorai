@@ -3,14 +3,18 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addBodyMeasurement,
   addFoodItemLog,
+  addRecurringMeal,
   addStepLog,
   addUserAchievement,
   addWaterLog,
+  BACKUP_VERSION,
   clearDatabase,
+  completeOnboarding,
   db,
   deleteBodyMeasurement,
   deleteFoodItem,
   deleteRecipe,
+  deleteRecurringMeal,
   deleteStepLog,
   deleteWaterLog,
   type FoodItem,
@@ -23,19 +27,25 @@ import {
   getDailyFoodLogs,
   getDailyStepLogs,
   getDailyWaterLogs,
+  getDietProfile,
   getFavoriteFoodItems,
   getFoodItemById,
   getOrCreateUser,
   getRecentFoodItems,
+  getRecurringMeals,
   getUnlockedAchievementIds,
   getUnlockedAchievements,
+  importBackup,
   initializeDB,
   type Recipe,
+  type RecurringMeal,
+  saveDietProfile,
   saveRecipe,
   toggleFavoriteFoodItem,
   updateBodyMeasurement,
   updateFoodItem,
   updateRecipe,
+  updateRecurringMeal,
   updateUserProfile,
 } from "./dbService";
 import {
@@ -43,6 +53,7 @@ import {
   FoodItemId as makeFoodItemId,
   ISODate,
   RecipeId,
+  RecurringMealId,
   StepLogId,
   todayISO,
   UserId,
@@ -1242,6 +1253,224 @@ describe("dbService", () => {
       await clearDatabase();
       const count = await db.table("foodItems").count();
       expect(count).toBe(0);
+    });
+  });
+
+  describe("DietProfile CRUD", () => {
+    const userId = UserId("diet-user");
+
+    it("getDietProfile returns null when no profile exists", async () => {
+      const result = await getDietProfile(userId);
+      expect(result).toBeNull();
+    });
+
+    it("saveDietProfile creates a new profile", async () => {
+      await saveDietProfile({
+        userId,
+        preset: "keto",
+        restrictions: ["gluten"],
+        updatedAt: new Date().toISOString(),
+      });
+
+      const profile = await getDietProfile(userId);
+      expect(profile?.preset).toBe("keto");
+      expect(profile?.restrictions).toStrictEqual(["gluten"]);
+    });
+
+    it("saveDietProfile upserts existing profile", async () => {
+      await saveDietProfile({
+        userId,
+        preset: "vegan",
+        restrictions: [],
+        updatedAt: new Date().toISOString(),
+      });
+
+      const profile = await getDietProfile(userId);
+      expect(profile?.preset).toBe("vegan");
+
+      // Upsert with new preset
+      await saveDietProfile({
+        userId,
+        preset: "paleo",
+        restrictions: ["nuts"],
+        updatedAt: new Date().toISOString(),
+      });
+
+      const updated = await getDietProfile(userId);
+      expect(updated?.preset).toBe("paleo");
+      expect(updated?.restrictions).toStrictEqual(["nuts"]);
+    });
+  });
+
+  describe("RecurringMeal CRUD", () => {
+    const userId = UserId("recurring-user");
+
+    const makeMeal = (name: string): Omit<RecurringMeal, "id"> => ({
+      userId,
+      name,
+      dayMask: 0b1111111,
+      mealType: "Breakfast",
+      scheduledTime: "08:00",
+      foods: [
+        {
+          name: "Oats",
+          calories: 150,
+          servingSize: 40,
+          protein: 5,
+          carbs: 27,
+          fat: 3,
+          mealType: "Breakfast",
+        },
+      ],
+    });
+
+    it("addRecurringMeal returns a RecurringMealId", async () => {
+      const id = await addRecurringMeal(makeMeal("Morning Oats") as RecurringMeal);
+      expect(typeof id).toBe("number");
+      expect(id).toBeGreaterThan(0);
+    });
+
+    it("getRecurringMeals returns meals for the user", async () => {
+      await addRecurringMeal(makeMeal("Evening Bowl") as RecurringMeal);
+      const meals = await getRecurringMeals(userId);
+      expect(meals.length).toBeGreaterThanOrEqual(1);
+      expect(meals.every((m) => m.userId === userId)).toBe(true);
+    });
+
+    it("deleteRecurringMeal removes the meal", async () => {
+      const id = await addRecurringMeal(makeMeal("Temp Meal") as RecurringMeal);
+      const before = await getRecurringMeals(userId);
+      const countBefore = before.length;
+
+      await deleteRecurringMeal(RecurringMealId(id), userId);
+      const after = await getRecurringMeals(userId);
+      expect(after).toHaveLength(countBefore - 1);
+    });
+
+    it("deleteRecurringMeal does not delete meal belonging to another user", async () => {
+      const otherId = UserId("other-recurring-user");
+      const id = await addRecurringMeal(makeMeal("My Meal") as RecurringMeal);
+
+      const before = await getRecurringMeals(userId);
+      await deleteRecurringMeal(RecurringMealId(id), otherId);
+      const after = await getRecurringMeals(userId);
+
+      // Meal still there because userId didn't match
+      expect(after).toHaveLength(before.length);
+    });
+
+    it("deleteRecurringMeal does not throw when meal does not exist", async () => {
+      const nonExistentId = RecurringMealId(999999);
+      await expect(deleteRecurringMeal(nonExistentId, userId)).resolves.not.toThrow();
+    });
+
+    it("updateRecurringMeal throws when meal has no id", async () => {
+      const mealWithoutId = makeMeal("No ID Meal") as RecurringMeal;
+      await expect(updateRecurringMeal(mealWithoutId, userId)).rejects.toThrow(
+        "RecurringMeal id required for update",
+      );
+    });
+
+    it("updateRecurringMeal returns silently when meal does not exist", async () => {
+      const mealWithFakeId: RecurringMeal = {
+        ...(makeMeal("Ghost Meal") as RecurringMeal),
+        id: RecurringMealId(999999),
+      };
+      await expect(updateRecurringMeal(mealWithFakeId, userId)).resolves.not.toThrow();
+    });
+
+    it("updateRecurringMeal returns silently when meal belongs to another user", async () => {
+      const otherId = UserId("update-other-user");
+      const id = await addRecurringMeal(makeMeal("Other User Meal") as RecurringMeal);
+      const mealWithId: RecurringMeal = {
+        ...(makeMeal("Other User Meal") as RecurringMeal),
+        id: RecurringMealId(id),
+      };
+      await expect(updateRecurringMeal(mealWithId, otherId)).resolves.not.toThrow();
+    });
+
+    it("updateRecurringMeal updates the meal successfully", async () => {
+      const id = await addRecurringMeal(makeMeal("Original Name") as RecurringMeal);
+      const updated: RecurringMeal = {
+        ...(makeMeal("Updated Name") as RecurringMeal),
+        id: RecurringMealId(id),
+      };
+      await updateRecurringMeal(updated, userId);
+      const meals = await getRecurringMeals(userId);
+      expect(meals.some((m) => m.name === "Updated Name")).toBe(true);
+    });
+  });
+
+  describe("completeOnboarding", () => {
+    it("does not throw when user does not exist", async () => {
+      const nonExistentUserId = UserId("onboarding-missing");
+      await expect(completeOnboarding(nonExistentUserId)).resolves.not.toThrow();
+    });
+
+    it("sets hasCompletedOnboarding to true for existing user", async () => {
+      const userId = UserId("onboarding-happy");
+      await getOrCreateUser(userId, "TestUser", "test@example.com");
+      await completeOnboarding(userId);
+      const user = await getOrCreateUser(userId, "TestUser", "test@example.com");
+      expect(user.hasCompletedOnboarding).toBe(true);
+    });
+  });
+
+  describe("importBackup", () => {
+    it("imports data including tdeeProfile", async () => {
+      const userId = UserId("import-user-1");
+      const payload = {
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        userId,
+        tables: {
+          foodItems: [],
+          recipes: [],
+          waterLogs: [],
+          bodyMeasurements: [],
+          userAchievements: [],
+          stepLogs: [],
+          activityLogs: [],
+          fastingSessions: [],
+          tdeeProfile: {
+            userId,
+            sex: "male" as const,
+            age: 30,
+            heightCm: 175,
+            weightKg: 75,
+            activityLevel: "moderate" as const,
+            goal: "maintain" as const,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      };
+
+      const result = await importBackup(payload, userId);
+      expect(result.imported["tdeeProfile"]).toBe(1);
+      expect(result.skipped).toBe(0);
+    });
+
+    it("imports data when tdeeProfile is null", async () => {
+      const userId = UserId("import-user-2");
+      const payload = {
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        userId,
+        tables: {
+          foodItems: [],
+          recipes: [],
+          waterLogs: [],
+          bodyMeasurements: [],
+          userAchievements: [],
+          stepLogs: [],
+          activityLogs: [],
+          fastingSessions: [],
+          tdeeProfile: null,
+        },
+      };
+
+      const result = await importBackup(payload, userId);
+      expect(result.skipped).toBe(0);
     });
   });
 });

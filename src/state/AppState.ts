@@ -6,6 +6,7 @@ import {
   addActivityLog as addActivityLogToDB,
   addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
+  addRecurringMeal as addRecurringMealToDB,
   addStepLog as addStepLogToDB,
   addUserAchievement as addUserAchievementToDB,
   addWaterLog as addWaterLogToDB,
@@ -16,8 +17,11 @@ import {
   deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
   deleteRecipe as deleteRecipeFromDB,
+  deleteRecurringMeal as deleteRecurringMealFromDB,
+  deleteReminder as deleteReminderFromDB,
   deleteStepLog as deleteStepLogFromDB,
   deleteWaterLog as deleteWaterLogFromDB,
+  type DietProfile,
   endFastingSession as endFastingSessionInDB,
   exportAllData,
   type FastingSession,
@@ -33,15 +37,21 @@ import {
   getDailyFoodLogs,
   getDailyStepLogs,
   getDailyWaterLogs,
+  getDietProfile as getDietProfileFromDB,
   getFavoriteFoodItems,
   getOrCreateUser,
   getRecentFoodItems,
+  getRecurringMeals as getRecurringMealsFromDB,
+  getReminders as getRemindersFromDB,
   getTdeeProfile,
   getUnlockedAchievementIds,
   getUnlockedAchievements,
   importBackup,
   type ImportResult,
   type Recipe,
+  type RecurringMeal,
+  type Reminder,
+  saveDietProfile as saveDietProfileToDB,
   saveTdeeProfile as saveTdeeProfileToDB,
   startFastingSession as startFastingSessionInDB,
   type StepLog,
@@ -50,7 +60,9 @@ import {
   updateBodyMeasurement as updateBodyMeasurementInDB,
   updateFoodItem,
   updateRecipe as updateRecipeInDB,
+  updateRecurringMeal as updateRecurringMealInDB,
   updateUserProfile,
+  upsertReminder as upsertReminderInDB,
   type UserAchievement,
   type WaterLog,
 } from "../db/dbService";
@@ -58,13 +70,25 @@ import type {
   ActivityLogId,
   AppInitState,
   BodyMeasurementId,
+  DietPreset,
   FoodItemId,
   RecipeId,
+  RecurringMealId,
+  ReminderId,
+  RestrictionFlag,
   StepLogId,
   UserId,
   WaterLogId,
 } from "@/types";
-import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
+import {
+  checkFoodNameRestrictions,
+  DAILY_STEP_GOAL,
+  DAILY_WATER_GOAL_ML,
+  DIET_PRESETS,
+  getTodayDayIndex,
+  RESTRICTION_FLAGS,
+  todayISO,
+} from "@/types";
 import { TOUR_TOTAL_STEPS } from "../components/tour/tourSteps";
 import { ACHIEVEMENTS, evaluateAchievements } from "../lib/achievements";
 import { computeCalorieGoal, computeTDEE, mifflinStJeorBMR } from "../lib/tdee";
@@ -99,6 +123,22 @@ export interface AppState {
   fetchFastingSessions: (userId: UserId) => Promise<void>;
   startFasting: (targetHours: number) => Promise<void>;
   endFasting: (completed: boolean) => Promise<void>;
+  // Feature 15 - Diet Profiles
+  dietProfile: DietProfile | null;
+  fetchDietProfile: (userId: UserId) => Promise<void>;
+  saveDietProfile: (preset: DietPreset, restrictions: RestrictionFlag[]) => Promise<void>;
+  // Feature 7 - Recurring Meals
+  recurringMeals: RecurringMeal[];
+  fetchRecurringMeals: (userId: UserId) => Promise<void>;
+  addRecurringMeal: (meal: Omit<RecurringMeal, "id" | "userId">) => Promise<void>;
+  updateRecurringMeal: (meal: RecurringMeal) => Promise<void>;
+  deleteRecurringMeal: (id: RecurringMealId) => Promise<void>;
+  checkAndPromptRecurringMeals: () => void;
+  // Feature 17 - Reminders
+  reminders: Reminder[];
+  fetchReminders: (userId: UserId) => Promise<void>;
+  saveReminder: (reminder: Omit<Reminder, "userId"> & { id?: ReminderId }) => Promise<void>;
+  deleteReminder: (id: ReminderId) => Promise<void>;
   // Feature 19 - Export/Import
   exportData: () => Promise<BackupPayload | null>;
   importData: (payload: BackupPayload) => Promise<ImportResult | null>;
@@ -160,6 +200,9 @@ export const useAppState = create<AppState>((set, get) => ({
   allActivityLogs: [],
   activeFastingSession: null,
   fastingHistory: [],
+  dietProfile: null,
+  recurringMeals: [],
+  reminders: [],
   waterGoalMl: (() => {
     const stored = localStorage.getItem("waterGoalMl");
     if (stored) {
@@ -202,6 +245,9 @@ export const useAppState = create<AppState>((set, get) => ({
         allActivityLogsData,
         activeSession,
         allSessions,
+        dietProfileData,
+        recurringMealsData,
+        remindersData,
       ] = await Promise.all([
         getDailyFoodLogs(userId, today),
         getAllRecipes(userId),
@@ -216,6 +262,9 @@ export const useAppState = create<AppState>((set, get) => ({
         getAllActivityLogs(userId),
         getActiveFastingSession(userId),
         getAllFastingSessions(userId),
+        getDietProfileFromDB(userId),
+        getRecurringMealsFromDB(userId),
+        getRemindersFromDB(userId),
       ]);
       set({
         init: { status: "ready", user: profile },
@@ -232,6 +281,9 @@ export const useAppState = create<AppState>((set, get) => ({
         allActivityLogs: allActivityLogsData,
         activeFastingSession: activeSession ?? null,
         fastingHistory: allSessions,
+        dietProfile: dietProfileData,
+        recurringMeals: recurringMealsData,
+        reminders: remindersData,
       });
     } catch (error) {
       if (import.meta.env.DEV) console.error("Error fetching initial app data:", error);
@@ -272,6 +324,14 @@ export const useAppState = create<AppState>((set, get) => ({
 
     try {
       set({ error: null });
+      const { dietProfile } = get();
+      if (dietProfile && dietProfile.restrictions.length > 0) {
+        const violated = checkFoodNameRestrictions(food.name, dietProfile.restrictions);
+        if (violated.length > 0) {
+          const flagLabels = violated.map((f) => RESTRICTION_FLAGS[f].label).join(", ");
+          toast.warning(`"${food.name}" may contain: ${flagLabels}`);
+        }
+      }
       await addFoodItemLog({ ...food, userId: state.userId });
       await state.refreshDailyLogs(state.userId);
       void get().checkAndUnlockAchievements();
@@ -763,6 +823,171 @@ export const useAppState = create<AppState>((set, get) => ({
       if (import.meta.env.DEV) console.error("Error importing data:", error);
       set({ error: message });
       return null;
+    }
+  },
+
+  // Feature 15 - Diet Profiles
+  fetchDietProfile: async (userId: UserId) => {
+    try {
+      const profile = await getDietProfileFromDB(userId);
+      set({ dietProfile: profile });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching diet profile:", error);
+    }
+  },
+
+  saveDietProfile: async (preset: DietPreset, restrictions: RestrictionFlag[]) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const profile: DietProfile = {
+        userId: state.userId,
+        preset,
+        restrictions,
+        updatedAt: new Date().toISOString(),
+      };
+      await saveDietProfileToDB(profile);
+      set({ dietProfile: profile });
+      toast.success(`Diet profile set to ${DIET_PRESETS[preset].label}`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save diet profile");
+      if (import.meta.env.DEV) console.error("Error saving diet profile:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  // Feature 7 - Recurring Meals
+  fetchRecurringMeals: async (userId: UserId) => {
+    try {
+      const meals = await getRecurringMealsFromDB(userId);
+      set({ recurringMeals: meals });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching recurring meals:", error);
+    }
+  },
+
+  addRecurringMeal: async (meal: Omit<RecurringMeal, "id" | "userId">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await addRecurringMealToDB({ ...meal, userId: state.userId });
+      const meals = await getRecurringMealsFromDB(state.userId);
+      set({ recurringMeals: meals });
+      toast.success(`"${meal.name}" added to recurring meals`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to add recurring meal");
+      if (import.meta.env.DEV) console.error("Error adding recurring meal:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  updateRecurringMeal: async (meal: RecurringMeal) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await updateRecurringMealInDB(meal, state.userId);
+      const meals = await getRecurringMealsFromDB(state.userId);
+      set({ recurringMeals: meals });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to update recurring meal");
+      if (import.meta.env.DEV) console.error("Error updating recurring meal:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  deleteRecurringMeal: async (id: RecurringMealId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteRecurringMealFromDB(id, state.userId);
+      const meals = await getRecurringMealsFromDB(state.userId);
+      set({ recurringMeals: meals });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete recurring meal");
+      if (import.meta.env.DEV) console.error("Error deleting recurring meal:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  checkAndPromptRecurringMeals: () => {
+    const { recurringMeals: meals, dailyLogs, userId, addFoodLog } = get();
+    if (!userId || meals.length === 0) return;
+    const dayBit = 1 << getTodayDayIndex();
+    const todayMeals = meals.filter((m) => m.dayMask & dayBit);
+    for (const meal of todayMeals) {
+      const alreadyLogged = meal.foods.some((f) =>
+        dailyLogs.some((log) => log.name === f.name && log.mealType === meal.mealType),
+      );
+      if (!alreadyLogged) {
+        toast(`Scheduled: ${meal.name}`, {
+          description: `${meal.mealType} at ${meal.scheduledTime}`,
+          action: {
+            label: "Log now",
+            onClick: () => {
+              void Promise.all(
+                meal.foods.map((f) =>
+                  addFoodLog({
+                    userId: userId!,
+                    name: f.name,
+                    calories: f.calories,
+                    servingSize: f.servingSize,
+                    protein: f.protein,
+                    carbs: f.carbs,
+                    fat: f.fat,
+                    dateLogged: todayISO(),
+                    isFavorite: false,
+                    mealType: f.mealType,
+                  }),
+                ),
+              );
+            },
+          },
+        });
+      }
+    }
+  },
+
+  // Feature 17 - Reminders
+  fetchReminders: async (userId: UserId) => {
+    try {
+      const data = await getRemindersFromDB(userId);
+      set({ reminders: data });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching reminders:", error);
+    }
+  },
+
+  saveReminder: async (reminder: Omit<Reminder, "userId"> & { id?: ReminderId }) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await upsertReminderInDB({ ...reminder, userId: state.userId } as Reminder);
+      const data = await getRemindersFromDB(state.userId);
+      set({ reminders: data });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save reminder");
+      if (import.meta.env.DEV) console.error("Error saving reminder:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  deleteReminder: async (id: ReminderId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteReminderFromDB(id, state.userId);
+      const data = await getRemindersFromDB(state.userId);
+      set({ reminders: data });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete reminder");
+      if (import.meta.env.DEV) console.error("Error deleting reminder:", error);
+      set({ error: message });
+      toast.error(message);
     }
   },
 

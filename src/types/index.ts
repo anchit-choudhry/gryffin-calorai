@@ -51,9 +51,15 @@ export function isStepLogId(value: unknown): value is StepLogId {
 
 export type ActivityLogId = Brand<number, "ActivityLogId">;
 export type FastingSessionId = Brand<number, "FastingSessionId">;
+export type DietProfileId = Brand<number, "DietProfileId">;
+export type RecurringMealId = Brand<number, "RecurringMealId">;
+export type ReminderId = Brand<number, "ReminderId">;
 
 export const ActivityLogId = (id: number): ActivityLogId => id as ActivityLogId;
 export const FastingSessionId = (id: number): FastingSessionId => id as FastingSessionId;
+export const DietProfileId = (id: number): DietProfileId => id as DietProfileId;
+export const RecurringMealId = (id: number): RecurringMealId => id as RecurringMealId;
+export const ReminderId = (id: number): ReminderId => id as ReminderId;
 
 export function isActivityLogId(value: unknown): value is ActivityLogId {
   return (
@@ -71,6 +77,143 @@ export function isFastingSessionId(value: unknown): value is FastingSessionId {
     value > 0 &&
     value <= Number.MAX_SAFE_INTEGER
   );
+}
+
+export function isDietProfileId(value: unknown): value is DietProfileId {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
+}
+
+export function isRecurringMealId(value: unknown): value is RecurringMealId {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
+}
+
+export function isReminderId(value: unknown): value is ReminderId {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= Number.MAX_SAFE_INTEGER
+  );
+}
+
+// --- Feature 17: Reminders ---
+
+export type ReminderType = "log_meal" | "drink_water" | "weigh_in" | "log_steps" | "fasting_check";
+
+export const REMINDER_TYPES: readonly ReminderType[] = [
+  "log_meal",
+  "drink_water",
+  "weigh_in",
+  "log_steps",
+  "fasting_check",
+] as const;
+
+export const REMINDER_LABELS: Record<ReminderType, string> = {
+  log_meal: "Log a Meal",
+  drink_water: "Drink Water",
+  weigh_in: "Weigh In",
+  log_steps: "Log Steps",
+  fasting_check: "Fasting Check",
+};
+
+// --- Feature 15: Diet Profiles ---
+
+export type DietPreset =
+  | "generic"
+  | "keto"
+  | "paleo"
+  | "vegan"
+  | "vegetarian"
+  | "mediterranean"
+  | "high_protein"
+  | "low_sodium"
+  | "low_carb";
+
+export type RestrictionFlag =
+  | "gluten"
+  | "dairy"
+  | "nuts"
+  | "soy"
+  | "eggs"
+  | "shellfish"
+  | "alcohol"
+  | "pork";
+
+export const DIET_PRESETS: Record<
+  DietPreset,
+  { label: string; macros: { protein: number; carbs: number; fat: number } }
+> = {
+  generic: { label: "Generic", macros: { protein: 25, carbs: 50, fat: 25 } },
+  keto: { label: "Keto", macros: { protein: 25, carbs: 5, fat: 70 } },
+  paleo: { label: "Paleo", macros: { protein: 30, carbs: 35, fat: 35 } },
+  vegan: { label: "Vegan", macros: { protein: 20, carbs: 60, fat: 20 } },
+  vegetarian: { label: "Vegetarian", macros: { protein: 20, carbs: 55, fat: 25 } },
+  mediterranean: { label: "Mediterranean", macros: { protein: 20, carbs: 50, fat: 30 } },
+  high_protein: { label: "High Protein", macros: { protein: 40, carbs: 35, fat: 25 } },
+  low_sodium: { label: "Low Sodium", macros: { protein: 25, carbs: 50, fat: 25 } },
+  low_carb: { label: "Low Carb", macros: { protein: 30, carbs: 20, fat: 50 } },
+};
+
+export const RESTRICTION_FLAGS: Record<
+  RestrictionFlag,
+  { label: string; keywords: readonly string[] }
+> = {
+  gluten: {
+    label: "Gluten",
+    keywords: ["wheat", "gluten", "bread", "pasta", "flour", "barley", "rye", "oat", "cereal"],
+  },
+  dairy: {
+    label: "Dairy",
+    keywords: ["milk", "cheese", "yogurt", "butter", "cream", "whey", "lactose", "dairy"],
+  },
+  nuts: {
+    label: "Nuts",
+    keywords: ["nut", "almond", "cashew", "walnut", "peanut", "pecan", "pistachio", "hazelnut"],
+  },
+  soy: { label: "Soy", keywords: ["soy", "tofu", "edamame", "miso", "tempeh"] },
+  eggs: { label: "Eggs", keywords: ["egg", "eggs"] },
+  shellfish: {
+    label: "Shellfish",
+    keywords: ["shrimp", "crab", "lobster", "clam", "oyster", "mussel", "scallop", "shellfish"],
+  },
+  alcohol: {
+    label: "Alcohol",
+    keywords: ["beer", "wine", "whiskey", "vodka", "rum", "alcohol", "liquor", "spirits"],
+  },
+  pork: {
+    label: "Pork",
+    keywords: ["pork", "bacon", "ham", "sausage", "salami", "prosciutto"],
+  },
+};
+
+export function checkFoodNameRestrictions(
+  foodName: string,
+  restrictions: readonly RestrictionFlag[],
+): RestrictionFlag[] {
+  const lower = foodName.toLowerCase();
+  return restrictions.filter((flag) =>
+    RESTRICTION_FLAGS[flag].keywords.some((kw) => lower.includes(kw)),
+  );
+}
+
+// --- Feature 7: Recurring Meals ---
+
+export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export type DayName = (typeof DAY_NAMES)[number];
+
+// Returns 0=Mon ... 6=Sun matching the dayMask bit positions
+export function getTodayDayIndex(): number {
+  return (new Date().getDay() + 6) % 7;
 }
 
 export type Sex = "male" | "female";

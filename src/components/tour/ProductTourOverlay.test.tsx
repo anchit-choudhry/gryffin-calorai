@@ -199,4 +199,35 @@ describe("ProductTourOverlay", () => {
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     expect(mockNextTourStep).toHaveBeenCalledTimes(1);
   });
+
+  it("sets inert on #main while tour is active and removes it on unmount", () => {
+    const mainEl = document.createElement("div");
+    mainEl.id = "main";
+    document.body.appendChild(mainEl);
+
+    try {
+      const { unmount } = render(<ProductTourOverlay />);
+      expect(mainEl.hasAttribute("inert")).toBe(true);
+      unmount();
+      expect(mainEl.hasAttribute("inert")).toBe(false);
+    } finally {
+      document.body.removeChild(mainEl);
+    }
+  });
+
+  it("renders coachmark on narrow viewport (mobile layout path)", () => {
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 375 });
+
+    try {
+      render(<ProductTourOverlay />);
+      expect(screen.getByRole("dialog")).toBeTruthy();
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        writable: true,
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
 });

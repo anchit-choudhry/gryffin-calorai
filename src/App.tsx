@@ -19,6 +19,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { normalizeHash, type ValidHash } from "./lib/utils";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useReminders } from "./hooks/useReminders";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
@@ -135,6 +136,7 @@ function App() {
   );
 
   useKeyboardShortcuts(kbHandlers);
+  useReminders();
 
   const tablistRef = useRef<HTMLDivElement>(null);
   const onTablistKeyDown = useCallback(

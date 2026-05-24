@@ -1,7 +1,7 @@
 {
   "name": "gryffin-calorai",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.5.0",
   "type": "module",
   "engines": {
     "node": "^24",
@@ -25,7 +25,6 @@
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
-    "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
@@ -51,14 +50,16 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.13",
     "vite-plugin-compression2": "^2.5.3",
-    "vitest": "^4.1.6",
+    "vite-plugin-pwa": "^1.3.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.9.0",
+    "vitest": "^4.1.6",
     "@vitest/coverage-v8": "^4.1.6",
     "@vitest/eslint-plugin": "^1.6.17",
     "@vitest/ui": "^4.1.6",

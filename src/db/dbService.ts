@@ -4,12 +4,18 @@ import type {
   ActivityLevel,
   ActivityLogId,
   BodyMeasurementId,
+  DietPreset,
+  DietProfileId,
   FastingSessionId,
   FoodItemId,
   GoalType,
   ISODate,
   MealType,
   RecipeId,
+  RecurringMealId,
+  ReminderId,
+  ReminderType,
+  RestrictionFlag,
   Sex,
   StepLogId,
   UserAchievementId,
@@ -19,9 +25,12 @@ import type {
 import {
   ActivityLogId as makeActivityLogId,
   BodyMeasurementId as makeBodyMeasurementId,
+  DietProfileId as makeDietProfileId,
   FastingSessionId as makeFastingSessionId,
   FoodItemId as makeFoodItemId,
   RecipeId as makeRecipeId,
+  RecurringMealId as makeRecurringMealId,
+  ReminderId as makeReminderId,
   StepLogId as makeStepLogId,
   UserAchievementId as makeUserAchievementId,
   WaterLogId as makeWaterLogId,
@@ -131,6 +140,43 @@ export interface FastingSession {
   targetHours: number;
   dateLogged: ISODate;
   completed: boolean;
+}
+
+export interface DietProfile {
+  id?: DietProfileId;
+  userId: UserId;
+  preset: DietPreset;
+  restrictions: RestrictionFlag[];
+  updatedAt: string;
+}
+
+export interface RecurringMealFood {
+  name: string;
+  calories: number;
+  servingSize: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mealType: MealType;
+}
+
+export interface RecurringMeal {
+  id?: RecurringMealId;
+  userId: UserId;
+  name: string;
+  dayMask: number; // bitmask: bit 0 = Mon, bit 6 = Sun
+  mealType: MealType;
+  scheduledTime: string; // HH:MM
+  foods: RecurringMealFood[];
+}
+
+export interface Reminder {
+  id?: ReminderId;
+  userId: UserId;
+  type: ReminderType;
+  time: string; // HH:MM
+  daysOfWeek: number; // bitmask: bit 0 = Mon, bit 6 = Sun
+  enabled: boolean;
 }
 
 // 1. Initialize Dexie Database
@@ -320,6 +366,57 @@ db.version(13).stores({
   fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
 });
 
+// 14. Version 14: add dietProfiles table (feature 15 - Diet Profiles)
+db.version(14).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
+  dietProfiles: "++id, &userId, updatedAt",
+});
+
+// 15. Version 15: add recurringMeals table (feature 7 - Recurring Meals)
+db.version(15).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
+  dietProfiles: "++id, &userId, updatedAt",
+  recurringMeals: "++id, userId, dayMask",
+});
+
+// 16. Version 16: add reminders table (feature 17 - Reminders)
+db.version(16).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
+  dietProfiles: "++id, &userId, updatedAt",
+  recurringMeals: "++id, userId, dayMask",
+  reminders: "++id, userId, [userId+type]",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -331,6 +428,9 @@ export const stepLogs: Table<StepLog> = db.table("stepLogs");
 export const tdeeProfiles: Table<TdeeProfile> = db.table("tdeeProfiles");
 export const activityLogs: Table<ActivityLog> = db.table("activityLogs");
 export const fastingSessions: Table<FastingSession> = db.table("fastingSessions");
+export const dietProfiles: Table<DietProfile> = db.table("dietProfiles");
+export const recurringMeals: Table<RecurringMeal> = db.table("recurringMeals");
+export const reminders: Table<Reminder> = db.table("reminders");
 
 export const initializeDB = async () => {
   try {
@@ -641,6 +741,79 @@ export const getActiveFastingSession = async (userId: UserId): Promise<FastingSe
 
 export const getAllFastingSessions = async (userId: UserId): Promise<FastingSession[]> => {
   return fastingSessions.where("userId").equals(userId).toArray();
+};
+
+// --- Diet Profile CRUD ---
+
+export const getDietProfile = async (userId: UserId): Promise<DietProfile | null> => {
+  return (await dietProfiles.where("userId").equals(userId).first()) ?? null;
+};
+
+export const saveDietProfile = async (profile: DietProfile): Promise<DietProfileId> => {
+  const existing = await getDietProfile(profile.userId);
+  if (existing?.id !== undefined) {
+    await dietProfiles.put({ ...profile, id: existing.id });
+    return existing.id;
+  }
+  const id = await dietProfiles.add(profile);
+  return makeDietProfileId(id);
+};
+
+// --- Recurring Meal CRUD ---
+
+export const addRecurringMeal = async (meal: RecurringMeal): Promise<RecurringMealId> => {
+  const id = await recurringMeals.add(meal);
+  return makeRecurringMealId(id);
+};
+
+export const getRecurringMeals = async (userId: UserId): Promise<RecurringMeal[]> => {
+  return recurringMeals.where("userId").equals(userId).toArray();
+};
+
+export const updateRecurringMeal = async (meal: RecurringMeal, userId: UserId): Promise<void> => {
+  if (!meal.id) throw new Error("RecurringMeal id required for update");
+  const existing = await recurringMeals.get(meal.id);
+  if (!existing || existing.userId !== userId) return;
+  await recurringMeals.put({ ...meal, userId });
+};
+
+export const deleteRecurringMeal = async (id: RecurringMealId, userId: UserId): Promise<void> => {
+  const meal = await recurringMeals.get(id);
+  if (!meal || meal.userId !== userId) return;
+  await recurringMeals.delete(id);
+};
+
+// --- Reminder CRUD ---
+
+export const getReminders = async (userId: UserId): Promise<Reminder[]> => {
+  return reminders.where("userId").equals(userId).toArray();
+};
+
+export const upsertReminder = async (reminder: Reminder): Promise<ReminderId> => {
+  if (reminder.id !== undefined) {
+    const existing = await reminders.get(reminder.id);
+    if (!existing || existing.userId !== reminder.userId) {
+      throw new Error("Unauthorized: cannot modify another user's reminder");
+    }
+    await reminders.put(reminder);
+    return reminder.id;
+  }
+  const existing = await reminders
+    .where("[userId+type]")
+    .equals([reminder.userId, reminder.type])
+    .first();
+  if (existing?.id !== undefined) {
+    await reminders.put({ ...reminder, id: existing.id });
+    return existing.id;
+  }
+  const id = await reminders.add(reminder);
+  return makeReminderId(id);
+};
+
+export const deleteReminder = async (id: ReminderId, userId: UserId): Promise<void> => {
+  const reminder = await reminders.get(id);
+  if (!reminder || reminder.userId !== userId) return;
+  await reminders.delete(id);
 };
 
 // --- Data Export / Import ---

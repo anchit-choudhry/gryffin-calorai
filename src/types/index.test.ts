@@ -1,18 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertDefined,
+  checkFoodNameRestrictions,
   computeStreaks,
   fuzzyMatchFoodName,
   isBodyMeasurementId,
+  isDietProfileId,
   isFoodItemId,
   isISODate,
   isLengthUnit,
   isRecipeId,
+  isRecurringMealId,
   isStepLogId,
   isUserAchievementId,
   isUserId,
   isWaterLogId,
   isWeightUnit,
+  getTodayDayIndex,
   sanitizeBarcodeInput,
   sanitizeVoiceTranscript,
 } from "./index";
@@ -423,5 +427,100 @@ describe("isLengthUnit", () => {
 
   it("rejects empty string", () => {
     expect(isLengthUnit("")).toBe(false);
+  });
+});
+
+describe("isDietProfileId", () => {
+  it("accepts positive integer", () => {
+    expect(isDietProfileId(1)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isDietProfileId(0)).toBe(false);
+  });
+
+  it("rejects float", () => {
+    expect(isDietProfileId(1.5)).toBe(false);
+  });
+
+  it("rejects string", () => {
+    expect(isDietProfileId("1")).toBe(false);
+  });
+
+  it("rejects negative", () => {
+    expect(isDietProfileId(-1)).toBe(false);
+  });
+});
+
+describe("isRecurringMealId", () => {
+  it("accepts positive integer", () => {
+    expect(isRecurringMealId(5)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isRecurringMealId(0)).toBe(false);
+  });
+
+  it("rejects float", () => {
+    expect(isRecurringMealId(2.2)).toBe(false);
+  });
+
+  it("rejects null", () => {
+    expect(isRecurringMealId(null)).toBe(false);
+  });
+});
+
+describe("checkFoodNameRestrictions", () => {
+  it("returns empty array when no restrictions", () => {
+    expect(checkFoodNameRestrictions("Chicken Salad", [])).toStrictEqual([]);
+  });
+
+  it("detects dairy keyword", () => {
+    const violations = checkFoodNameRestrictions("Cheddar Cheese Burger", ["dairy"]);
+    expect(violations).toContain("dairy");
+  });
+
+  it("detects gluten keyword", () => {
+    const violations = checkFoodNameRestrictions("Whole Wheat Bread", ["gluten"]);
+    expect(violations).toContain("gluten");
+  });
+
+  it("detects multiple violations", () => {
+    const violations = checkFoodNameRestrictions("Cheese Egg Sandwich", ["dairy", "eggs"]);
+    expect(violations).toContain("dairy");
+    expect(violations).toContain("eggs");
+  });
+
+  it("returns empty for non-matching food", () => {
+    const violations = checkFoodNameRestrictions("Grilled Chicken", ["dairy", "gluten", "nuts"]);
+    expect(violations).toStrictEqual([]);
+  });
+
+  it("is case-insensitive", () => {
+    const violations = checkFoodNameRestrictions("MILK SHAKE", ["dairy"]);
+    expect(violations).toContain("dairy");
+  });
+});
+
+describe("getTodayDayIndex", () => {
+  it("returns 0 for Monday (getDay() === 1)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2024, 0, 1)); // January 1, 2024 = Monday (local)
+    expect(getTodayDayIndex()).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("returns 6 for Sunday (getDay() === 0)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2024, 0, 7)); // January 7, 2024 = Sunday (local)
+    expect(getTodayDayIndex()).toBe(6);
+    vi.useRealTimers();
+  });
+
+  it("returns 4 for Friday (getDay() === 5)", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2024, 0, 5)); // January 5, 2024 = Friday (local)
+    expect(getTodayDayIndex()).toBe(4);
+    vi.useRealTimers();
   });
 });

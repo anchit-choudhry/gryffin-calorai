@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCalorieGoal,
+  computeMacroTargets,
   computeTDEE,
   mifflinStJeorBMR,
   projectedDateForWeightChange,
@@ -91,6 +92,48 @@ describe("computeCalorieGoal", () => {
 
   it("never returns below 1200", () => {
     expect(computeCalorieGoal(100, "lose")).toBe(1200);
+  });
+});
+
+describe("computeMacroTargets", () => {
+  it("generic preset: 25% protein at 2000 kcal gives 125g", () => {
+    // (2000 * 25) / 100 / 4 = 125
+    expect(computeMacroTargets(2000, "generic").protein).toBe(125);
+  });
+
+  it("generic preset: 50% carbs at 2000 kcal gives 250g", () => {
+    // (2000 * 50) / 100 / 4 = 250
+    expect(computeMacroTargets(2000, "generic").carbs).toBe(250);
+  });
+
+  it("generic preset: 25% fat at 2000 kcal gives 56g", () => {
+    // (2000 * 25) / 100 / 9 = 55.55 -> 56
+    expect(computeMacroTargets(2000, "generic").fat).toBe(56);
+  });
+
+  it("keto preset has very low carb target", () => {
+    // keto: carbs = 5%, so (2000 * 5) / 100 / 4 = 25g
+    expect(computeMacroTargets(2000, "keto").carbs).toBe(25);
+  });
+
+  it("high_protein preset has more protein than generic", () => {
+    const hp = computeMacroTargets(2000, "high_protein");
+    const generic = computeMacroTargets(2000, "generic");
+    expect(hp.protein).toBeGreaterThan(generic.protein);
+  });
+
+  it("scales proportionally with calorie goal", () => {
+    const at2000 = computeMacroTargets(2000, "generic");
+    const at4000 = computeMacroTargets(4000, "generic");
+    expect(at4000.protein).toBe(at2000.protein * 2);
+    expect(at4000.carbs).toBe(at2000.carbs * 2);
+  });
+
+  it("returns zero targets for zero calorie goal", () => {
+    const result = computeMacroTargets(0, "generic");
+    expect(result.protein).toBe(0);
+    expect(result.carbs).toBe(0);
+    expect(result.fat).toBe(0);
   });
 });
 

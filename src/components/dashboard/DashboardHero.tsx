@@ -3,6 +3,7 @@ import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/state/AppState.ts";
+import { computeMacroTargets } from "@/lib/tdee";
 import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
 import { Input } from "@/components/ui/input";
@@ -17,8 +18,14 @@ interface Props {
 }
 
 function DashboardHero({ totalCalories, totals }: Props) {
-  const { init, updateCalorieGoal, bodyMeasurements, dailyActivityLogs, activeFastingSession } =
-    useAppState();
+  const {
+    init,
+    updateCalorieGoal,
+    bodyMeasurements,
+    dailyActivityLogs,
+    activeFastingSession,
+    dietProfile,
+  } = useAppState();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(
     init.status === "ready" ? init.user.calorieGoal : 2000,
@@ -48,6 +55,11 @@ function DashboardHero({ totalCalories, totals }: Props) {
   const ratio = Math.min(1, displayCalories / (calorieGoal || 1));
   const isOver = displayCalories > calorieGoal;
   const today = useMemo(() => new Date(), []);
+
+  const macroTargets = useMemo(() => {
+    if (!dietProfile) return null;
+    return computeMacroTargets(calorieGoal, dietProfile.preset);
+  }, [calorieGoal, dietProfile]);
 
   const greeting = useMemo(() => {
     const hours = today.getHours();
@@ -210,9 +222,9 @@ function DashboardHero({ totalCalories, totals }: Props) {
 
       {/* Macro stats row */}
       <div className="col-span-12 flex border-y border-rule bg-paper-muted">
-        <MacroStat label="Protein" value={totals.protein} unit="g" />
-        <MacroStat label="Carbs" value={totals.carbs} unit="g" />
-        <MacroStat label="Fat" value={totals.fat} unit="g" />
+        <MacroStat label="Protein" value={totals.protein} unit="g" target={macroTargets?.protein} />
+        <MacroStat label="Carbs" value={totals.carbs} unit="g" target={macroTargets?.carbs} />
+        <MacroStat label="Fat" value={totals.fat} unit="g" target={macroTargets?.fat} />
         <MacroStat label="Calories" value={totalCalories} unit="kcal" />
       </div>
     </>

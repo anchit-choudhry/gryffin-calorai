@@ -157,4 +157,34 @@ describe("LogEntry", () => {
     );
     expect(screen.queryByText(/1 serving/)).toBeNull();
   });
+
+  it("shows default meal type when mealType is undefined", () => {
+    render(
+      <LogEntry
+        log={makeLog({ mealType: undefined })}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onToggleFavorite={vi.fn()}
+      />,
+    );
+    // DEFAULT_MEAL_TYPE ("Breakfast") is used when mealType is absent
+    expect(screen.getByText("Breakfast")).toBeTruthy();
+  });
+
+  it("handleDelete does nothing when log.id is undefined", () => {
+    const onDelete = vi.fn();
+    render(
+      <LogEntry
+        log={makeLog({ id: undefined })}
+        onEdit={vi.fn()}
+        onDelete={onDelete}
+        onToggleFavorite={vi.fn()}
+      />,
+    );
+    const deleteBtn = screen.getByRole("button", { name: /delete/i });
+    fireEvent.click(deleteBtn);
+    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
+    fireEvent.click(confirmBtn);
+    expect(onDelete).not.toHaveBeenCalled();
+  });
 });

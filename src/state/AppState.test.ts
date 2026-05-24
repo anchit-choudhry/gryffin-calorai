@@ -9,6 +9,8 @@ import {
   FoodItemId,
   ISODate,
   RecipeId,
+  RecurringMealId,
+  ReminderId,
   StepLogId,
   UserAchievementId,
   UserId,
@@ -40,6 +42,7 @@ describe("AppState", () => {
       allActivityLogs: [],
       activeFastingSession: null,
       fastingHistory: [],
+      reminders: [],
     });
     vi.clearAllMocks();
     localStorage.clear();
@@ -123,6 +126,17 @@ describe("AppState", () => {
       },
     });
     vi.mocked(dbService.importBackup).mockResolvedValue({ imported: { foodItems: 0 }, skipped: 0 });
+    vi.mocked(dbService.getDietProfile).mockResolvedValue(null);
+    vi.mocked(dbService.saveDietProfile).mockResolvedValue(
+      1 as unknown as import("@/types").DietProfileId,
+    );
+    vi.mocked(dbService.getRecurringMeals).mockResolvedValue([]);
+    vi.mocked(dbService.addRecurringMeal).mockResolvedValue(RecurringMealId(1));
+    vi.mocked(dbService.deleteRecurringMeal).mockResolvedValue(undefined);
+    vi.mocked(dbService.updateRecurringMeal).mockResolvedValue(undefined);
+    vi.mocked(dbService.getReminders).mockResolvedValue([]);
+    vi.mocked(dbService.upsertReminder).mockResolvedValue(ReminderId(1));
+    vi.mocked(dbService.deleteReminder).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -1512,6 +1526,274 @@ describe("AppState", () => {
         .importData({} as import("../db/dbService").BackupPayload);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("Diet Profile", () => {
+    const userId = UserId("diet-profile-user");
+
+    it("saveDietProfile stores profile in state", async () => {
+      useAppState.setState({ userId, dietProfile: null });
+
+      await useAppState.getState().saveDietProfile("keto", ["gluten"]);
+
+      const { dietProfile } = useAppState.getState();
+      expect(dietProfile?.preset).toBe("keto");
+      expect(dietProfile?.restrictions).toStrictEqual(["gluten"]);
+      expect(dbService.saveDietProfile).toHaveBeenCalled();
+    });
+
+    it("saveDietProfile does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().saveDietProfile("vegan", []);
+
+      expect(dbService.saveDietProfile).not.toHaveBeenCalled();
+    });
+
+    it("saveDietProfile sets error state on DB failure", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.saveDietProfile).mockRejectedValueOnce(new Error("DB error"));
+
+      await useAppState.getState().saveDietProfile("generic", []);
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("saveDietProfile sets updatedAt timestamp", async () => {
+      useAppState.setState({ userId, dietProfile: null });
+      const before = new Date().toISOString();
+
+      await useAppState.getState().saveDietProfile("mediterranean", []);
+
+      const { dietProfile } = useAppState.getState();
+      expect(dietProfile?.updatedAt).toBeDefined();
+      expect(dietProfile!.updatedAt >= before).toBe(true);
+    });
+  });
+
+  describe("Recurring Meals", () => {
+    const userId = UserId("recurring-meals-user");
+
+    const sampleMeal = {
+      name: "Morning Oats",
+      dayMask: 0b1111111,
+      mealType: "Breakfast" as const,
+      scheduledTime: "08:00",
+      foods: [
+        {
+          name: "Oats",
+          calories: 150,
+          servingSize: 40,
+          protein: 5,
+          carbs: 27,
+          fat: 3,
+          mealType: "Breakfast" as const,
+        },
+      ],
+    };
+
+    it("addRecurringMeal saves meal and refreshes state", async () => {
+      useAppState.setState({ userId, recurringMeals: [] });
+      vi.mocked(dbService.getRecurringMeals).mockResolvedValue([
+        { ...sampleMeal, id: RecurringMealId(1), userId },
+      ] as import("../db/dbService").RecurringMeal[]);
+
+      await useAppState.getState().addRecurringMeal(sampleMeal);
+
+      expect(dbService.addRecurringMeal).toHaveBeenCalled();
+      expect(useAppState.getState().recurringMeals).toHaveLength(1);
+    });
+
+    it("addRecurringMeal does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().addRecurringMeal(sampleMeal);
+
+      expect(dbService.addRecurringMeal).not.toHaveBeenCalled();
+    });
+
+    it("addRecurringMeal sets error state on DB failure", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.addRecurringMeal).mockRejectedValueOnce(new Error("DB error"));
+
+      await useAppState.getState().addRecurringMeal(sampleMeal);
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("deleteRecurringMeal removes meal and refreshes state", async () => {
+      const mealId = RecurringMealId(1);
+      useAppState.setState({
+        userId,
+        recurringMeals: [{ ...sampleMeal, id: mealId, userId }],
+      });
+      vi.mocked(dbService.getRecurringMeals).mockResolvedValue([]);
+
+      await useAppState.getState().deleteRecurringMeal(mealId);
+
+      expect(dbService.deleteRecurringMeal).toHaveBeenCalledWith(mealId, userId);
+      expect(useAppState.getState().recurringMeals).toHaveLength(0);
+    });
+
+    it("deleteRecurringMeal does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().deleteRecurringMeal(RecurringMealId(1));
+
+      expect(dbService.deleteRecurringMeal).not.toHaveBeenCalled();
+    });
+
+    it("checkAndPromptRecurringMeals does nothing when no meals", () => {
+      useAppState.setState({ userId, recurringMeals: [], dailyLogs: [] });
+      // No assertions beyond confirming no throw
+      expect(() => useAppState.getState().checkAndPromptRecurringMeals()).not.toThrow();
+    });
+
+    it("checkAndPromptRecurringMeals does nothing when userId is null", () => {
+      useAppState.setState({
+        userId: null,
+        recurringMeals: [{ ...sampleMeal, id: RecurringMealId(1), userId }],
+      });
+      expect(() => useAppState.getState().checkAndPromptRecurringMeals()).not.toThrow();
+    });
+
+    it("checkAndPromptRecurringMeals does not throw for unlogged meal today", () => {
+      useAppState.setState({
+        userId,
+        recurringMeals: [{ ...sampleMeal, id: RecurringMealId(1), userId, dayMask: 0b1111111 }],
+        dailyLogs: [],
+      });
+
+      expect(() => useAppState.getState().checkAndPromptRecurringMeals()).not.toThrow();
+    });
+
+    it("checkAndPromptRecurringMeals does not throw when meal already logged", () => {
+      useAppState.setState({
+        userId,
+        recurringMeals: [{ ...sampleMeal, id: RecurringMealId(1), userId, dayMask: 0b1111111 }],
+        dailyLogs: [
+          {
+            id: FoodItemId(1),
+            userId,
+            name: "Oats",
+            calories: 150,
+            servingSize: 40,
+            protein: 5,
+            carbs: 27,
+            fat: 3,
+            dateLogged: ISODate("2024-01-01"),
+            isFavorite: false,
+            mealType: "Breakfast",
+          },
+        ],
+      });
+
+      expect(() => useAppState.getState().checkAndPromptRecurringMeals()).not.toThrow();
+    });
+  });
+
+  describe("Reminders", () => {
+    const userId = UserId("reminders-user");
+
+    const sampleReminder: import("../db/dbService").Reminder = {
+      id: ReminderId(1),
+      userId,
+      type: "drink_water",
+      time: "09:00",
+      daysOfWeek: 0b1111111,
+      enabled: true,
+    };
+
+    it("fetchReminders populates reminders from DB", async () => {
+      useAppState.setState({ userId, reminders: [] });
+      vi.mocked(dbService.getReminders).mockResolvedValue([sampleReminder]);
+
+      await useAppState.getState().fetchReminders(userId);
+
+      expect(dbService.getReminders).toHaveBeenCalledWith(userId);
+      expect(useAppState.getState().reminders).toHaveLength(1);
+      expect(useAppState.getState().reminders[0]).toStrictEqual(sampleReminder);
+    });
+
+    it("fetchReminders does not throw on DB error", async () => {
+      useAppState.setState({ userId, reminders: [] });
+      vi.mocked(dbService.getReminders).mockRejectedValueOnce(new Error("DB error"));
+
+      await expect(useAppState.getState().fetchReminders(userId)).resolves.toBeUndefined();
+      expect(useAppState.getState().reminders).toHaveLength(0);
+    });
+
+    it("saveReminder calls upsertReminder and refreshes state", async () => {
+      useAppState.setState({ userId, reminders: [] });
+      vi.mocked(dbService.getReminders).mockResolvedValue([sampleReminder]);
+
+      await useAppState.getState().saveReminder({
+        id: ReminderId(1),
+        type: "drink_water",
+        time: "09:00",
+        daysOfWeek: 0b1111111,
+        enabled: true,
+      });
+
+      expect(dbService.upsertReminder).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "drink_water", userId }),
+      );
+      expect(useAppState.getState().reminders).toHaveLength(1);
+    });
+
+    it("saveReminder does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().saveReminder({
+        type: "drink_water",
+        time: "09:00",
+        daysOfWeek: 0b1111111,
+        enabled: true,
+      });
+
+      expect(dbService.upsertReminder).not.toHaveBeenCalled();
+    });
+
+    it("saveReminder sets error state on DB failure", async () => {
+      useAppState.setState({ userId, reminders: [] });
+      vi.mocked(dbService.upsertReminder).mockRejectedValueOnce(new Error("DB error"));
+
+      await useAppState.getState().saveReminder({
+        type: "log_meal",
+        time: "12:00",
+        daysOfWeek: 0b0011111,
+        enabled: true,
+      });
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("deleteReminder calls DB and refreshes state", async () => {
+      useAppState.setState({ userId, reminders: [sampleReminder] });
+      vi.mocked(dbService.getReminders).mockResolvedValue([]);
+
+      await useAppState.getState().deleteReminder(ReminderId(1));
+
+      expect(dbService.deleteReminder).toHaveBeenCalledWith(ReminderId(1), userId);
+      expect(useAppState.getState().reminders).toHaveLength(0);
+    });
+
+    it("deleteReminder does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().deleteReminder(ReminderId(1));
+
+      expect(dbService.deleteReminder).not.toHaveBeenCalled();
+    });
+
+    it("deleteReminder sets error state on DB failure", async () => {
+      useAppState.setState({ userId, reminders: [sampleReminder] });
+      vi.mocked(dbService.deleteReminder).mockRejectedValueOnce(new Error("DB error"));
+
+      await useAppState.getState().deleteReminder(ReminderId(1));
+
+      expect(useAppState.getState().error).toBeDefined();
     });
   });
 });

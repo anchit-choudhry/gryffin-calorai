@@ -202,6 +202,44 @@ describe("StepTracker component", () => {
     expect(submitStepLogMock).toHaveBeenCalledWith(1500);
   });
 
+  it("clicking a quick-add button calls submitStepLog with that step count", async () => {
+    const submitStepLogMock = vi.fn().mockResolvedValue(true);
+    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
+      form: {
+        register: vi.fn(() => ({})),
+        getValues: vi.fn(() => 1000),
+        setValue: vi.fn(),
+      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
+      isLoading: false,
+      submitStepLog: submitStepLogMock,
+    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+
+    render(<StepTracker />);
+    const btn = screen.getByText(/\+2,000/);
+    fireEvent.click(btn);
+    expect(submitStepLogMock).toHaveBeenCalledWith(2000);
+  });
+
+  it("does not show success toast when quick-add returns false", async () => {
+    const { toast } = await import("sonner");
+    const submitStepLogMock = vi.fn().mockResolvedValue(false);
+    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
+      form: {
+        register: vi.fn(() => ({})),
+        getValues: vi.fn(() => 1000),
+        setValue: vi.fn(),
+      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
+      isLoading: false,
+      submitStepLog: submitStepLogMock,
+    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+
+    render(<StepTracker />);
+    const btn = screen.getByText(/\+2,000/);
+    fireEvent.click(btn);
+    await Promise.resolve();
+    expect(vi.mocked(toast).success).not.toHaveBeenCalled();
+  });
+
   it("deletes a step log entry when remove button is clicked", () => {
     const deleteStepLogMock = vi.fn();
     vi.mocked(appState).useAppState.mockReturnValue({

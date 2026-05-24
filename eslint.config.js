@@ -54,7 +54,7 @@ export default [
       // prefer toHaveLength() over toBe(x.length)
       "vitest/prefer-to-have-length": "error",
       // Prefer strict deep equality checks
-      "vitest/prefer-strict-equal": "warn",
+      "vitest/prefer-strict-equal": "error",
       // Catch invalid describe callback shapes
       "vitest/valid-describe-callback": "error",
       // Ensure expect() is used correctly and awaited when needed

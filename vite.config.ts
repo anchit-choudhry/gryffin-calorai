@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import viteCompression from "vite-plugin-compression2";
+import { VitePWA } from "vite-plugin-pwa";
 import packageJson from "./package.json";
 
 // style-src requires 'unsafe-inline' for Tailwind's JIT engine (CSS-only; cannot execute JS).
@@ -70,6 +71,41 @@ export default defineConfig({
     tailwindcss(),
     viteCompression({
       algorithms: ["gzip", "brotliCompress"],
+    }),
+    VitePWA({
+      registerType: "autoUpdate",
+      // 'script' injects <script src="registerSW.js"> which satisfies script-src 'self' CSP
+      injectRegister: "script",
+      includeAssets: ["favicon.svg", "scarlet-gryffin.jpg"],
+      manifest: {
+        name: "Gryffin Calorai",
+        short_name: "Calorai",
+        description: "Offline-first nutrition and calorie tracker. No accounts, no cloud.",
+        theme_color: "#0A0A0A",
+        background_color: "#E8E0D5",
+        display: "standalone",
+        icons: [
+          {
+            src: "scarlet-gryffin.jpg",
+            sizes: "160x160",
+            type: "image/jpeg",
+          },
+          {
+            src: "favicon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      },
+      workbox: {
+        // Pre-cache all build outputs (JS chunks, CSS, HTML, static assets)
+        globPatterns: ["**/*.{js,css,html,svg,jpg,jpeg,png,ico,woff,woff2}"],
+        cleanupOutdatedCaches: true,
+        // Cache-first for all navigation since app is fully offline
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/api\//],
+      },
     }),
     {
       name: "strip-csp-meta-dev",
