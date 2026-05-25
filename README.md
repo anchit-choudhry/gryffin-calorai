@@ -4,7 +4,8 @@ Offline-first calorie tracking app with activity logging, intermittent fasting, 
 and comprehensive progress analytics.
 
 **Tech Stack:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
-CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • lucide-react
+CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • motion 12 • lucide-react • sonner •
+date-fns • @zxing (barcode) • fflate (ZIP compression) • vite-plugin-pwa
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)
@@ -18,9 +19,12 @@ CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • lucide-reac
 Powered by
 
 [![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)](https://react.dev)
-[![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?logo=chartdotjs&logoColor=fff)](https://www.chartjs.org)
+[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000?logo=shadcnui&logoColor=fff)](https://ui.shadcn.com)
+[![Recharts](https://img.shields.io/badge/Recharts-FF7300?logo=recharts&logoColor=fff)](https://recharts.org)
 [![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=fff)](https://vitest.dev)
 [![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-%2338B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Github Pages](https://img.shields.io/badge/github%20pages-121013?style=for-the-badge&logo=github&logoColor=white)](https://pages.github.com)
 [![Claude Code](https://img.shields.io/badge/Claude-D97757?logo=claude&logoColor=fff)](https://claude.com/product/claude-code)

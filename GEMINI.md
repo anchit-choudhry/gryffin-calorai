@@ -1,4 +1,4 @@
-# Project Documentation: Gryffin Calorai (v0.3.0)
+# Project Documentation: Gryffin Calorai (v0.5.0)
 
 ## Architectural Overview
 
@@ -9,7 +9,7 @@ dependency.
 - **Routing:** Hash-based navigation (`window.location.hash`) using `React.lazy` and `Suspense` for
   code-splitting.
 - **State Management:** Global state is managed by a single Zustand store (`src/state/AppState.ts`).
-- **Persistence:** Local storage via Dexie.js (currently **schema version 13**) with compound
+- **Persistence:** Local storage via Dexie.js (currently **schema version 17**) with compound
   indices
   for performance.
 - **Styling:** Tailwind CSS v4 using modern CSS-only `@import` directives.
@@ -23,7 +23,7 @@ dependency.
 - **State:** Zustand 5 (single store)
 - **Database:** IndexedDB via Dexie.js 4 (no backend)
 - **Styling:** Tailwind CSS 4 (dark mode: class-based) + shadcn/ui primitives (Radix UI)
-- **Forms:** react-hook-form 7 + zod 4 (imported via `zod/v3`) + @hookform/resolvers
+- **Forms:** react-hook-form 7 + zod (imported via `zod/v3`) + @hookform/resolvers
 - **Testing:** Vitest 4 + jsdom + fake-indexeddb
 - **Charts:** Recharts 3
 - **Animation:** motion 12 (`motion/react`)
@@ -51,11 +51,12 @@ dependency.
 - `state/AppState.ts`: Central Zustand store. Manages state and async actions for food logs,
   recipes, water intake, body measurements, step logs, user achievements, activity logs, fasting
   sessions, and tour state.
-- `db/dbService.ts`: Dexie.js service layer. Defines schema v13 (adds activityLogs, fastingSessions,
-  tdeeProfiles) and provides CRUD abstractions and data export/import logic.
+- `db/dbService.ts`: Dexie.js service layer. Defines schema v17 (adds dietProfiles, recurringMeals,
+  reminders, mealTemplates) and provides CRUD abstractions and data export/import logic.
 - `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId,
-  BodyMeasurementId, StepLogId, UserAchievementId, ActivityLogId, FastingSessionId, ISODate).
-  Includes sanitizers, unit conversions, and constants.
+  BodyMeasurementId, StepLogId, UserAchievementId, ActivityLogId, FastingSessionId, ReminderId,
+  ISODate).
+  Includes sanitizers, unit conversions, constants, and v0.6.0 types (DietPreset, RestrictionFlag).
 
 ### UI Components (`/src/components`)
 
@@ -79,6 +80,9 @@ dependency.
 - `StreakCard.tsx` & `WeeklySummary.tsx`: Gamification and history visualization.
 - `OnboardingModal.tsx` & `OnboardingBanner.tsx`: TDEE goal engine and onboarding flow.
 - `DataExportPanel.tsx`: JSON backup and CSV ZIP export/import UI.
+- `DietProfileEditor.tsx`, `RecurringMeals.tsx`, `RemindersSettings.tsx`, `MealTemplates.tsx`:
+  v0.6.0
+  personalized diet, meal patterns, and notifications.
 - `KeyboardShortcutsOverlay.tsx`: Global shortcut command registry.
 - `PageLoading.tsx`: Suspense fallback.
 
@@ -86,9 +90,10 @@ dependency.
 
 - `useKeyboardShortcuts.ts`: Global keyboard event listener and command registry.
 - `useFoodForm.ts`, `useRecipeForm.ts`, `useWaterForm.ts`, `useStepForm.ts`, `useBodyForm.ts`,
-  `useActivityForm.ts`: Form-specific logic and validation.
+  `useActivityForm.ts`, `useRecurringMealForm.ts`: Form-specific logic and validation.
 - `useFastingTimer.ts`: Fasting state management with Notification API integration.
 - `useOnboarding.ts`: Multi-step onboarding and TDEE profile management.
+- `useDietProfile.ts` & `useReminders.ts`: Personalization and notification scheduling.
 - `useDataExport.ts` & `useDataImport.ts`: JSON/CSV backup and recovery logic.
 - `useProgressData.ts`, `useWeeklySummary.ts`, `useStreaks.ts`, `useWaterHistoryData.ts`: Data
   aggregation for charts/stats.
@@ -127,6 +132,27 @@ dependency.
   enabled.
 - **Accessibility:** Global keyboard shortcuts (`?`); Guided product tour for onboarding.
 
+- **Do NOT suggest or make git commits** - the user manages commits themselves
+- **Never add personal information to any files** - no email addresses, phone numbers, physical addresses, or PII
+
+### Development Guidelines for Gemini CLI
+
+To ensure consistency and leverage existing project documentation:
+
+- **Primary Source of Truth:** For comprehensive and detailed rules, especially those specific to
+  Claude AI's agents and workflows, refer to the `.claude/` directory. This includes specific mock
+  patterns, framework limitations, and agent-specific configurations.
+- **Frontend Rules:** For detailed frontend development conventions and specific component
+  guidelines, refer to `src/GEMINI.md`.
+- **Testing Principles:**
+  - **Framework:** Utilize Vitest with `@testing-library/react`, jsdom, and `fake-indexeddb/auto`.
+  - **TDD Approach:** Always write a failing test first and confirm its failure before implementing
+    the fix.
+  - **Coverage Targets:** Aim for 90% statements, 90% functions, 80% branches, and 90% lines.
+  - **File Placement:** Place test files alongside their corresponding source files (e.g.,
+    `Foo.tsx` -> `Foo.test.tsx`).
+  - **Assertions:** Prefer `toStrictEqual` over `toEqual` for deep equality checks.
+
 ### Architectural Baseline (Adding New Features)
 
 1. `src/types/index.ts`: Branded ID + domain constants.
@@ -137,16 +163,16 @@ dependency.
 6. `src/pages/`: Integration + motion/react stagger animations.
 7. `src/**/*.test.ts`: Comprehensive tests for DB, state, and hooks.
 
-## Roadmap (v0.4.0+)
+## Roadmap (v0.6.0+)
 
-- [ ] Recurring Meal Logging (copy yesterday, daily bitmasks)
+- [x] Recurring Meal Logging (copy yesterday, daily bitmasks)
+- [x] Diet Profiles & Restriction Flags (Keto, Vegan, etc. + allergen warnings)
+- [x] Reminders & Web Push Notifications
 - [ ] Micronutrient Tracking (~25 nutrients: fiber, sodium, vitamins/minerals)
-- [ ] Diet Profiles & Restriction Flags (Keto, Vegan, etc. + allergen warnings)
 - [ ] PWA + Service Worker (Install-to-home, better offline)
-- [ ] Reminders & Web Push Notifications
 - [ ] Recipe Import from URL (CORS proxy + JSON-LD parsing)
-- [ ] Spring Boot Backend (v0.6.0 milestone for sync/auth)
-- [ ] Native iOS/Android apps (v0.8.0+ milestone)
+- [ ] Spring Boot Backend (v0.8.0 milestone for sync/auth)
+- [ ] Native iOS/Android apps (v1.0.0+ milestone)
 
 ---
-**Last Updated:** May 23, 2026 (v0.3.0 release)
+**Last Updated:** May 25, 2026 (v0.5.0 release)
