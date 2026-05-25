@@ -11,10 +11,14 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
 *.local
 .tsbuildinfo
 
-coverage
+# Frontend generated outputs
+apps/web/dist/
+apps/web/coverage/
+apps/web/.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -28,6 +32,11 @@ coverage
 *.sw?
 
 .claude
-
 .gemini/
 gha-creds-*.json
+
+# Backend secrets - never commit
+apps/backend/.env
+
+# Maven build output
+apps/backend/target/

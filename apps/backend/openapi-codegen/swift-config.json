@@ -1,0 +1,12 @@
+{
+  "generatorName": "swift5",
+  "inputSpec": "../api-docs/openapi.json",
+  "outputDir": "./swift-sdk",
+  "additionalProperties": {
+    "projectName": "CaloraiSDK",
+    "podVersion": "0.7.0",
+    "responseAs": "AsyncAwait",
+    "swiftPackagePath": "Sources/CaloraiSDK",
+    "useSPMFileStructure": true
+  }
+}

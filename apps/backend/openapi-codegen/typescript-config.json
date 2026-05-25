@@ -1,0 +1,14 @@
+{
+  "generatorName": "typescript-axios",
+  "inputSpec": "../api-docs/openapi.json",
+  "outputDir": "../../src/api/generated",
+  "additionalProperties": {
+    "npmName": "@gryffin/calorai-api-client",
+    "npmVersion": "0.7.0",
+    "withSeparateModelsAndApi": true,
+    "apiPackage": "api",
+    "modelPackage": "model",
+    "supportsES6": true,
+    "useSingleRequestParameter": true
+  }
+}

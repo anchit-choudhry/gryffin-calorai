@@ -2,6 +2,11 @@
 # All non-auth settings belong here (not .npmrc) per pnpm v11 conventions.
 # https://pnpm.io/settings
 
+# ── Workspace packages ───────────────────────────────────────────────────────
+packages:
+  - "apps/web"
+  - "packages/*"
+
 # ── Supply-chain & Security ──────────────────────────────────────────────────
 
 # Delay installing newly-published package versions.

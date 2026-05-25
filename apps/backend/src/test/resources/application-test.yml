@@ -1,0 +1,19 @@
+---
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ""
+
+app:
+  jwt:
+    secret: test-only-jwt-secret-not-for-production-use-at-all-x

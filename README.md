@@ -1,11 +1,12 @@
-# Gryffin Calorai: React + Recharts + TypeScript + Vite
+# Gryffin Calorai
 
 Offline-first calorie tracking app with activity logging, intermittent fasting, recipe management,
 and comprehensive progress analytics.
 
-**Tech Stack:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
+**Frontend:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
 CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • motion 12 • lucide-react • sonner •
-date-fns • @zxing (barcode) • fflate (ZIP compression) • vite-plugin-pwa
+date-fns • @zxing/library (barcode) • fflate (ZIP) • vite-plugin-pwa  
+**Backend:** Spring Boot 4.0 • Java 25 • PostgreSQL 18 • Flyway • Spring Security • JJWT
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)
@@ -15,6 +16,107 @@ date-fns • @zxing (barcode) • fflate (ZIP compression) • vite-plugin-pwa
 [![DevSkim](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/devskim.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/devskim.yml)
 [![Lint Code Base](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/super-linter.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/super-linter.yml)
 [![OSV-Scanner](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/osv-scanner.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/osv-scanner.yml)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+ and [pnpm](https://pnpm.io)
+- Java 25+ and Maven 3.9.16+ (for backend)
+- Docker + Docker Compose (recommended for backend)
+
+### Repository layout
+
+```
+gryffin-calorai/
+├── apps/
+│   ├── web/        React + Vite + TypeScript (this app)
+│   ├── backend/    Spring Boot 4.0 + PostgreSQL
+│   ├── android/    Kotlin/Compose (planned v0.8)
+│   └── ios/        Swift/SwiftUI (planned v0.9)
+└── packages/
+    └── api-sdk/    Auto-generated OpenAPI clients
+```
+
+### Frontend
+
+```bash
+pnpm install              # install all workspace packages
+pnpm dev                  # http://localhost:5173
+pnpm test                 # run all tests with coverage
+pnpm build                # production build (output: apps/web/dist/)
+```
+
+### Backend
+
+**Secret management:** `apps/backend/.env` is gitignored and must never be committed. All other
+backend config files (`application.yml`, `docker-compose.yml`, `application-test.yml`) are safe to
+commit - they contain no real secrets; every secret is read from environment variables using
+`${ENV_VAR}` substitution. Copy `.env.example` to create your local `.env`.
+
+**With Docker Compose (recommended):**
+
+```bash
+cd apps/backend
+cp .env.example .env
+# Open .env and fill in the required values:
+#   POSTGRES_PASSWORD=<any local password you choose>
+#   JWT_SECRET=<output of: openssl rand -hex 32>
+#   PGADMIN_DEFAULT_PASSWORD=<any local password you choose>
+docker compose up -d    # starts all three services in the background
+```
+
+Services started:
+
+| Service  | URL                   | Notes                                          |
+|----------|-----------------------|------------------------------------------------|
+| Backend  | http://localhost:8080 | Spring Boot API; health: /actuator/health      |
+| pgAdmin  | http://localhost:5050 | DB browser (log in with your .env password)    |
+| Postgres | localhost:5432        | DB name / user / password: `gcalorai`          |
+
+```bash
+docker compose logs -f backend   # tail backend logs
+docker compose down              # stop all services (data volumes preserved)
+docker compose down -v           # stop and delete all data volumes
+```
+
+> `docker compose up` will fail with a clear error if `JWT_SECRET` or `PGADMIN_DEFAULT_PASSWORD`
+> is missing from `.env` - this is intentional. The backend also refuses to start with a
+> known-placeholder secret. Swagger UI is disabled by default; set `SWAGGER_ENABLED=true` in
+> `.env` to enable it at http://localhost:8080/swagger-ui.html.
+
+**With Maven only (requires PostgreSQL running locally):**
+
+```bash
+# 1. Create the database (first time only - substitute your chosen password):
+createdb -U postgres gcalorai
+psql -U postgres -c "CREATE USER gcalorai WITH PASSWORD '<your-password>';"
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE gcalorai TO gcalorai;"
+
+# 2. Set required environment variables:
+cd apps/backend
+export DATABASE_URL=jdbc:postgresql://localhost:5432/gcalorai
+export DATABASE_USER=gcalorai
+export DATABASE_PASSWORD=<your-password>
+export JWT_SECRET=$(openssl rand -hex 32)   # must be a real random value
+export CORS_ALLOWED_ORIGINS=http://localhost:5173
+export SWAGGER_ENABLED=true                 # optional: enables Swagger UI at /swagger-ui.html
+
+# 3. Start the backend:
+mvn spring-boot:run     # http://localhost:8080
+```
+
+Health check: `curl http://localhost:8080/actuator/health`
+
+### OpenAPI codegen
+
+```bash
+# Export spec from running backend, then regenerate SDK clients:
+curl http://localhost:8080/api-docs > apps/backend/api-docs/openapi.json
+cd apps/backend/openapi-codegen && bash generate.sh
+```
+
+---
 
 Powered by
 

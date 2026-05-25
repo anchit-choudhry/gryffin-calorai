@@ -1,0 +1,14 @@
+{
+  "generatorName": "kotlin",
+  "inputSpec": "../api-docs/openapi.json",
+  "outputDir": "./kotlin-sdk",
+  "additionalProperties": {
+    "groupId": "com.gryffin",
+    "artifactId": "calorai-kotlin-sdk",
+    "artifactVersion": "0.7.0",
+    "library": "jvm-retrofit2",
+    "useCoroutines": true,
+    "serializationLibrary": "kotlinx_serialization",
+    "packageName": "com.gryffin.calorai.sdk"
+  }
+}

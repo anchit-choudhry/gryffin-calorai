@@ -1,178 +1,153 @@
-# Project Documentation: Gryffin Calorai (v0.5.0)
+# Project Documentation: Gryffin Calorai (v0.7.0)
 
 ## Architectural Overview
 
-Gryffin Calorai is a client-side, offline-first React single-page application (SPA). It is designed
-for privacy and speed, persisting all data locally via IndexedDB (Dexie.js) without a backend
-dependency.
+Gryffin Calorai is a full-stack, offline-first health management platform. It features a React
+single-page application (SPA) for the frontend and a Spring Boot service for the backend. The system
+is designed for privacy and speed, persisting data locally via IndexedDB (Dexie.js) and
+synchronizing with a PostgreSQL database.
 
-- **Routing:** Hash-based navigation (`window.location.hash`) using `React.lazy` and `Suspense` for
-  code-splitting.
-- **State Management:** Global state is managed by a single Zustand store (`src/state/AppState.ts`).
-- **Persistence:** Local storage via Dexie.js (currently **schema version 17**) with compound
-  indices
-  for performance.
-- **Styling:** Tailwind CSS v4 using modern CSS-only `@import` directives.
-- **Security:** Strict Content Security Policy (CSP) and HTTP security headers (HSTS, COOP, COEP)
-  configured in
-  `vite.config.ts`.
+- **Monorepo Structure:** Managed with `pnpm` workspaces, separating `apps/web`, `apps/backend`,
+  `apps/android`, `apps/ios`, and `packages/api-sdk`.
+- **Frontend Routing:** Hash-based navigation (`window.location.hash`) using `React.lazy` and
+  `Suspense` for code-splitting.
+- **State Management:** Global state is managed by a single Zustand store
+  (`apps/web/src/state/AppState.ts`), composed from functional slices.
+- **Persistence:**
+    - **Client:** IndexedDB via Dexie.js 4 (currently **schema version 18**) with compound
+      indices for performance.
+    - **Server:** PostgreSQL 18 with migrations managed by Flyway.
+- **Styling:** Tailwind CSS v4 using modern CSS-only `@import` directives and shadcn/ui.
+- **Security:** Strict Content Security Policy (CSP), HSTS, COOP/COEP, and JWT-based authentication
+  for the backend.
 
 ## Technical Stack
 
-- **Frontend:** React 19 + Vite 8 + TypeScript 6 (strict mode)
-- **State:** Zustand 5 (single store)
-- **Database:** IndexedDB via Dexie.js 4 (no backend)
-- **Styling:** Tailwind CSS 4 (dark mode: class-based) + shadcn/ui primitives (Radix UI)
-- **Forms:** react-hook-form 7 + zod (imported via `zod/v3`) + @hookform/resolvers
+### Frontend (`apps/web`)
+- **Core:** React 19 + Vite 8 + TypeScript 6 (strict mode)
+- **State:** Zustand 5 (composed slices)
+- **Database:** IndexedDB via Dexie.js 4
+- **Styling:** Tailwind CSS 4 + shadcn/ui primitives (Radix UI)
+- **Forms:** react-hook-form 7 + zod 4 (via `zod/v3`) + @hookform/resolvers
 - **Testing:** Vitest 4 + jsdom + fake-indexeddb
 - **Charts:** Recharts 3
 - **Animation:** motion 12 (`motion/react`)
 - **Toast:** sonner
 - **Icons:** lucide-react
-- **Libraries:** date-fns 4 (time manipulation), fflate 0.8 (ZIP compression for CSV exports)
+- **Libraries:** date-fns 4, fflate 0.8 (ZIP), @zxing/library (barcode)
+
+### Backend (`apps/backend`)
+- **Core:** Spring Boot 4.0 + Java 25
+- **Database:** PostgreSQL 18 + Flyway (migrations)
+- **Security:** Spring Security + JJWT
+- **API:** OpenAPI 3 (docs) + generated SDKs
 
 ## Core File Documentation
 
 ### Configuration & Tooling
 
-- `package.json`: Project dependencies and scripts. Pinned `pnpm` workspace standards.
-- `vite.config.ts`: Configures the build system, Tailwind v4 plugin, and defines production security
-  headers (CSP, X-Frame-Options, HSTS, etc.).
-- `tsconfig.json`: TypeScript configuration with strict mode and path mappings.
-- `vitest.config.ts`: Configured for Vitest with `jsdom` and code coverage reporting.
-- `.github/workflows/`: CI/CD pipeline with 17+ workflows including linting, testing, and security
-  scanning (CodeQL, OSV).
+- `pnpm-workspace.yaml`: Defines the monorepo workspace structure.
+- `apps/web/package.json`: Frontend dependencies and scripts.
+- `apps/web/vite.config.ts`: Build system with Tailwind v4, CSP headers, and Rollup manual chunks.
+- `apps/web/tsconfig.json`: TypeScript configuration with strict mode and path mappings.
+- `apps/web/vitest.config.ts`: Vitest configuration with `jsdom` and coverage.
+- `.github/workflows/`: CI/CD pipeline (17+ workflows) including CodeQL, OSV-Scanner, and Super-Linter.
 
-### Application Logic & State (`/src`)
+### Frontend Logic & State (`apps/web/src`)
 
 - `main.tsx`: Entry point. Wraps the app in an `ErrorBoundary`.
-- `App.tsx`: Orchestrator component. Manages hash-based routing, theme persistence, and provides the
-  `Suspense` boundary for lazy-loaded pages.
-- `state/AppState.ts`: Central Zustand store. Manages state and async actions for food logs,
-  recipes, water intake, body measurements, step logs, user achievements, activity logs, fasting
-  sessions, and tour state.
-- `db/dbService.ts`: Dexie.js service layer. Defines schema v17 (adds dietProfiles, recurringMeals,
-  reminders, mealTemplates) and provides CRUD abstractions and data export/import logic.
-- `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, WaterLogId,
-  BodyMeasurementId, StepLogId, UserAchievementId, ActivityLogId, FastingSessionId, ReminderId,
-  ISODate).
-  Includes sanitizers, unit conversions, constants, and v0.6.0 types (DietPreset, RestrictionFlag).
+- `App.tsx`: Orchestrator. Manages hash-based routing and provides `Suspense` boundaries.
+- `state/AppState.ts`: Central Zustand store. Composed from `foodSlice`, `recipeSlice`, `bodySlice`,
+  `activitySlice`, `trackerSlice`, `settingsSlice`, and `coreSlice`.
+- `db/dbService.ts`: Dexie.js service layer. Defines schema v18 and CRUD abstractions.
+- `types/index.ts`: Domain models and branded types (UserId, FoodItemId, RecipeId, etc.). Includes
+  sanitizers, constants (TDEE, Fasting Presets), and unit helpers.
 
-### UI Components (`/src/components`)
+### UI Components (`apps/web/src/components`)
 
-- `dashboard/`: Sub-components for main overview (`DashboardHero`, `DateKicker`, `LogEntry`,
-  `MacroStat`, `SectionHeader`, `EditorialFrame`).
-- `recipes/`: Recipe management system (`RecipesHero`, `RecipeForm`, `RecipeList`, `RecipeRow`,
-  `IngredientRow`).
-- `progress/`: Visualization components (`ProgressHero`).
-- `charts/`: Shared chart primitives (`ChartLegend`, `ChartTooltip`, `EditorialChartCard`).
-- `tour/`: Product tour system (`ProductTourOverlay`, `CoachmarkCard`, `tourSteps`,
-  `useSpotlightRect`).
+- `dashboard/`: Sub-components (`DashboardHero`, `DateKicker`, `LogEntry`, `MacroStat`, `EditorialFrame`).
+- `recipes/`: Recipe management (`RecipesHero`, `RecipeForm`, `RecipeList`, `RecipeRow`, `IngredientRow`).
+- `progress/`: Visualization components (`ProgressHero`, `MicronutrientPanel`).
+- `charts/`: Shared primitives (`ChartLegend`, `ChartTooltip`, `EditorialChartCard`).
+- `tour/`: Product tour system (`ProductTourOverlay`, `CoachmarkCard`, `tourSteps`).
 - `settings/`: Settings sub-components (`TdeeProfilePanel`, `GoalSettings`).
-- `ui/`: shadcn/ui primitives (Button, Dialog, Tabs, etc.) and `Skeleton` loaders.
-- `FoodLogger.tsx`: Nutrition logging form (text, barcode, voice).
-- `VoiceFoodLogger.tsx`: Web Speech API logging.
-- `BarcodeScanner.tsx`: ZXing-based barcode interface (lazy-loaded).
-- `WaterTracker.tsx` & `StepTracker.tsx`: Hydration and movement tracking.
-- `FastingTimer.tsx`: Intermittent fasting dashboard widget with protocols and notifications.
-- `ActivityLogger.tsx` & `ActivityTracker.tsx`: MET-based activity logging and summaries.
-- `BodyMeasurements.tsx`: Physical metric tracking.
-- `StreakCard.tsx` & `WeeklySummary.tsx`: Gamification and history visualization.
-- `OnboardingModal.tsx` & `OnboardingBanner.tsx`: TDEE goal engine and onboarding flow.
-- `DataExportPanel.tsx`: JSON backup and CSV ZIP export/import UI.
+- `ui/`: shadcn/ui primitives and `Skeleton` loaders.
+- `FoodLogger.tsx`, `VoiceFoodLogger.tsx`, `BarcodeScanner.tsx`: Nutrition logging tools.
+- `WaterTracker.tsx`, `StepTracker.tsx`, `FastingTimer.tsx`: Activity and habit tracking.
+- `ActivityLogger.tsx`, `ActivityTracker.tsx`: MET-based exercise logging.
+- `BodyMeasurements.tsx`, `StreakCard.tsx`, `WeeklySummary.tsx`: Progress and gamification.
+- `OnboardingModal.tsx`, `OnboardingBanner.tsx`: TDEE goal engine and onboarding.
+- `DataExportPanel.tsx`, `DataImportConflictModal.tsx`: Backup and recovery logic.
 - `DietProfileEditor.tsx`, `RecurringMeals.tsx`, `RemindersSettings.tsx`, `MealTemplates.tsx`:
-  v0.6.0
-  personalized diet, meal patterns, and notifications.
-- `KeyboardShortcutsOverlay.tsx`: Global shortcut command registry.
-- `PageLoading.tsx`: Suspense fallback.
+  Personalized diet and notification settings.
+- `KeyboardShortcutsOverlay.tsx`: Global shortcut registry.
 
-### Hooks (`/src/hooks`)
+### Hooks (`apps/web/src/hooks`)
 
-- `useKeyboardShortcuts.ts`: Global keyboard event listener and command registry.
+- `useKeyboardShortcuts.ts`: Global keyboard event listener.
 - `useFoodForm.ts`, `useRecipeForm.ts`, `useWaterForm.ts`, `useStepForm.ts`, `useBodyForm.ts`,
-  `useActivityForm.ts`, `useRecurringMealForm.ts`: Form-specific logic and validation.
-- `useFastingTimer.ts`: Fasting state management with Notification API integration.
-- `useOnboarding.ts`: Multi-step onboarding and TDEE profile management.
-- `useDietProfile.ts` & `useReminders.ts`: Personalization and notification scheduling.
-- `useDataExport.ts` & `useDataImport.ts`: JSON/CSV backup and recovery logic.
-- `useProgressData.ts`, `useWeeklySummary.ts`, `useStreaks.ts`, `useWaterHistoryData.ts`: Data
-  aggregation for charts/stats.
+  `useActivityForm.ts`, `useRecurringMealForm.ts`: Form-specific logic.
+- `useFastingTimer.ts`, `useOnboarding.ts`, `useDietProfile.ts`, `useReminders.ts`: Core features.
+- `useDataExport.ts`, `useDataImport.ts`, `useRecipeImport.ts`: Integration hooks.
+- `useProgressData.ts`, `useWeeklySummary.ts`, `useStreaks.ts`, `useMicronutrientData.ts`: Data aggregation.
 
-### Utility & Library Logic (`/src/lib`)
+### Utility & Library Logic (`apps/web/src/lib`)
 
-- `achievements.ts`: Evaluation engine for 20+ gamification milestones.
-- `tdee.ts`: Mifflin-St Jeor BMR and activity-based calorie goal calculations.
-- `metTable.ts`: Static MET lookup table for ~60 activities.
-- `chartTheme.ts`: Centralized color palette and styling for Recharts.
-- `motionVariants.ts`: Shared animation variants (page, section, spotlight, coachmark).
-- `utils.ts`: Class merging (`cn`), date formatting, and log grouping.
+- `achievements.ts`: Gamification engine (20+ milestones).
+- `tdee.ts`: Mifflin-St Jeor BMR and calorie goal calculations.
+- `metTable.ts`: Static MET lookup for ~60 activities.
+- `chartTheme.ts`: Centralized Recharts palette.
+- `motionVariants.ts`: Shared Framer Motion variants.
+- `utils.ts`: Utility functions (cn, date formatting, log grouping).
 
-### Page Components (`/src/pages`)
+### Page Components (`apps/web/src/pages`)
 
-- `Dashboard.tsx`: Main overview with editorial layout and grouped logs.
-- `Recipes.tsx`: User-defined recipe management.
-- `Progress.tsx`: Comprehensive visualizations (7 sections: Calorie Trend, Macro Breakdown, Meal
-  Distribution, Water Intake, Body Measurements, Measurement History, Achievements).
-- `Settings.tsx`: User profile, personalized goal management (TDEE), and data export/import.
+- `Dashboard.tsx`: Main overview with editorial layout.
+- `Recipes.tsx`: Recipe management interface.
+- `Progress.tsx`: Data-driven visualizations (Calorie Trend, Macros, Micronutrients, etc.).
+- `Settings.tsx`: User profile, TDEE management, and data settings.
 
 ## Operational Standards
 
 - **Strict Development Rules:**
   - **Tailwind Only:** No inline styles or CSS modules.
-  - **Branded Types:** Use branded types for all IDs (UserId, FoodItemId, etc.) to prevent mix-ups.
-  - **Zustand Store:** All shared state must reside in `src/state/AppState.ts`.
-  - **IndexedDB Indices:** Always use compound indices (e.g., `[userId+dateLogged]`) for queries.
-  - **Test-Driven:** Every component and logic file must have a `.test.ts/tsx` file with >80%
-    coverage.
-  - **Navigation:** Hash-based only; no router library allowed.
+  - **Branded Types:** Use branded types for all IDs to prevent mix-ups.
+  - **Zustand Store:** Composed slices in `apps/web/src/state/slices/`.
+  - **IndexedDB Indices:** Use compound indices (e.g., `[userId+dateLogged]`) for all queries.
+  - **Test-Driven:** Every component/logic file must have a `.test.ts/tsx` file with >80% coverage.
+  - **Navigation:** Hash-based only; no router library.
   - **Named Imports:** Never use `import React from "react"`; use named imports.
-  - **Lazy Loading:** Heavy components (e.g., `BarcodeScanner`) must be lazy-loaded with `Suspense`.
-- **Database Safety:** `clearDatabase()` disabled in production.
-- **Security:** Strict CSP restricts hardware to `self` and disables geolocation. HSTS and COOP/COEP
-  enabled.
-- **Accessibility:** Global keyboard shortcuts (`?`); Guided product tour for onboarding.
-
-- **Do NOT suggest or make git commits** - the user manages commits themselves
-- **Never add personal information to any files** - no email addresses, phone numbers, physical addresses, or PII
+  - **Lazy Loading:** Heavy components (e.g., `BarcodeScanner`, `TdeeProfilePanel`) must be lazy-loaded.
+- **Security:** Strict CSP, HSTS, and JWT-based sync security.
+- **Git:** Commit format `<type>(<scope>): <subject>`. Run `pnpm lint:fix` and `pnpm test` before commits.
 
 ### Development Guidelines for Gemini CLI
 
-To ensure consistency and leverage existing project documentation:
-
-- **Primary Source of Truth:** For comprehensive and detailed rules, especially those specific to
-  Claude AI's agents and workflows, refer to the `.claude/` directory. This includes specific mock
-  patterns, framework limitations, and agent-specific configurations.
-- **Frontend Rules:** For detailed frontend development conventions and specific component
-  guidelines, refer to `src/GEMINI.md`.
+- **Primary Source of Truth:** Refer to the `.claude/` directory for detailed agent-specific rules.
+- **Frontend Rules:** See `src/GEMINI.md` (subdirectory) for detailed UI conventions.
 - **Testing Principles:**
-  - **Framework:** Utilize Vitest with `@testing-library/react`, jsdom, and `fake-indexeddb/auto`.
-  - **TDD Approach:** Always write a failing test first and confirm its failure before implementing
-    the fix.
-  - **Coverage Targets:** Aim for 90% statements, 90% functions, 80% branches, and 90% lines.
-  - **File Placement:** Place test files alongside their corresponding source files (e.g.,
-    `Foo.tsx` -> `Foo.test.tsx`).
-  - **Assertions:** Prefer `toStrictEqual` over `toEqual` for deep equality checks.
+  - **Framework:** Vitest + @testing-library/react + jsdom + fake-indexeddb.
+  - **TDD:** Write failing tests first.
+  - **Assertions:** Prefer `toStrictEqual` for deep equality.
 
 ### Architectural Baseline (Adding New Features)
 
-1. `src/types/index.ts`: Branded ID + domain constants.
-2. `src/db/dbService.ts`: New table/schema version + CRUD helpers.
-3. `src/state/AppState.ts`: State fields + actions (using aliases for DB functions).
-4. `src/hooks/use<Feature>Form.ts`: react-hook-form + zod + toast feedback.
-5. `src/components/<Feature>.tsx`: Consume hook + store; use shadcn/ui + Tailwind.
-6. `src/pages/`: Integration + motion/react stagger animations.
-7. `src/**/*.test.ts`: Comprehensive tests for DB, state, and hooks.
+1. `apps/web/src/types/index.ts`: Branded ID + domain constants.
+2. `apps/web/src/db/dbService.ts`: Schema update + CRUD helpers.
+3. `apps/web/src/state/slices/`: New state slice unified in `AppState.ts`.
+4. `apps/web/src/hooks/use<Feature>Form.ts`: Form logic + validation.
+5. `apps/web/src/components/<Feature>.tsx`: Component implementation.
+6. `apps/web/src/**/*.test.ts`: Comprehensive verification.
 
-## Roadmap (v0.6.0+)
+## Roadmap (v0.7.0+)
 
-- [x] Recurring Meal Logging (copy yesterday, daily bitmasks)
-- [x] Diet Profiles & Restriction Flags (Keto, Vegan, etc. + allergen warnings)
-- [x] Reminders & Web Push Notifications
-- [ ] Micronutrient Tracking (~25 nutrients: fiber, sodium, vitamins/minerals)
-- [ ] PWA + Service Worker (Install-to-home, better offline)
-- [ ] Recipe Import from URL (CORS proxy + JSON-LD parsing)
-- [ ] Spring Boot Backend (v0.8.0 milestone for sync/auth)
-- [ ] Native iOS/Android apps (v1.0.0+ milestone)
+- [x] Micronutrient Tracking (~25 nutrients: fiber, sodium, vitamins/minerals)
+- [x] PWA + Service Worker (Install-to-home, better offline)
+- [x] Recipe Import from URL (CORS proxy + JSON-LD parsing)
+- [x] Spring Boot Backend (v0.7.0 milestone)
+- [ ] Cloud Sync (Backend B4 milestone) - **In Progress**
+- [ ] AI Photo Logging (Backend B5 milestone) - **Planned**
+- [ ] Native iOS/Android apps (v0.8.0-v1.0.0 milestone) - **Planned**
 
 ---
-**Last Updated:** May 25, 2026 (v0.5.0 release)
+**Last Updated:** May 25, 2026 (v0.7.0 release)
