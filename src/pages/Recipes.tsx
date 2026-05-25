@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
@@ -11,11 +11,22 @@ import RecipeForm from "@/components/recipes/RecipeForm";
 import RecipeList from "@/components/recipes/RecipeList";
 import { type Recipe, saveRecipe } from "@/db/dbService";
 import type { RecipeId } from "@/types";
+import { Input } from "@/components/ui/input";
+import { EDITORIAL_INPUT_CLS } from "@/lib/utils";
 
 const Recipes = () => {
   const { recipes, deleteRecipe, fetchRecipes, userId } = useAppState();
   const shouldReduceMotion = useReducedMotion();
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredRecipes = useMemo(
+    () =>
+      searchQuery.trim()
+        ? recipes.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()))
+        : recipes,
+    [recipes, searchQuery],
+  );
 
   const handleDeleteRecipeWithUndo = useCallback(
     async (id: RecipeId) => {
@@ -78,8 +89,15 @@ const Recipes = () => {
             subtitle={`(${recipes.length})`}
           />
           <div className="col-span-12">
+            <Input
+              className={EDITORIAL_INPUT_CLS + " mb-4 max-w-sm"}
+              placeholder="Search recipes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search recipes"
+            />
             <RecipeList
-              recipes={recipes}
+              recipes={filteredRecipes}
               onEdit={setEditingRecipe}
               onDelete={handleDeleteRecipeWithUndo}
             />

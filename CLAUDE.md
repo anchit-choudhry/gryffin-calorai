@@ -5,7 +5,7 @@
 **Project Name:** Gryffin Calorai  
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.  
-**Context:** v0.5.0 (May 2026), client-side only, no backend dependency. Health-focused personal
+**Context:** v0.6.0 (May 2026), client-side only, no backend dependency. Health-focused personal
 tool.
 
 ---
@@ -71,7 +71,7 @@ tool.
   `vendor-motion`, `vendor-ui` (shadcn/Radix)
 - **Store:** Single Zustand instance with actions for food logs, recipes, water logs, and body
   measurements.
-- **DB:** Dexie.js tables with compound indices; currently at **schema version 16**
+- **DB:** Dexie.js tables with compound indices; currently at **schema version 17**
 - **FoodItem fields:** `name`, `calories`, `servingSize`, `protein`, `carbs`, `fat`, `dateLogged`,
   `userId`, `isFavorite`, `mealType`
 - **MealType:** `"Breakfast" | "Lunch" | "Snacks" | "Dinner"` (defined in `src/types/index.ts`)
@@ -134,7 +134,9 @@ For release history & changes, see @@release-notes/0.3.0.md (current), @@release
 @@release-notes/0.1.0.md, @@release-notes/0.0.9.md,
 @@release-notes/0.0.8.md, @@release-notes/0.0.4.md, @@release-notes/0.0.3.md, and
 @@release-notes/0.0.2.md  
-For roadmap, implemented history, and DB schema versions, see @@docs/ROADMAP.md  
+For roadmap, implemented history, and DB schema versions, see @@ROADMAP.md  
+For pending TDD test plans (FoodLogger, WaterTracker, useKeyboardShortcuts, etc.), see @@new-tdd.md  
+For UX/design system guidelines (color, spacing, motion, interaction, responsive), see @@UX-principles.md  
 For quick dev commands, see @@README.md
 
 ---
@@ -144,10 +146,10 @@ For quick dev commands, see @@README.md
 | Category       | File                                                                                                                                                                                                                                                                           | Key Info                                                                     |
 |----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------|
 | **State**      | `src/state/AppState.ts`                                                                                                                                                                                                                                                        | Single Zustand store; all mutations here                                     |
-| **DB**         | `src/db/dbService.ts`                                                                                                                                                                                                                                                          | Dexie schema v16, CRUD, compound indices                                     |
+| **DB**         | `src/db/dbService.ts`                                                                                                                                                                                                                                                          | Dexie schema v17, CRUD, compound indices                                     |
 | **Types**      | `src/types/index.ts`                                                                                                                                                                                                                                                           | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS, DietPreset, RestrictionFlag, getTodayDayIndex, checkFoodNameRestrictions, ReminderId, REMINDER_LABELS |
 | **Pages**      | `src/pages/{Dashboard,Recipes,Progress,Settings}.tsx`                                                                                                                                                                                                                          | Main views (lazy-loaded); Settings at `#/settings`                           |
-| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay,FastingTimer,ActivityLogger,ActivityTracker,OnboardingModal,OnboardingBanner,DataExportPanel,DietProfileEditor,RecurringMeals,RemindersSettings}.tsx` | UI components incl. v0.5.0 additions                                  |
+| **Components** | `src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay,FastingTimer,ActivityLogger,ActivityTracker,OnboardingModal,OnboardingBanner,DataExportPanel,DietProfileEditor,RecurringMeals,RemindersSettings,MealTemplates}.tsx` | UI components incl. v0.6.0 additions                                  |
 | **Settings**   | `src/components/settings/{TdeeProfilePanel,GoalSettings}.tsx`                                                                                                                                                                                                                  | Settings sub-components; TdeeProfilePanel is lazy-loaded                     |
 | **Dashboard**  | `src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                                                                                                                                      | Dashboard sub-components                                                     |
 | **Tour**       | `src/components/tour/{ProductTourOverlay,CoachmarkCard,tourSteps,useSpotlightRect}.tsx/.ts`                                                                                                                                                                                    | Product tour system with spotlight and coachmarks                            |
@@ -179,5 +181,5 @@ pnpm build            # Production build
 
 ---
 
-**Last Updated:** May 24, 2026 | **Current release:** v0.5.0 | **In progress:** v0.5.x (Feature 16)  
+**Last Updated:** May 25, 2026 | **Current release:** v0.6.0 | **In progress:** v0.6.x (Features 12, 14)  
 **Maintainer:** Anchit Choudhry

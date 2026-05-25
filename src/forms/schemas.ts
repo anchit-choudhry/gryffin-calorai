@@ -97,6 +97,9 @@ export const IngredientSchema = z.object({
       "Name may only contain letters, numbers, spaces, and common punctuation (- ' , . ( ) /)",
     ),
   calories: z.number().min(0, "Cannot be negative").max(10000, "Cannot exceed 10,000 kcal"),
+  protein: z.number().min(0).max(500),
+  carbs: z.number().min(0).max(500),
+  fat: z.number().min(0).max(500),
   quantity: z.number().min(1, "Min 1").max(999, "Max 999"),
   serving: z.number().min(1, "Min 1").max(999, "Max 999"),
 });
@@ -247,6 +250,42 @@ export const ReminderSchema = z.object({
 });
 
 export type ReminderFormValues = z.infer<typeof ReminderSchema>;
+
+// Meal template schema (feature 16)
+export const MealTemplateSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .max(80, "Name must be 80 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]+$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation",
+    ),
+});
+
+export type MealTemplateFormValues = z.infer<typeof MealTemplateSchema>;
+
+// Meal plan schema (feature 16)
+export const MealPlanSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Plan name is required")
+    .max(80, "Name must be 80 characters or fewer")
+    .regex(
+      /^[\w\s\-',.()/]+$/,
+      "Name may only contain letters, numbers, spaces, and common punctuation",
+    ),
+  days: z
+    .array(
+      z.object({
+        dayIndex: z.number().int().min(0).max(6),
+        templateId: z.number().int().min(1).nullable(),
+      }),
+    )
+    .length(7, "A meal plan must have exactly 7 days"),
+});
+
+export type MealPlanFormValues = z.infer<typeof MealPlanSchema>;
 
 // Per-table backup row schemas - enforce critical value ranges on imported data
 

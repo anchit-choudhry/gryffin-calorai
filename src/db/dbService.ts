@@ -10,6 +10,8 @@ import type {
   FoodItemId,
   GoalType,
   ISODate,
+  MealPlanId,
+  MealTemplateId,
   MealType,
   RecipeId,
   RecurringMealId,
@@ -28,6 +30,8 @@ import {
   DietProfileId as makeDietProfileId,
   FastingSessionId as makeFastingSessionId,
   FoodItemId as makeFoodItemId,
+  MealPlanId as makeMealPlanId,
+  MealTemplateId as makeMealTemplateId,
   RecipeId as makeRecipeId,
   RecurringMealId as makeRecurringMealId,
   ReminderId as makeReminderId,
@@ -61,6 +65,9 @@ export interface Recipe {
     serving: number;
   }[];
   totalCalories: number;
+  totalProtein?: number;
+  totalCarbs?: number;
+  totalFat?: number;
   createdBy: UserId;
   dateCreated: string;
   userId: UserId;
@@ -177,6 +184,40 @@ export interface Reminder {
   time: string; // HH:MM
   daysOfWeek: number; // bitmask: bit 0 = Mon, bit 6 = Sun
   enabled: boolean;
+}
+
+// --- Feature 16: Meal Templates & Plans ---
+
+export interface MealTemplateFood {
+  name: string;
+  calories: number;
+  servingSize: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  mealType: MealType;
+}
+
+export interface MealTemplate {
+  id?: MealTemplateId;
+  userId: UserId;
+  name: string;
+  foods: MealTemplateFood[];
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+}
+
+export interface MealPlanDay {
+  dayIndex: number; // 0=Mon ... 6=Sun
+  templateId: MealTemplateId | null;
+}
+
+export interface MealPlan {
+  id?: MealPlanId;
+  userId: UserId;
+  name: string;
+  days: MealPlanDay[];
+  createdAt: string; // ISO timestamp
 }
 
 // 1. Initialize Dexie Database
@@ -417,6 +458,26 @@ db.version(16).stores({
   reminders: "++id, userId, [userId+type]",
 });
 
+// 17. Version 17: add mealTemplates + mealPlans tables (feature 16 - Meal Planning & Templates)
+db.version(17).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime",
+  dietProfiles: "++id, &userId, updatedAt",
+  recurringMeals: "++id, userId, dayMask",
+  reminders: "++id, userId, [userId+type]",
+  mealTemplates: "++id, userId, createdAt",
+  mealPlans: "++id, userId, createdAt",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -431,6 +492,8 @@ export const fastingSessions: Table<FastingSession> = db.table("fastingSessions"
 export const dietProfiles: Table<DietProfile> = db.table("dietProfiles");
 export const recurringMeals: Table<RecurringMeal> = db.table("recurringMeals");
 export const reminders: Table<Reminder> = db.table("reminders");
+export const mealTemplates: Table<MealTemplate> = db.table("mealTemplates");
+export const mealPlans: Table<MealPlan> = db.table("mealPlans");
 
 export const initializeDB = async () => {
   try {
@@ -814,6 +877,54 @@ export const deleteReminder = async (id: ReminderId, userId: UserId): Promise<vo
   const reminder = await reminders.get(id);
   if (!reminder || reminder.userId !== userId) return;
   await reminders.delete(id);
+};
+
+// --- Meal Template CRUD ---
+
+export const addMealTemplate = async (template: MealTemplate): Promise<MealTemplateId> => {
+  const id = await mealTemplates.add(template);
+  return makeMealTemplateId(id);
+};
+
+export const getMealTemplates = async (userId: UserId): Promise<MealTemplate[]> => {
+  return mealTemplates.where("userId").equals(userId).toArray();
+};
+
+export const updateMealTemplate = async (template: MealTemplate, userId: UserId): Promise<void> => {
+  if (!template.id) throw new Error("MealTemplate id required for update");
+  const existing = await mealTemplates.get(template.id);
+  if (!existing || existing.userId !== userId) return;
+  await mealTemplates.put({ ...template, userId });
+};
+
+export const deleteMealTemplate = async (id: MealTemplateId, userId: UserId): Promise<void> => {
+  const template = await mealTemplates.get(id);
+  if (!template || template.userId !== userId) return;
+  await mealTemplates.delete(id);
+};
+
+// --- Meal Plan CRUD ---
+
+export const addMealPlan = async (plan: MealPlan): Promise<MealPlanId> => {
+  const id = await mealPlans.add(plan);
+  return makeMealPlanId(id);
+};
+
+export const getMealPlans = async (userId: UserId): Promise<MealPlan[]> => {
+  return mealPlans.where("userId").equals(userId).toArray();
+};
+
+export const updateMealPlan = async (plan: MealPlan, userId: UserId): Promise<void> => {
+  if (!plan.id) throw new Error("MealPlan id required for update");
+  const existing = await mealPlans.get(plan.id);
+  if (!existing || existing.userId !== userId) return;
+  await mealPlans.put({ ...plan, userId });
+};
+
+export const deleteMealPlan = async (id: MealPlanId, userId: UserId): Promise<void> => {
+  const plan = await mealPlans.get(id);
+  if (!plan || plan.userId !== userId) return;
+  await mealPlans.delete(id);
 };
 
 // --- Data Export / Import ---

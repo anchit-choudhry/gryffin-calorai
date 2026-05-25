@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useDietProfile } from "./useDietProfile";
 import * as appState from "../state/AppState";
+import { toast } from "sonner";
+
+vi.mock("sonner");
 
 vi.mock("../state/AppState");
 
@@ -79,5 +82,71 @@ describe("useDietProfile", () => {
 
     const { result } = renderHook(() => useDietProfile());
     expect(result.current.dietProfile).toStrictEqual(profile);
+  });
+
+  it("shows a success toast after saveDietProfile resolves", async () => {
+    const mockSave = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      ...baseMock,
+      saveDietProfile: mockSave,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useDietProfile());
+
+    await act(async () => {
+      result.current.form.setValue("preset", "keto", { shouldDirty: true });
+      result.current.form.setValue("restrictions", ["gluten", "dairy"], { shouldDirty: true });
+    });
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+    });
+
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it("calls saveDietProfile with all selected restrictions", async () => {
+    const mockSave = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      ...baseMock,
+      saveDietProfile: mockSave,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useDietProfile());
+
+    await act(async () => {
+      result.current.form.setValue("preset", "vegan", { shouldDirty: true });
+      result.current.form.setValue("restrictions", ["gluten", "dairy", "nuts"], {
+        shouldDirty: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+    });
+
+    expect(mockSave).toHaveBeenCalledWith("vegan", ["gluten", "dairy", "nuts"]);
+  });
+
+  it("does not call saveDietProfile when form is invalid", async () => {
+    const mockSave = vi.fn();
+    vi.mocked(appState).useAppState.mockReturnValue({
+      ...baseMock,
+      saveDietProfile: mockSave,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    const { result } = renderHook(() => useDietProfile());
+
+    await act(async () => {
+      result.current.form.setValue("preset", "invalid-preset-value" as never, {
+        shouldDirty: true,
+      });
+    });
+
+    await act(async () => {
+      await result.current.onSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+    });
+
+    expect(mockSave).not.toHaveBeenCalled();
   });
 });

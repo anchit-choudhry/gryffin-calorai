@@ -43,12 +43,16 @@ export type FastingSessionId = Brand<number, "FastingSessionId">;
 export type DietProfileId = Brand<number, "DietProfileId">;
 export type RecurringMealId = Brand<number, "RecurringMealId">;
 export type ReminderId = Brand<number, "ReminderId">;
+export type MealTemplateId = Brand<number, "MealTemplateId">;
+export type MealPlanId = Brand<number, "MealPlanId">;
 
 export const ActivityLogId = (id: number): ActivityLogId => id as ActivityLogId;
 export const FastingSessionId = (id: number): FastingSessionId => id as FastingSessionId;
 export const DietProfileId = (id: number): DietProfileId => id as DietProfileId;
 export const RecurringMealId = (id: number): RecurringMealId => id as RecurringMealId;
 export const ReminderId = (id: number): ReminderId => id as ReminderId;
+export const MealTemplateId = (id: number): MealTemplateId => id as MealTemplateId;
+export const MealPlanId = (id: number): MealPlanId => id as MealPlanId;
 
 export function isActivityLogId(value: unknown): value is ActivityLogId {
   return isPositiveIntegerId(value);
@@ -67,6 +71,14 @@ export function isRecurringMealId(value: unknown): value is RecurringMealId {
 }
 
 export function isReminderId(value: unknown): value is ReminderId {
+  return isPositiveIntegerId(value);
+}
+
+export function isMealTemplateId(value: unknown): value is MealTemplateId {
+  return isPositiveIntegerId(value);
+}
+
+export function isMealPlanId(value: unknown): value is MealPlanId {
   return isPositiveIntegerId(value);
 }
 

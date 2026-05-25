@@ -32,6 +32,9 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
             foodItemId: Number(ing.foodItemId),
             foodItemName: foodItem?.name ?? "",
             calories: foodItem?.calories ?? 0,
+            protein: foodItem?.protein ?? 0,
+            carbs: foodItem?.carbs ?? 0,
+            fat: foodItem?.fat ?? 0,
             quantity: ing.quantity,
             serving: ing.serving,
           };
@@ -65,6 +68,18 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
               (acc, ing) => acc + ing.calories * ing.quantity * ing.serving,
               0,
             );
+            const totalProtein = data.ingredients.reduce(
+              (acc, ing) => acc + (ing.protein ?? 0) * ing.quantity * ing.serving,
+              0,
+            );
+            const totalCarbs = data.ingredients.reduce(
+              (acc, ing) => acc + (ing.carbs ?? 0) * ing.quantity * ing.serving,
+              0,
+            );
+            const totalFat = data.ingredients.reduce(
+              (acc, ing) => acc + (ing.fat ?? 0) * ing.quantity * ing.serving,
+              0,
+            );
 
             const mappedIngredients = data.ingredients.map(({ foodItemId, quantity, serving }) => ({
               foodItemId: FoodItemId(foodItemId),
@@ -80,6 +95,9 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
                   description: data.description,
                   ingredients: mappedIngredients,
                   totalCalories,
+                  totalProtein,
+                  totalCarbs,
+                  totalFat,
                 },
                 userId,
               );
@@ -90,6 +108,9 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
                 description: data.description,
                 ingredients: mappedIngredients,
                 totalCalories,
+                totalProtein,
+                totalCarbs,
+                totalFat,
                 createdBy: userId,
                 dateCreated: new Date().toISOString(),
                 userId,

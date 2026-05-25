@@ -39,6 +39,14 @@ export function normalizeHash(raw: string): ValidHash {
   return (VALID_HASHES.has(h as ValidHash) ? h : "#dashboard") as ValidHash;
 }
 
+export function stripHtml(html: string): string {
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function mapDbError(error: unknown, fallback: string): string {
   if (error instanceof Dexie.DexieError) {
     if (error.name === "QuotaExceededError")

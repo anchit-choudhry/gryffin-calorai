@@ -225,6 +225,9 @@ describe("useRecipeForm", () => {
           foodItemId: 1,
           foodItemName: "Pasta",
           calories: 220,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
           quantity: 1,
           serving: 1,
         });
@@ -307,6 +310,9 @@ describe("useRecipeForm", () => {
           foodItemId: 1,
           foodItemName: "Pasta",
           calories: 200,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
           quantity: 1,
           serving: 1,
         });
@@ -352,6 +358,9 @@ describe("useRecipeForm", () => {
           foodItemId: 1,
           foodItemName: "Pasta",
           calories: 200,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
           quantity: 1,
           serving: 1,
         });
@@ -380,6 +389,9 @@ describe("useRecipeForm", () => {
           foodItemId: 1,
           foodItemName: "Pasta",
           calories: 200,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
           quantity: 1,
           serving: 1,
         });

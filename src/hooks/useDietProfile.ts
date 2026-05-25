@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { type DietProfileFormValues, DietProfileSchema } from "@/forms/schemas";
 import { useAppState } from "@/state/AppState";
 import type { DietPreset, RestrictionFlag } from "@/types";
@@ -17,6 +18,7 @@ export function useDietProfile() {
 
   const onSubmit = form.handleSubmit(async (data) => {
     await saveDietProfile(data.preset as DietPreset, data.restrictions as RestrictionFlag[]);
+    toast.success("Diet profile saved");
   });
 
   return { form, onSubmit, dietProfile };

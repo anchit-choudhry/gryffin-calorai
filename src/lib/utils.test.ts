@@ -301,6 +301,44 @@ describe("ICON_BTN_CLS", () => {
   });
 });
 
+describe("stripHtml", () => {
+  // imported below - will fail until added to utils
+  it("returns plain text unchanged", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("plain text")).toBe("plain text");
+  });
+
+  it("strips a single tag", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("<b>bold</b>")).toBe("bold");
+  });
+
+  it("strips multiple nested tags", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("<p>Click <a href='#'>here</a></p>")).toBe("Click here");
+  });
+
+  it("collapses extra whitespace left by removed tags", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("<p>foo</p><p>bar</p>")).toBe("foo bar");
+  });
+
+  it("returns empty string for empty input", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("")).toBe("");
+  });
+
+  it("strips self-closing tags", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("line1<br/>line2")).toBe("line1 line2");
+  });
+
+  it("strips script tags", async () => {
+    const { stripHtml } = await import("./utils");
+    expect(stripHtml("<script>alert('xss')</script>text")).toBe("text");
+  });
+});
+
 describe("mapDbError", () => {
   it("should return fallback for generic error", () => {
     const error = new Error("Generic error");

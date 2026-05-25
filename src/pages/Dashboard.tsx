@@ -14,7 +14,8 @@ import FastingTimer from "../components/FastingTimer";
 import OnboardingBanner from "../components/OnboardingBanner";
 import OnboardingModal from "../components/OnboardingModal";
 import { useAppState } from "../state/AppState";
-import { todayISO } from "@/types";
+import type { MealType } from "@/types";
+import { MEAL_TYPES, todayISO } from "@/types";
 import type { FoodItem } from "../db/dbService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DashboardHero from "../components/dashboard/DashboardHero";
@@ -22,6 +23,7 @@ import SectionHeader from "../components/dashboard/SectionHeader";
 import EditorialFrame from "../components/dashboard/EditorialFrame";
 import LogEntry from "../components/dashboard/LogEntry";
 import RecurringMeals from "../components/RecurringMeals";
+import MealTemplates from "../components/MealTemplates";
 import { motionTokens, pageVariants, useSectionMotion } from "../lib/motionVariants";
 import { groupLogsByMeal } from "../lib/utils";
 
@@ -40,6 +42,7 @@ const Dashboard = () => {
     tdeeProfile,
   } = useAppState();
 
+  const [logFilter, setLogFilter] = useState<MealType | "All">("All");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
   const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
@@ -76,7 +79,11 @@ const Dashboard = () => {
     [dailyLogs],
   );
 
-  const groupedLogs = useMemo(() => groupLogsByMeal(dailyLogs), [dailyLogs]);
+  const filteredLogs = useMemo(
+    () => (logFilter === "All" ? dailyLogs : dailyLogs.filter((l) => l.mealType === logFilter)),
+    [dailyLogs, logFilter],
+  );
+  const groupedLogs = useMemo(() => groupLogsByMeal(filteredLogs), [filteredLogs]);
   const recentFoods = useMemo(() => allFoodItems.slice(0, 8), [allFoodItems]);
 
   const closeEditLog = useCallback(() => setEditingLog(null), []);
@@ -278,10 +285,15 @@ const Dashboard = () => {
           </div>
         </motion.section>
 
-        {/* Section F.5 — Recurring Meals */}
-        <motion.section className="col-span-12 lg:col-span-4" {...sv}>
-          <RecurringMeals />
-        </motion.section>
+        {/* Section F.5 — Recurring Meals & Templates */}
+        <div className="col-span-12 flex flex-col lg:flex-row gap-6">
+          <motion.section className="flex-1" {...sv}>
+            <RecurringMeals />
+          </motion.section>
+          <motion.section className="flex-[2]" {...sv}>
+            <MealTemplates />
+          </motion.section>
+        </div>
 
         {/* Section G — Activity Logging */}
         <motion.section
@@ -297,11 +309,28 @@ const Dashboard = () => {
 
         {/* Section F — Today's Log */}
         <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>
-          <SectionHeader
-            title="Today's Log"
-            subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
-            accent
-          />
+          <div className="flex items-baseline gap-4 flex-wrap">
+            <SectionHeader
+              title="Today's Log"
+              subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
+              accent
+            />
+            <div className="flex gap-1 ml-auto flex-wrap">
+              {(["All", ...MEAL_TYPES] as const).map((label) => (
+                <button
+                  key={label}
+                  onClick={() => setLogFilter(label as MealType | "All")}
+                  className={`px-2 py-0.5 text-xs font-mono border transition-colors ${
+                    logFilter === label
+                      ? "border-ink bg-ink text-paper"
+                      : "border-rule text-ink-soft hover:border-ink hover:text-ink"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           {init.status === "loading" ? (
             <div className="mt-4 space-y-4">
               {[1, 2, 3].map((i) => (

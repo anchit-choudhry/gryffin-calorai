@@ -8,6 +8,8 @@ import {
   FastingSessionId,
   FoodItemId,
   ISODate,
+  MealPlanId,
+  MealTemplateId,
   RecipeId,
   RecurringMealId,
   ReminderId,
@@ -43,6 +45,8 @@ describe("AppState", () => {
       activeFastingSession: null,
       fastingHistory: [],
       reminders: [],
+      mealTemplates: [],
+      mealPlans: [],
     });
     vi.clearAllMocks();
     localStorage.clear();
@@ -137,6 +141,14 @@ describe("AppState", () => {
     vi.mocked(dbService.getReminders).mockResolvedValue([]);
     vi.mocked(dbService.upsertReminder).mockResolvedValue(ReminderId(1));
     vi.mocked(dbService.deleteReminder).mockResolvedValue(undefined);
+    vi.mocked(dbService.getMealTemplates).mockResolvedValue([]);
+    vi.mocked(dbService.getMealPlans).mockResolvedValue([]);
+    vi.mocked(dbService.addMealTemplate).mockResolvedValue(MealTemplateId(1));
+    vi.mocked(dbService.deleteMealTemplate).mockResolvedValue(undefined);
+    vi.mocked(dbService.updateMealTemplate).mockResolvedValue(undefined);
+    vi.mocked(dbService.addMealPlan).mockResolvedValue(MealPlanId(1));
+    vi.mocked(dbService.deleteMealPlan).mockResolvedValue(undefined);
+    vi.mocked(dbService.updateMealPlan).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -1794,6 +1806,311 @@ describe("AppState", () => {
       await useAppState.getState().deleteReminder(ReminderId(1));
 
       expect(useAppState.getState().error).toBeDefined();
+    });
+  });
+
+  describe("Feature 16 - Meal Templates & Plans", () => {
+    const userId = UserId("f16-user");
+
+    const sampleTemplate = {
+      id: MealTemplateId(1),
+      userId,
+      name: "My Breakfast",
+      foods: [
+        {
+          name: "Oats",
+          calories: 150,
+          servingSize: 40,
+          protein: 5,
+          carbs: 27,
+          fat: 3,
+          mealType: "Breakfast" as const,
+        },
+      ],
+      createdAt: "2026-05-24T08:00:00Z",
+      updatedAt: "2026-05-24T08:00:00Z",
+    };
+
+    const samplePlan = {
+      id: MealPlanId(1),
+      userId,
+      name: "My Week Plan",
+      days: Array.from({ length: 7 }, (_, i) => ({ dayIndex: i, templateId: null })),
+      createdAt: "2026-05-24T08:00:00Z",
+    };
+
+    it("fetchMealTemplates populates mealTemplates from DB", async () => {
+      useAppState.setState({ userId, mealTemplates: [] });
+      vi.mocked(dbService.getMealTemplates).mockResolvedValue([sampleTemplate]);
+
+      await useAppState.getState().fetchMealTemplates(userId);
+
+      expect(dbService.getMealTemplates).toHaveBeenCalledWith(userId);
+      expect(useAppState.getState().mealTemplates).toHaveLength(1);
+      expect(useAppState.getState().mealTemplates[0]!.name).toBe("My Breakfast");
+    });
+
+    it("fetchMealTemplates does not throw on DB error", async () => {
+      useAppState.setState({ userId, mealTemplates: [] });
+      vi.mocked(dbService.getMealTemplates).mockRejectedValueOnce(new Error("DB error"));
+
+      await expect(useAppState.getState().fetchMealTemplates(userId)).resolves.toBeUndefined();
+    });
+
+    it("addMealTemplate calls DB and refreshes state", async () => {
+      useAppState.setState({ userId, mealTemplates: [] });
+      vi.mocked(dbService.getMealTemplates).mockResolvedValue([sampleTemplate]);
+
+      await useAppState
+        .getState()
+        .addMealTemplate({ name: "My Breakfast", foods: sampleTemplate.foods });
+
+      expect(dbService.addMealTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "My Breakfast", userId }),
+      );
+      expect(useAppState.getState().mealTemplates).toHaveLength(1);
+    });
+
+    it("addMealTemplate does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().addMealTemplate({ name: "X", foods: [] });
+
+      expect(dbService.addMealTemplate).not.toHaveBeenCalled();
+    });
+
+    it("addMealTemplate sets error state on DB failure", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.addMealTemplate).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().addMealTemplate({ name: "X", foods: [] });
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("deleteMealTemplate calls DB and refreshes state", async () => {
+      useAppState.setState({ userId, mealTemplates: [sampleTemplate] });
+      vi.mocked(dbService.getMealTemplates).mockResolvedValue([]);
+
+      await useAppState.getState().deleteMealTemplate(MealTemplateId(1));
+
+      expect(dbService.deleteMealTemplate).toHaveBeenCalledWith(MealTemplateId(1), userId);
+      expect(useAppState.getState().mealTemplates).toHaveLength(0);
+    });
+
+    it("deleteMealTemplate does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().deleteMealTemplate(MealTemplateId(1));
+
+      expect(dbService.deleteMealTemplate).not.toHaveBeenCalled();
+    });
+
+    it("deleteMealTemplate sets error on DB failure", async () => {
+      useAppState.setState({ userId });
+      vi.mocked(dbService.deleteMealTemplate).mockRejectedValueOnce(new Error("fail"));
+
+      await useAppState.getState().deleteMealTemplate(MealTemplateId(1));
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+
+    it("saveTemplateFromTodayLogs saves a template from daily logs", async () => {
+      const food = {
+        id: FoodItemId(1),
+        userId,
+        name: "Apple",
+        calories: 95,
+        servingSize: 1,
+        protein: 0,
+        carbs: 25,
+        fat: 0,
+        dateLogged: ISODate("2026-05-24"),
+        isFavorite: false,
+        mealType: "Breakfast" as const,
+      };
+      useAppState.setState({ userId, dailyLogs: [food], mealTemplates: [] });
+      vi.mocked(dbService.getMealTemplates).mockResolvedValue([sampleTemplate]);
+
+      await useAppState.getState().saveTemplateFromTodayLogs("Today's Meals");
+
+      expect(dbService.addMealTemplate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Today's Meals" }),
+      );
+    });
+
+    it("saveTemplateFromTodayLogs does nothing when name is empty", async () => {
+      useAppState.setState({ userId, dailyLogs: [] });
+
+      await useAppState.getState().saveTemplateFromTodayLogs("");
+
+      expect(dbService.addMealTemplate).not.toHaveBeenCalled();
+    });
+
+    it("logAllFoodsFromTemplate logs all foods from the template", async () => {
+      useAppState.setState({ userId, mealTemplates: [sampleTemplate] });
+      vi.mocked(dbService.getDailyFoodLogs).mockResolvedValue([]);
+
+      await useAppState.getState().logAllFoodsFromTemplate(MealTemplateId(1));
+
+      expect(dbService.addFoodItemLog).toHaveBeenCalledTimes(1);
+      expect(dbService.addFoodItemLog).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Oats" }),
+      );
+    });
+
+    it("logAllFoodsFromTemplate does nothing when template is not found", async () => {
+      useAppState.setState({ userId, mealTemplates: [] });
+
+      await useAppState.getState().logAllFoodsFromTemplate(MealTemplateId(99));
+
+      expect(dbService.addFoodItemLog).not.toHaveBeenCalled();
+    });
+
+    it("copyFoodsFromDate copies food logs from the given date to today", async () => {
+      const pastLog = {
+        id: FoodItemId(2),
+        userId,
+        name: "Banana",
+        calories: 89,
+        servingSize: 1,
+        protein: 1,
+        carbs: 23,
+        fat: 0,
+        dateLogged: ISODate("2026-05-23"),
+        isFavorite: false,
+        mealType: "Breakfast" as const,
+      };
+      useAppState.setState({ userId });
+      vi.mocked(dbService.getDailyFoodLogs).mockResolvedValueOnce([pastLog]).mockResolvedValue([]);
+
+      await useAppState.getState().copyFoodsFromDate(ISODate("2026-05-23"));
+
+      expect(dbService.addFoodItemLog).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Banana" }),
+      );
+    });
+
+    it("fetchMealPlans populates mealPlans from DB", async () => {
+      useAppState.setState({ userId, mealPlans: [] });
+      vi.mocked(dbService.getMealPlans).mockResolvedValue([samplePlan]);
+
+      await useAppState.getState().fetchMealPlans(userId);
+
+      expect(dbService.getMealPlans).toHaveBeenCalledWith(userId);
+      expect(useAppState.getState().mealPlans).toHaveLength(1);
+    });
+
+    it("fetchMealPlans does not throw on DB error", async () => {
+      useAppState.setState({ userId, mealPlans: [] });
+      vi.mocked(dbService.getMealPlans).mockRejectedValueOnce(new Error("fail"));
+
+      await expect(useAppState.getState().fetchMealPlans(userId)).resolves.toBeUndefined();
+    });
+
+    it("saveMealPlan calls DB and refreshes state", async () => {
+      useAppState.setState({ userId, mealPlans: [] });
+      vi.mocked(dbService.getMealPlans).mockResolvedValue([samplePlan]);
+
+      await useAppState.getState().saveMealPlan({ name: "My Week Plan", days: samplePlan.days });
+
+      expect(dbService.addMealPlan).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "My Week Plan", userId }),
+      );
+      expect(useAppState.getState().mealPlans).toHaveLength(1);
+    });
+
+    it("saveMealPlan does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().saveMealPlan({ name: "X", days: [] });
+
+      expect(dbService.addMealPlan).not.toHaveBeenCalled();
+    });
+
+    it("deleteMealPlan calls DB and refreshes state", async () => {
+      useAppState.setState({ userId, mealPlans: [samplePlan] });
+      vi.mocked(dbService.getMealPlans).mockResolvedValue([]);
+
+      await useAppState.getState().deleteMealPlan(MealPlanId(1));
+
+      expect(dbService.deleteMealPlan).toHaveBeenCalledWith(MealPlanId(1), userId);
+      expect(useAppState.getState().mealPlans).toHaveLength(0);
+    });
+
+    it("deleteMealPlan does nothing when userId is null", async () => {
+      useAppState.setState({ userId: null });
+
+      await useAppState.getState().deleteMealPlan(MealPlanId(1));
+
+      expect(dbService.deleteMealPlan).not.toHaveBeenCalled();
+    });
+
+    it("applyWeekPlan logs today's template foods", async () => {
+      // Assign the template to every day so the test passes regardless of which day it runs
+      const planWithTemplate = {
+        ...samplePlan,
+        days: samplePlan.days.map((d) => ({ ...d, templateId: MealTemplateId(1) })),
+      };
+      useAppState.setState({
+        userId,
+        mealPlans: [planWithTemplate],
+        mealTemplates: [sampleTemplate],
+      });
+      vi.mocked(dbService.getDailyFoodLogs).mockResolvedValue([]);
+
+      await useAppState.getState().applyWeekPlan(MealPlanId(1));
+
+      expect(dbService.addFoodItemLog).toHaveBeenCalled();
+    });
+
+    it("applyWeekPlan does nothing when plan is not found", async () => {
+      useAppState.setState({ userId, mealPlans: [] });
+
+      await useAppState.getState().applyWeekPlan(MealPlanId(99));
+
+      expect(dbService.addFoodItemLog).not.toHaveBeenCalled();
+    });
+
+    it("applyWeekPlan sets error state on DB failure", async () => {
+      const planWithTemplate = {
+        ...samplePlan,
+        days: samplePlan.days.map((d) => ({ ...d, templateId: MealTemplateId(1) })),
+      };
+      useAppState.setState({
+        userId,
+        mealPlans: [planWithTemplate],
+        mealTemplates: [sampleTemplate],
+      });
+      vi.mocked(dbService.addFoodItemLog).mockRejectedValueOnce(new Error("DB fail"));
+
+      await useAppState.getState().applyWeekPlan(MealPlanId(1));
+
+      expect(useAppState.getState().error).toBeDefined();
+    });
+  });
+
+  describe("completeOnboarding", () => {
+    const userId = UserId("onboarding-user");
+
+    it("completeOnboarding does not throw on DB error", async () => {
+      useAppState.setState({
+        userId,
+        init: {
+          status: "ready",
+          user: {
+            id: userId,
+            username: "Test",
+            email: "",
+            lastLogin: "",
+            calorieGoal: 0,
+            hasCompletedOnboarding: false,
+          },
+        },
+      });
+      vi.mocked(dbService.completeOnboarding).mockRejectedValueOnce(new Error("DB fail"));
+
+      await expect(useAppState.getState().completeOnboarding()).resolves.toBeUndefined();
     });
   });
 });

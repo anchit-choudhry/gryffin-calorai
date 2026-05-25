@@ -24,7 +24,7 @@ function computeCardStyle(
   if (isMobile) {
     return {
       position: "fixed",
-      bottom: MOBILE_BOTTOM_NAV_HEIGHT + 8,
+      bottom: `calc(${MOBILE_BOTTOM_NAV_HEIGHT + 8}px + env(safe-area-inset-bottom))`,
       left: "50%",
       transform: "translateX(-50%)",
       width: Math.min(CARD_WIDTH, vw - 32),

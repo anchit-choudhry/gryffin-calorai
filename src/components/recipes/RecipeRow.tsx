@@ -21,6 +21,12 @@ function RecipeRow({ recipe, onEdit, onDelete }: Props) {
           {recipe.totalCalories.toLocaleString()} kcal &middot; {recipe.ingredients.length}{" "}
           ingredient(s)
         </p>
+        {recipe.totalProtein !== undefined && (
+          <p className="text-xs text-ink-soft/70 mt-1">
+            {Math.round(recipe.totalProtein)}g P &middot; {Math.round(recipe.totalCarbs ?? 0)}g C
+            &middot; {Math.round(recipe.totalFat ?? 0)}g F
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-1 ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
         <button

@@ -124,6 +124,29 @@ describe("parseRecipeFromHtml", () => {
     expect(result?.description).toBe("");
   });
 
+  it("strips HTML tags from description", () => {
+    const html = makeJsonLdHtml({
+      "@type": "Recipe",
+      name: "Test",
+      description: "<b>Healthy</b> meal with <em>fresh</em> ingredients.",
+      recipeIngredient: [],
+    });
+    const result = parseRecipeFromHtml(html, foods);
+    expect(result?.description).toBe("Healthy meal with fresh ingredients.");
+  });
+
+  it("truncates description to 500 characters", () => {
+    const long = "A".repeat(600);
+    const html = makeJsonLdHtml({
+      "@type": "Recipe",
+      name: "Test",
+      description: long,
+      recipeIngredient: [],
+    });
+    const result = parseRecipeFromHtml(html, foods);
+    expect(result?.description.length).toBeLessThanOrEqual(500);
+  });
+
   it("handles @graph array containing Recipe object", () => {
     const html = makeJsonLdHtml({
       "@graph": [

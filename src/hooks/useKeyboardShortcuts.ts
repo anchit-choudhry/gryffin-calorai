@@ -19,7 +19,10 @@ export function useKeyboardShortcuts(handlers: Handlers) {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const inInput =
-        target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        (target instanceof HTMLElement && target.contentEditable === "true");
 
       if (e.key === "g" && !inInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
         gPressed = true;

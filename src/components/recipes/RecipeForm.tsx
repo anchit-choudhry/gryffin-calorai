@@ -140,7 +140,16 @@ const RecipeForm: FC<Props> = ({ initialRecipe, onSuccess }) => {
             <button
               type="button"
               onClick={() =>
-                append({ foodItemId: 0, foodItemName: "", calories: 0, quantity: 1, serving: 1 })
+                append({
+                  foodItemId: 0,
+                  foodItemName: "",
+                  calories: 0,
+                  protein: 0,
+                  carbs: 0,
+                  fat: 0,
+                  quantity: 1,
+                  serving: 1,
+                })
               }
               className="w-full border border-dashed border-rule text-ink-soft hover:border-ink hover:text-ink px-4 py-2 font-mono text-[11px] uppercase tracking-wider transition-colors"
             >

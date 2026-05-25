@@ -86,7 +86,7 @@ const Settings = () => {
               Offline-first nutrition tracker. No accounts, no cloud, your data stays local.
             </p>
             <a
-              href="https://github.com/anchitchoudhry/gryffin-calorai"
+              href="https://github.com/anchit-choudhry/gryffin-calorai"
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-[10px] text-persimmon hover:text-persimmon/80 transition-colors"

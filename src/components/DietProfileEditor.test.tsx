@@ -8,6 +8,8 @@ const mockWatch = vi.hoisted(() =>
   vi.fn((field: string): string | string[] => (field === "preset" ? "generic" : [])),
 );
 const mockSetValue = vi.hoisted(() => vi.fn());
+const mockOnSubmit = vi.hoisted(() => vi.fn((e: React.FormEvent) => e.preventDefault()));
+const mockFormState = vi.hoisted(() => ({ value: { isSubmitting: false, isDirty: false } }));
 
 vi.mock("../state/AppState");
 vi.mock("../hooks/useDietProfile", () => ({
@@ -21,9 +23,9 @@ vi.mock("../hooks/useDietProfile", () => ({
       watch: mockWatch,
       setValue: mockSetValue,
       reset: vi.fn(),
-      formState: { isSubmitting: false, isDirty: false },
+      formState: mockFormState.value,
     },
-    onSubmit: vi.fn((e: React.FormEvent) => e.preventDefault()),
+    onSubmit: mockOnSubmit,
   }),
 }));
 vi.mock("@/components/ui/form", () => ({
@@ -45,7 +47,10 @@ const baseMock = {
 describe("DietProfileEditor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWatch.mockImplementation((field: string) => (field === "preset" ? "generic" : []));
+    mockWatch.mockImplementation((field: string): string | string[] =>
+      field === "preset" ? "generic" : [],
+    );
+    mockFormState.value = { isSubmitting: false, isDirty: false };
     vi.mocked(appState).useAppState.mockReturnValue(
       baseMock as unknown as ReturnType<typeof appState.useAppState>,
     );
@@ -101,7 +106,6 @@ describe("DietProfileEditor", () => {
       render(<DietProfileEditor />);
     });
 
-    // Component renders without throwing
     expect(screen.getByText(/Diet Preset/i)).toBeTruthy();
   });
 
@@ -124,8 +128,8 @@ describe("DietProfileEditor", () => {
   });
 
   it("toggleRestriction removes a restriction that is already active", async () => {
-    mockWatch.mockImplementation((field: string) =>
-      field === "preset" ? "generic" : (["gluten"] as string[]),
+    mockWatch.mockImplementation((field: string): string | string[] =>
+      field === "preset" ? "generic" : ["gluten"],
     );
 
     await act(async () => {
@@ -136,5 +140,47 @@ describe("DietProfileEditor", () => {
     fireEvent.click(glutenBtn);
 
     expect(mockSetValue).toHaveBeenCalledWith("restrictions", [], { shouldDirty: true });
+  });
+
+  it("clicking a preset button calls setValue with the selected preset", async () => {
+    await act(async () => {
+      render(<DietProfileEditor />);
+    });
+    fireEvent.click(screen.getByText("Vegan"));
+    expect(mockSetValue).toHaveBeenCalledWith("preset", "vegan", { shouldDirty: true });
+  });
+
+  it("clicking a restriction that is NOT active adds it to the array", async () => {
+    mockWatch.mockImplementation((field: string): string | string[] =>
+      field === "preset" ? "generic" : [],
+    );
+    await act(async () => {
+      render(<DietProfileEditor />);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /gluten/i }));
+    expect(mockSetValue).toHaveBeenCalledWith("restrictions", ["gluten"], { shouldDirty: true });
+  });
+
+  it("clicking a restriction that IS active removes it, keeping others", async () => {
+    mockWatch.mockImplementation((field: string): string | string[] =>
+      field === "preset" ? "generic" : ["gluten", "dairy"],
+    );
+    await act(async () => {
+      render(<DietProfileEditor />);
+    });
+    fireEvent.click(screen.getByRole("button", { name: /gluten/i }));
+    expect(mockSetValue).toHaveBeenCalledWith("restrictions", ["dairy"], { shouldDirty: true });
+  });
+
+  it("clicking Save Diet Profile calls onSubmit", async () => {
+    mockFormState.value = { isSubmitting: false, isDirty: true };
+    await act(async () => {
+      render(<DietProfileEditor />);
+    });
+    const form = document.querySelector("form")!;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+    expect(mockOnSubmit).toHaveBeenCalledOnce();
   });
 });

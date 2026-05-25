@@ -31,6 +31,9 @@ const IngredientRow: FC<Props> = ({ field, index, form, allFoodItems, onRemove }
               form.setValue(`ingredients.${index}.foodItemId`, match.id);
               form.setValue(`ingredients.${index}.foodItemName`, match.name);
               form.setValue(`ingredients.${index}.calories`, match.calories);
+              form.setValue(`ingredients.${index}.protein`, match.protein ?? 0);
+              form.setValue(`ingredients.${index}.carbs`, match.carbs ?? 0);
+              form.setValue(`ingredients.${index}.fat`, match.fat ?? 0);
             }
           }}
           className={cn(EDITORIAL_INPUT_CLS, "w-full text-sm")}

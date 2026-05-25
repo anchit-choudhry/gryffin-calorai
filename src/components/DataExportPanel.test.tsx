@@ -1,26 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import DataExportPanel from "./DataExportPanel";
 
+const mockDownloadJSON = vi.hoisted(() => vi.fn());
+const mockDownloadCSVZip = vi.hoisted(() => vi.fn());
+const mockIsExporting = vi.hoisted(() => ({ value: false }));
+const mockOpenFilePicker = vi.hoisted(() => vi.fn());
+const mockConfirmImport = vi.hoisted(() => vi.fn());
+const mockCancelImport = vi.hoisted(() => vi.fn());
+const mockPendingPayload = vi.hoisted(() => ({ value: null as Record<string, unknown> | null }));
+
 vi.mock("../hooks/useDataExport", () => ({
   useDataExport: () => ({
-    downloadJSON: vi.fn(),
-    downloadCSVZip: vi.fn(),
-    isExporting: false,
+    downloadJSON: mockDownloadJSON,
+    downloadCSVZip: mockDownloadCSVZip,
+    isExporting: mockIsExporting.value,
   }),
 }));
-
-const mockOpenFilePicker = vi.fn();
 
 vi.mock("../hooks/useDataImport", () => ({
   useDataImport: () => ({
     fileInputRef: { current: null },
     openFilePicker: mockOpenFilePicker,
     handleFileChange: vi.fn(),
-    confirmImport: vi.fn(),
-    cancelImport: vi.fn(),
+    confirmImport: mockConfirmImport,
+    cancelImport: mockCancelImport,
     isImporting: false,
-    pendingPayload: null,
+    pendingPayload: mockPendingPayload.value,
   }),
 }));
 
@@ -41,13 +47,20 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Dialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <>{children}</> : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 
 describe("DataExportPanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsExporting.value = false;
+    mockPendingPayload.value = null;
+  });
+
   it("renders JSON backup export button", () => {
     render(<DataExportPanel />);
     expect(screen.getByText("JSON Backup")).toBeTruthy();
@@ -72,5 +85,44 @@ describe("DataExportPanel", () => {
     render(<DataExportPanel />);
     fireEvent.click(screen.getByText("Import JSON Backup"));
     expect(mockOpenFilePicker).toHaveBeenCalled();
+  });
+
+  it("clicking 'JSON Backup' calls downloadJSON", () => {
+    render(<DataExportPanel />);
+    fireEvent.click(screen.getByText("JSON Backup"));
+    expect(mockDownloadJSON).toHaveBeenCalledOnce();
+  });
+
+  it("clicking CSV button calls downloadCSVZip", () => {
+    render(<DataExportPanel />);
+    fireEvent.click(screen.getByText(/csv tables/i));
+    expect(mockDownloadCSVZip).toHaveBeenCalledOnce();
+  });
+
+  it("export buttons are disabled while isExporting is true", () => {
+    mockIsExporting.value = true;
+    render(<DataExportPanel />);
+    const exportingBtns = screen.getAllByText("Exporting...");
+    exportingBtns.forEach((btn) => {
+      expect((btn.closest("button") as HTMLButtonElement).disabled).toBe(true);
+    });
+  });
+
+  it("shows import confirmation dialog when pendingPayload is not null", () => {
+    mockPendingPayload.value = { version: 1 };
+    render(<DataExportPanel />);
+    expect(screen.getByText("Confirm Import")).toBeTruthy();
+  });
+
+  it("dialog is not shown when pendingPayload is null", () => {
+    render(<DataExportPanel />);
+    expect(screen.queryByText("Confirm Import")).toBeNull();
+  });
+
+  it("clicking Import in the confirmation dialog calls confirmImport", () => {
+    mockPendingPayload.value = { version: 1 };
+    render(<DataExportPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Import" }));
+    expect(mockConfirmImport).toHaveBeenCalledOnce();
   });
 });

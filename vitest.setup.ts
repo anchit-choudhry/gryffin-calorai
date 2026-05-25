@@ -1,7 +1,8 @@
+import "@testing-library/jest-dom/vitest";
 import * as FakeIndexedDB from "fake-indexeddb";
 
 // Patch global IndexedDB with fake implementation for tests
-Object.assign(global, {
+Object.assign(globalThis, {
   indexedDB: FakeIndexedDB.indexedDB,
   IDBDatabase: FakeIndexedDB.IDBDatabase,
   IDBFactory: FakeIndexedDB.IDBFactory,

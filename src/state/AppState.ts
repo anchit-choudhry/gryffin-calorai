@@ -6,6 +6,8 @@ import {
   addActivityLog as addActivityLogToDB,
   addBodyMeasurement as addBodyMeasurementToDB,
   addFoodItemLog,
+  addMealPlan as addMealPlanToDB,
+  addMealTemplate as addMealTemplateToDB,
   addRecurringMeal as addRecurringMealToDB,
   addStepLog as addStepLogToDB,
   addUserAchievement as addUserAchievementToDB,
@@ -16,6 +18,8 @@ import {
   deleteActivityLog as deleteActivityLogFromDB,
   deleteBodyMeasurement as deleteBodyMeasurementFromDB,
   deleteFoodItem,
+  deleteMealPlan as deleteMealPlanFromDB,
+  deleteMealTemplate as deleteMealTemplateFromDB,
   deleteRecipe as deleteRecipeFromDB,
   deleteRecurringMeal as deleteRecurringMealFromDB,
   deleteReminder as deleteReminderFromDB,
@@ -39,6 +43,8 @@ import {
   getDailyWaterLogs,
   getDietProfile as getDietProfileFromDB,
   getFavoriteFoodItems,
+  getMealPlans as getMealPlansFromDB,
+  getMealTemplates as getMealTemplatesFromDB,
   getOrCreateUser,
   getRecentFoodItems,
   getRecurringMeals as getRecurringMealsFromDB,
@@ -48,6 +54,9 @@ import {
   getUnlockedAchievements,
   importBackup,
   type ImportResult,
+  type MealPlan,
+  type MealTemplate,
+  type MealTemplateFood,
   type Recipe,
   type RecurringMeal,
   type Reminder,
@@ -59,6 +68,7 @@ import {
   toggleFavoriteFoodItem,
   updateBodyMeasurement as updateBodyMeasurementInDB,
   updateFoodItem,
+  updateMealTemplate as updateMealTemplateInDB,
   updateRecipe as updateRecipeInDB,
   updateRecurringMeal as updateRecurringMealInDB,
   updateUserProfile,
@@ -72,6 +82,9 @@ import type {
   BodyMeasurementId,
   DietPreset,
   FoodItemId,
+  ISODate,
+  MealPlanId,
+  MealTemplateId,
   RecipeId,
   RecurringMealId,
   ReminderId,
@@ -139,6 +152,20 @@ export interface AppState {
   fetchReminders: (userId: UserId) => Promise<void>;
   saveReminder: (reminder: Omit<Reminder, "userId"> & { id?: ReminderId }) => Promise<void>;
   deleteReminder: (id: ReminderId) => Promise<void>;
+  // Feature 16 - Meal Templates & Plans
+  mealTemplates: MealTemplate[];
+  mealPlans: MealPlan[];
+  fetchMealTemplates: (userId: UserId) => Promise<void>;
+  addMealTemplate: (template: Pick<MealTemplate, "name" | "foods">) => Promise<void>;
+  updateMealTemplate: (template: MealTemplate) => Promise<void>;
+  deleteMealTemplate: (id: MealTemplateId) => Promise<void>;
+  saveTemplateFromTodayLogs: (name: string) => Promise<void>;
+  logAllFoodsFromTemplate: (id: MealTemplateId) => Promise<void>;
+  copyFoodsFromDate: (date: ISODate) => Promise<void>;
+  fetchMealPlans: (userId: UserId) => Promise<void>;
+  saveMealPlan: (plan: Pick<MealPlan, "name" | "days">) => Promise<void>;
+  deleteMealPlan: (id: MealPlanId) => Promise<void>;
+  applyWeekPlan: (planId: MealPlanId) => Promise<void>;
   // Feature 19 - Export/Import
   exportData: () => Promise<BackupPayload | null>;
   importData: (payload: BackupPayload) => Promise<ImportResult | null>;
@@ -203,6 +230,8 @@ export const useAppState = create<AppState>((set, get) => ({
   dietProfile: null,
   recurringMeals: [],
   reminders: [],
+  mealTemplates: [],
+  mealPlans: [],
   waterGoalMl: (() => {
     const stored = localStorage.getItem("waterGoalMl");
     if (stored) {
@@ -248,6 +277,8 @@ export const useAppState = create<AppState>((set, get) => ({
         dietProfileData,
         recurringMealsData,
         remindersData,
+        mealTemplatesData,
+        mealPlansData,
       ] = await Promise.all([
         getDailyFoodLogs(userId, today),
         getAllRecipes(userId),
@@ -265,6 +296,8 @@ export const useAppState = create<AppState>((set, get) => ({
         getDietProfileFromDB(userId),
         getRecurringMealsFromDB(userId),
         getRemindersFromDB(userId),
+        getMealTemplatesFromDB(userId),
+        getMealPlansFromDB(userId),
       ]);
       set({
         init: { status: "ready", user: profile },
@@ -284,6 +317,8 @@ export const useAppState = create<AppState>((set, get) => ({
         dietProfile: dietProfileData,
         recurringMeals: recurringMealsData,
         reminders: remindersData,
+        mealTemplates: mealTemplatesData,
+        mealPlans: mealPlansData,
       });
     } catch (error) {
       if (import.meta.env.DEV) console.error("Error fetching initial app data:", error);
@@ -660,7 +695,11 @@ export const useAppState = create<AppState>((set, get) => ({
       set({ unlockedAchievements: fresh });
       for (const id of newIds) {
         const def = ACHIEVEMENTS.find((a) => a.id === id);
-        if (def) toast.success(`${def.icon} Achievement Unlocked: ${def.title}`);
+        if (def)
+          toast.success(`${def.icon} ${def.title}`, {
+            description: def.description,
+            duration: 5000,
+          });
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("Achievement check failed:", err);
@@ -986,6 +1025,226 @@ export const useAppState = create<AppState>((set, get) => ({
     } catch (error) {
       const message = mapDbError(error, "Failed to delete reminder");
       if (import.meta.env.DEV) console.error("Error deleting reminder:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  // Feature 16 - Meal Templates & Plans
+  fetchMealTemplates: async (userId: UserId) => {
+    try {
+      const templates = await getMealTemplatesFromDB(userId);
+      set({ mealTemplates: templates });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching meal templates:", error);
+    }
+  },
+
+  addMealTemplate: async (template: Pick<MealTemplate, "name" | "foods">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await addMealTemplateToDB({
+        ...template,
+        userId: state.userId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      const templates = await getMealTemplatesFromDB(state.userId);
+      set({ mealTemplates: templates });
+      toast.success(`Template "${template.name}" saved`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save template");
+      if (import.meta.env.DEV) console.error("Error adding meal template:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  updateMealTemplate: async (template: MealTemplate) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await updateMealTemplateInDB(template, state.userId);
+      const templates = await getMealTemplatesFromDB(state.userId);
+      set({ mealTemplates: templates });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to update template");
+      if (import.meta.env.DEV) console.error("Error updating meal template:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  deleteMealTemplate: async (id: MealTemplateId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteMealTemplateFromDB(id, state.userId);
+      const templates = await getMealTemplatesFromDB(state.userId);
+      set({ mealTemplates: templates });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete template");
+      if (import.meta.env.DEV) console.error("Error deleting meal template:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  saveTemplateFromTodayLogs: async (name: string) => {
+    const state = get();
+    if (!state.userId || !name.trim()) return;
+    try {
+      const foods: MealTemplateFood[] = state.dailyLogs.map((log) => ({
+        name: log.name,
+        calories: log.calories,
+        servingSize: log.servingSize,
+        protein: log.protein,
+        carbs: log.carbs,
+        fat: log.fat,
+        mealType: log.mealType ?? "Breakfast",
+      }));
+      await addMealTemplateToDB({
+        userId: state.userId,
+        name: name.trim(),
+        foods,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      const templates = await getMealTemplatesFromDB(state.userId);
+      set({ mealTemplates: templates });
+      toast.success(`Template "${name}" saved from today's logs`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save template from today");
+      if (import.meta.env.DEV) console.error("Error saving template from today:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  logAllFoodsFromTemplate: async (id: MealTemplateId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const template = state.mealTemplates.find((t) => t.id === id);
+      if (!template) return;
+      await Promise.all(
+        template.foods.map((f) =>
+          addFoodItemLog({
+            userId: state.userId!,
+            name: f.name,
+            calories: f.calories,
+            servingSize: f.servingSize,
+            protein: f.protein,
+            carbs: f.carbs,
+            fat: f.fat,
+            dateLogged: todayISO(),
+            isFavorite: false,
+            mealType: f.mealType,
+          }),
+        ),
+      );
+      await get().refreshDailyLogs(state.userId);
+      toast.success(`Logged ${template.foods.length} items from "${template.name}"`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to log template foods");
+      if (import.meta.env.DEV) console.error("Error logging template:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  copyFoodsFromDate: async (date: ISODate) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const logs = await getDailyFoodLogs(state.userId, date);
+      await Promise.all(
+        logs.map((f) =>
+          addFoodItemLog({
+            userId: state.userId!,
+            name: f.name,
+            calories: f.calories,
+            servingSize: f.servingSize,
+            protein: f.protein,
+            carbs: f.carbs,
+            fat: f.fat,
+            dateLogged: todayISO(),
+            isFavorite: false,
+            mealType: f.mealType ?? "Breakfast",
+          }),
+        ),
+      );
+      await get().refreshDailyLogs(state.userId);
+      toast.success(`Copied ${logs.length} items from ${date}`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to copy foods from date");
+      if (import.meta.env.DEV) console.error("Error copying foods from date:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  fetchMealPlans: async (userId: UserId) => {
+    try {
+      const plans = await getMealPlansFromDB(userId);
+      set({ mealPlans: plans });
+    } catch (error) {
+      if (import.meta.env.DEV) console.error("Error fetching meal plans:", error);
+    }
+  },
+
+  saveMealPlan: async (plan: Pick<MealPlan, "name" | "days">) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await addMealPlanToDB({
+        ...plan,
+        userId: state.userId,
+        createdAt: new Date().toISOString(),
+      });
+      const plans = await getMealPlansFromDB(state.userId);
+      set({ mealPlans: plans });
+      toast.success(`Plan "${plan.name}" saved`);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to save meal plan");
+      if (import.meta.env.DEV) console.error("Error saving meal plan:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  deleteMealPlan: async (id: MealPlanId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      await deleteMealPlanFromDB(id, state.userId);
+      const plans = await getMealPlansFromDB(state.userId);
+      set({ mealPlans: plans });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to delete meal plan");
+      if (import.meta.env.DEV) console.error("Error deleting meal plan:", error);
+      set({ error: message });
+      toast.error(message);
+    }
+  },
+
+  applyWeekPlan: async (planId: MealPlanId) => {
+    const state = get();
+    if (!state.userId) return;
+    try {
+      const plan = state.mealPlans.find((p) => p.id === planId);
+      if (!plan) return;
+      const todayIndex = getTodayDayIndex();
+      const dayEntry = plan.days.find((d) => d.dayIndex === todayIndex);
+      if (!dayEntry?.templateId) {
+        toast("No template assigned for today in this plan");
+        return;
+      }
+      await get().logAllFoodsFromTemplate(dayEntry.templateId);
+    } catch (error) {
+      const message = mapDbError(error, "Failed to apply meal plan");
+      if (import.meta.env.DEV) console.error("Error applying meal plan:", error);
       set({ error: message });
       toast.error(message);
     }

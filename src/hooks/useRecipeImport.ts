@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import type { FoodItem } from "../db/dbService";
 import { fuzzyMatchFoodName } from "@/types";
+import { stripHtml } from "@/lib/utils";
 
 export type ParsedIngredient = {
   rawName: string;
@@ -80,7 +81,9 @@ export function parseRecipeFromHtml(
 
       const name = typeof recipeNode["name"] === "string" ? recipeNode["name"] : "";
       const description =
-        typeof recipeNode["description"] === "string" ? recipeNode["description"] : "";
+        typeof recipeNode["description"] === "string"
+          ? stripHtml(recipeNode["description"]).slice(0, 500)
+          : "";
 
       const rawIngredients: string[] = Array.isArray(recipeNode["recipeIngredient"])
         ? (recipeNode["recipeIngredient"] as unknown[]).filter(
