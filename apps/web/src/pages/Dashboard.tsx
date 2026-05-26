@@ -198,24 +198,24 @@ const Dashboard = () => {
           <div className="col-span-12 lg:col-span-6 border border-rule p-6">
             <WeeklySummary />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
+          <div className="col-span-12 sm:col-span-4 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <StreakCard />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
+          <div className="col-span-12 sm:col-span-4 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <WaterTracker />
           </div>
-          <div className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised">
+          <div className="col-span-12 sm:col-span-4 lg:col-span-2 border border-rule p-5 bg-paper-raised">
             <StepTracker />
           </div>
           <div
             data-tour-id="dashboard-activity-tile"
-            className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised"
+            className="col-span-12 sm:col-span-6 lg:col-span-6 border border-rule p-5 bg-paper-raised"
           >
             <ActivityTracker />
           </div>
           <div
             data-tour-id="dashboard-fasting"
-            className="col-span-12 sm:col-span-6 lg:col-span-2 border border-rule p-5 bg-paper-raised"
+            className="col-span-12 sm:col-span-6 lg:col-span-6 border border-rule p-5 bg-paper-raised"
           >
             <FastingTimer />
           </div>

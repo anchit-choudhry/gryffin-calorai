@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest --coverage",
-    "format": "prettier --write \"./src/**/*.{ts,tsx}\"",
+    "format": "prettier --write --list-different \"./src/**/*.{ts,tsx}\"",
     "lint": "eslint --config eslint.config.js ./src",
     "lint:fix": "pnpm format && pnpm lint --fix",
     "preview": "vite preview",
@@ -19,8 +19,8 @@
     "build": "pnpm licenses:update && tsc && vite build"
   },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/public-sans": "^5.2.7",
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/postcss": "^4.3.0",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
 import { useWaterForm } from "../hooks/useWaterForm";
@@ -173,7 +173,7 @@ const WaterTracker = () => {
                 }}
                 aria-label={`Remove ${log.amount} ml entry`}
               >
-                ✕
+                <X className="size-3" />
               </Button>
             </li>
           ))}

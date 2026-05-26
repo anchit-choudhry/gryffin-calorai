@@ -16,44 +16,12 @@ interface Props {
 
 interface ActionStripProps {
   log: FoodItem;
-  pendingDelete: boolean;
-  onConfirmDelete: () => void;
-  onCancelDelete: () => void;
-  onInitDelete: () => void;
+  onDelete: () => void;
   onEdit: () => void;
   onToggleFavorite: () => void;
 }
 
-function ActionStrip({
-  log,
-  pendingDelete,
-  onConfirmDelete,
-  onCancelDelete,
-  onInitDelete,
-  onEdit,
-  onToggleFavorite,
-}: ActionStripProps) {
-  if (pendingDelete) {
-    return (
-      <>
-        <button
-          onClick={onConfirmDelete}
-          className="px-2 py-1 rounded-none bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
-          aria-label={`Confirm delete ${log.name}`}
-        >
-          Delete
-        </button>
-        <button
-          onClick={onCancelDelete}
-          className="px-2 py-1 rounded-none font-mono text-[9px] uppercase tracking-wider text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
-          aria-label="Cancel delete"
-        >
-          Cancel
-        </button>
-      </>
-    );
-  }
-
+function ActionStrip({ log, onDelete, onEdit, onToggleFavorite }: ActionStripProps) {
   return (
     <>
       <button
@@ -68,7 +36,7 @@ function ActionStrip({
       <button onClick={onEdit} className={ICON_BTN_CLS} aria-label={`Edit ${log.name}`}>
         <Pencil className="size-3.5 text-ink-soft" />
       </button>
-      <button onClick={onInitDelete} className={ICON_BTN_CLS} aria-label={`Delete ${log.name}`}>
+      <button onClick={onDelete} className={ICON_BTN_CLS} aria-label={`Delete ${log.name}`}>
         <X className="size-3.5 text-ink-soft" />
       </button>
     </>
@@ -77,20 +45,14 @@ function ActionStrip({
 
 const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorite }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState(false);
 
   const handleDelete = () => {
-    if (log.id) {
-      onDelete(log.id);
-    }
+    if (log.id) onDelete(log.id);
   };
 
   const stripProps: ActionStripProps = {
     log,
-    pendingDelete,
-    onConfirmDelete: handleDelete,
-    onCancelDelete: () => setPendingDelete(false),
-    onInitDelete: () => setPendingDelete(true),
+    onDelete: handleDelete,
     onEdit: () => onEdit(log),
     onToggleFavorite: () => log.id && onToggleFavorite(log.id, !log.isFavorite),
   };

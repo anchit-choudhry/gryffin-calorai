@@ -66,33 +66,12 @@ describe("LogEntry", () => {
     expect(onEdit).toHaveBeenCalledWith(log);
   });
 
-  it("shows confirm/cancel when delete is clicked", () => {
-    const log = makeLog();
-    render(<LogEntry log={log} onEdit={vi.fn()} onDelete={vi.fn()} onToggleFavorite={vi.fn()} />);
-    const deleteBtns = screen.getAllByRole("button", { name: /delete chicken breast/i });
-    fireEvent.click(deleteBtns[0]!);
-    expect(screen.getAllByRole("button", { name: /confirm delete/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /cancel delete/i }).length).toBeGreaterThan(0);
-  });
-
-  it("calls onDelete when confirm delete is clicked", () => {
+  it("calls onDelete immediately when delete is clicked (no confirm step)", () => {
     const onDelete = vi.fn();
     const log = makeLog();
     render(<LogEntry log={log} onEdit={vi.fn()} onDelete={onDelete} onToggleFavorite={vi.fn()} />);
     fireEvent.click(screen.getAllByRole("button", { name: /delete chicken breast/i })[0]!);
-    fireEvent.click(screen.getAllByRole("button", { name: /confirm delete/i })[0]!);
     expect(onDelete).toHaveBeenCalledWith(log.id);
-  });
-
-  it("cancels delete when cancel button is clicked", () => {
-    const onDelete = vi.fn();
-    render(
-      <LogEntry log={makeLog()} onEdit={vi.fn()} onDelete={onDelete} onToggleFavorite={vi.fn()} />,
-    );
-    fireEvent.click(screen.getAllByRole("button", { name: /delete chicken breast/i })[0]!);
-    fireEvent.click(screen.getAllByRole("button", { name: /cancel delete/i })[0]!);
-    expect(onDelete).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /confirm delete/i })).toBeNull();
   });
 
   it("calls onToggleFavorite when star button is clicked", () => {
@@ -181,10 +160,7 @@ describe("LogEntry", () => {
         onToggleFavorite={vi.fn()}
       />,
     );
-    const deleteBtn = screen.getByRole("button", { name: /delete/i });
-    fireEvent.click(deleteBtn);
-    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
-    fireEvent.click(confirmBtn);
+    fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]!);
     expect(onDelete).not.toHaveBeenCalled();
   });
 });

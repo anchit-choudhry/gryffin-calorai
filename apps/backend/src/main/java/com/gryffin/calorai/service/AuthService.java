@@ -7,6 +7,7 @@ import com.gryffin.calorai.entity.RefreshToken;
 import com.gryffin.calorai.repository.RefreshTokenRepository;
 import com.gryffin.calorai.repository.UserRepository;
 import com.gryffin.calorai.security.*;
+import io.jsonwebtoken.JwtException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +80,17 @@ public class AuthService {
         storeRefreshToken(newRefresh, user);
 
         return AuthResponse.of(newAccess, newRefresh, jwtService.getAccessExpirationSeconds());
+    }
+
+    @Transactional
+    public void logout(String refreshTokenStr) {
+        try {
+            if (jwtService.isRefreshToken(refreshTokenStr)) {
+                refreshTokenRepository.deleteByJti(jwtService.extractJti(refreshTokenStr));
+            }
+        } catch (JwtException ignored) {
+            // malformed or expired token - nothing to revoke, treat as success
+        }
     }
 
     private void storeRefreshToken(String rawToken, AppUser user) {

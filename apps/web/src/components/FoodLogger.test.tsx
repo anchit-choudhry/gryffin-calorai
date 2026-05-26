@@ -3,6 +3,13 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import FoodLogger from "./FoodLogger";
 import type { FoodItem } from "../db/dbService";
 
+vi.mock("motion/react", () => ({
+  motion: {
+    div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 const mockForm = vi.hoisted(() => ({
   control: {},
   setValue: vi.fn(),

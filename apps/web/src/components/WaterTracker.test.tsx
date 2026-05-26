@@ -46,6 +46,7 @@ vi.mock("@/components/ui/button", () => ({
 
 vi.mock("lucide-react", () => ({
   Pencil: () => <svg data-testid="pencil-icon" />,
+  X: () => <svg data-testid="x-icon" />,
 }));
 
 const makeLog = (id: number, amount: number): WaterLog => ({

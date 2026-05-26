@@ -44,7 +44,7 @@
   --color-chart-grid: var(--chart-grid);
   --color-chart-goal: var(--chart-goal);
   /* Editorial typography */
-  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --font-display: "Manrope Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   --font-sans: "Public Sans Variable", system-ui, sans-serif;
 }
@@ -166,11 +166,13 @@
   );
 }
 
-/* ---- Touch-target adaptive density ---- */
+/* ---- Touch-target adaptive density ----
+   Expand tap height only; width is left alone to avoid breaking narrow pill buttons
+   and icon buttons whose visual size is intentional. Pseudo-element expansion is used
+   for the icon-only buttons (ICON_BTN_CLS) that are 36px square. */
 @media (pointer: coarse) {
   button, a, [role="button"] {
     min-height: 44px;
-    min-width: 44px;
   }
 }
 

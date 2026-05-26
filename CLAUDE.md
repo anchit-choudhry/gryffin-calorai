@@ -104,6 +104,7 @@ apps (v0.8-v1.0).
 **Git & Commits:**
 
 - Run `pnpm lint:fix` before every commit (ESLint + Prettier)
+- Run `pnpm build` after `pnpm lint:fix` before every commit; build must succeed with no errors
 - Commit format: `<type>(<scope>): <subject>` (e.g., `feat(FoodLogger): add calorie validation`)
 - Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 - Atomic commits only; one logical change per commit
@@ -129,6 +130,9 @@ apps (v0.8-v1.0).
 
 ## Key Documentation (Progressive Disclosure)
 
+For persistent cross-session context (architecture decisions, preferences, plans, incidents), read
+@@project-knowledge/AGENTS.md first, then @@project-knowledge/index.md - this wiki is the
+canonical session-start artifact; update it at session end per the checklist in AGENTS.md.  
 For architecture details, see @@specifications/gryffin-calorai-specifications.md  
 For React patterns & best practices, see @@docs/REACT_STANDARDS_REVIEW.md  
 For security guidelines, see @@docs/SECURITY_AUDIT.md and
@@ -243,6 +247,4 @@ bash generate.sh
 
 ---
 
-**Last Updated:** May 25, 2026 | **Current release:** v0.7.0 | **In progress:** v0.8.0 (B4 Cloud Sync, B5 AI Photo Logging)  
-**Maintainer:** Anchit Choudhry  
-**GitHub:** https://github.com/anchit-choudhry/gryffin-calorai
+**Last Updated:** May 25, 2026 | **Current release:** v0.7.0 | **In progress:** v0.8.0 (B4 Cloud Sync, B5 AI Photo Logging)

@@ -37,6 +37,10 @@ gha-creds-*.json
 
 # Backend secrets - never commit
 apps/backend/.env
+apps/backend/.env.example
+
+# Project knowledge wiki (local session artifacts)
+project-knowledge/
 
 # Maven build output
 apps/backend/target/

@@ -8,7 +8,9 @@ interface Props {
 const EditorialFrame: FC<Props> = ({ label, children }) => (
   <div className="border border-rule">
     <div className="px-5 pt-3 pb-2 border-b border-rule">
-      <span className="text-xs text-ink-soft font-sans">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+        {label}
+      </span>
     </div>
     <div className="p-5">{children}</div>
   </div>

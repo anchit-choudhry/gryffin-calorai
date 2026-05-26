@@ -1,5 +1,6 @@
 // src/components/FoodLogger.tsx
 import { type FC, type FormEvent, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import type { FoodItem } from "../db/dbService";
 import { useFoodForm } from "../hooks/useFoodForm";
 import {
@@ -202,7 +203,8 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                    step="any"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />
@@ -226,7 +228,8 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                    step="any"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />
@@ -250,7 +253,8 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
                     type="number"
                     className={EDITORIAL_INPUT_CLS}
                     placeholder="0"
-                    onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
+                    step="any"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
                 <FormMessage className="font-mono text-[10px]" />
@@ -272,64 +276,75 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
             />
           </Button>
 
-          {showAdvanced && (
-            <div className="mt-3 space-y-4">
-              {MICRONUTRIENT_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft/60 mb-2">
-                    {group.label}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {group.keys.map((key) => (
-                      <FormField
-                        key={key}
-                        control={form.control}
-                        name={`nutritionData.${key}` as NutritionPath}
-                        render={({ field }) => {
-                          const val = typeof field.value === "number" ? field.value : undefined;
-                          const pct =
-                            val != null && val > 0
-                              ? Math.min(100, Math.round((val / MICRONUTRIENT_RDA[key]) * 100))
-                              : null;
-                          return (
-                            <FormItem>
-                              <FormLabel className={labelCls}>
-                                {MICRONUTRIENT_LABELS[key]}
-                                <span className="ml-1 normal-case font-sans tracking-normal opacity-50">
-                                  ({MICRONUTRIENT_UNITS[key]})
-                                </span>
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="number"
-                                  className={EDITORIAL_INPUT_CLS}
-                                  step="any"
-                                  min="0"
-                                  placeholder="—"
-                                  value={val ?? ""}
-                                  onChange={(e) => {
-                                    const v = parseFloat(e.target.value);
-                                    field.onChange(isNaN(v) ? undefined : v);
-                                  }}
-                                />
-                              </FormControl>
-                              {pct !== null && (
-                                <p className="font-mono text-[9px] text-ink-soft/60 mt-0.5">
-                                  {pct}% DV
-                                </p>
-                              )}
-                              <FormMessage className="font-mono text-[10px]" />
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
+          <AnimatePresence initial={false}>
+            {showAdvanced && (
+              <motion.div
+                key="advanced"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 space-y-4">
+                  {MICRONUTRIENT_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft/60 mb-2">
+                        {group.label}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {group.keys.map((key) => (
+                          <FormField
+                            key={key}
+                            control={form.control}
+                            name={`nutritionData.${key}` as NutritionPath}
+                            render={({ field }) => {
+                              const val = typeof field.value === "number" ? field.value : undefined;
+                              const pct =
+                                val != null && val > 0
+                                  ? Math.min(100, Math.round((val / MICRONUTRIENT_RDA[key]) * 100))
+                                  : null;
+                              return (
+                                <FormItem>
+                                  <FormLabel className={labelCls}>
+                                    {MICRONUTRIENT_LABELS[key]}
+                                    <span className="ml-1 normal-case font-sans tracking-normal opacity-50">
+                                      ({MICRONUTRIENT_UNITS[key]})
+                                    </span>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="number"
+                                      className={EDITORIAL_INPUT_CLS}
+                                      step="any"
+                                      min="0"
+                                      placeholder="—"
+                                      value={val ?? ""}
+                                      onChange={(e) => {
+                                        const v = parseFloat(e.target.value);
+                                        field.onChange(isNaN(v) ? undefined : v);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  {pct !== null && (
+                                    <p className="font-mono text-[9px] text-ink-soft/60 mt-0.5">
+                                      {pct}% DV
+                                    </p>
+                                  )}
+                                  <FormMessage className="font-mono text-[10px]" />
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <div className="flex gap-2 pt-1">

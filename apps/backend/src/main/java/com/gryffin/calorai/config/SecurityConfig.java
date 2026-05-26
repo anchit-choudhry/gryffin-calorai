@@ -34,6 +34,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins}")
     private String allowedOriginsRaw;
 
+    @Value("${springdoc.api-docs.enabled:false}")
+    private boolean swaggerEnabled;
+
     public SecurityConfig(SecretKey jwtSigningKey) {
         this.jwtSigningKey = jwtSigningKey;
     }
@@ -53,13 +56,15 @@ public class SecurityConfig {
                 .referrerPolicy(referrer -> referrer
                     .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
             )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/v1/auth/token", "/api/v1/auth/refresh").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/ping").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/token", "/api/v1/auth/refresh").permitAll();
+                auth.requestMatchers(HttpMethod.GET, "/api/v1/ping").permitAll();
+                auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
+                if (swaggerEnabled) {
+                    auth.requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
 
         return http.build();
