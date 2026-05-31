@@ -16,6 +16,7 @@ import {
 } from "../../db/dbService";
 import type { ActivityLogId, UserId } from "@/types";
 import { todayISO } from "@/types";
+import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface ActivitySlice {
   dailyActivityLogs: ActivityLog[];
@@ -50,13 +51,21 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
   addActivityLog: async (log: Omit<ActivityLog, "id">) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = crypto.randomUUID();
     try {
-      await addActivityLogToDB({ ...log, userId: state.userId });
+      await addActivityLogToDB({ ...log, userId: state.userId, syncId });
       const [daily, all] = await Promise.all([
         getDailyActivityLogs(state.userId, todayISO()),
         getAllActivityLogs(state.userId),
       ]);
       set({ dailyActivityLogs: daily, allActivityLogs: all });
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "activityLog",
+        syncId,
+        operation: "create",
+        payload: { ...log, userId: state.userId, syncId },
+      });
     } catch (error) {
       const message = mapDbError(error, "Failed to add activity log");
       if (import.meta.env.DEV) console.error("Error adding activity log:", error);
@@ -68,6 +77,9 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
   deleteActivityLog: async (id: ActivityLogId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = [...state.dailyActivityLogs, ...state.allActivityLogs].find(
+      (l) => l.id === id,
+    )?.syncId;
     try {
       await deleteActivityLogFromDB(id, state.userId);
       const [daily, all] = await Promise.all([
@@ -75,6 +87,15 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
         getAllActivityLogs(state.userId),
       ]);
       set({ dailyActivityLogs: daily, allActivityLogs: all });
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "activityLog",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete activity log");
       if (import.meta.env.DEV) console.error("Error deleting activity log:", error);
@@ -102,6 +123,7 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
       return;
     }
     try {
+      const syncId = crypto.randomUUID();
       const session: FastingSession = {
         userId: state.userId,
         startTime: new Date().toISOString(),
@@ -109,9 +131,17 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
         targetHours,
         dateLogged: todayISO(),
         completed: false,
+        syncId,
       };
       await startFastingSessionInDB(session);
       await get().fetchFastingSessions(state.userId);
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "fastingSession",
+        syncId,
+        operation: "create",
+        payload: session,
+      });
     } catch (error) {
       const message = mapDbError(error, "Failed to start fasting session");
       if (import.meta.env.DEV) console.error("Error starting fast:", error);
@@ -122,9 +152,19 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
   endFasting: async (completed: boolean) => {
     const state = get();
     if (!state.userId || !state.activeFastingSession?.id) return;
+    const syncId = state.activeFastingSession.syncId;
     try {
       await endFastingSessionInDB(state.activeFastingSession.id, state.userId, completed);
       await get().fetchFastingSessions(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "fastingSession",
+          syncId,
+          operation: "update",
+          payload: { endTime: new Date().toISOString(), completed },
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to end fasting session");
       if (import.meta.env.DEV) console.error("Error ending fast:", error);

@@ -6,8 +6,8 @@ import { useFoodForm } from "../hooks/useFoodForm";
 import {
   MEAL_TYPES,
   MICRONUTRIENT_LABELS,
-  MICRONUTRIENT_UNITS,
   MICRONUTRIENT_RDA,
+  MICRONUTRIENT_UNITS,
   type NutritionKey,
 } from "@/types";
 import {

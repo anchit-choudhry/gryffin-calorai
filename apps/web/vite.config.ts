@@ -7,13 +7,22 @@ import { VitePWA } from "vite-plugin-pwa";
 // style-src requires 'unsafe-inline' for Tailwind's JIT engine (CSS-only; cannot execute JS).
 // Never allow user-controlled values in HTML style attributes.
 //
-// connect-src: when the barcode food-lookup API is integrated, add only its specific origin
-// here (e.g. https://world.openfoodfacts.org) - do NOT expand to '*'.
+// connect-src: add only specific origins; never expand to 'https:' or '*'.
+// When adding a new API integration, append its exact origin here.
+const API_ORIGIN = (() => {
+  const raw = process.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "http://localhost:8080";
+  }
+})();
+
 const SECURITY_HEADERS: Record<string, string> = {
   // frame-ancestors is intentionally omitted from the <meta> CSP in index.html because
   // browsers ignore it there (W3C spec). It is enforced only via this HTTP header.
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://corsproxy.io; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+    `default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; font-src 'self'; connect-src 'self' https://corsproxy.io https://accounts.google.com ${API_ORIGIN}; worker-src 'self'; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
   "X-Frame-Options": "DENY",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -21,8 +30,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
   // HSTS: enforce HTTPS for 1 year, include subdomains, allow preload submission.
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
-  // Isolate the browsing context so cross-origin documents can't access window.opener.
-  "Cross-Origin-Opener-Policy": "same-origin",
+  // Allow popups to communicate back (required for Google Sign-In popup flow).
+  "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
   // Require cross-origin resources to opt in via CORP/CORS before being loaded.
   "Cross-Origin-Embedder-Policy": "require-corp",
   // Prevent this origin's resources from being loaded cross-origin without opt-in.

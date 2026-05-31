@@ -9,7 +9,7 @@ interface Props {
 }
 
 const iconBtn =
-  "flex items-center justify-center size-9 rounded hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1";
+  "flex items-center justify-center size-11 rounded-none hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-offset-1";
 
 function RecipeRow({ recipe, onEdit, onDelete }: Props) {
   return (

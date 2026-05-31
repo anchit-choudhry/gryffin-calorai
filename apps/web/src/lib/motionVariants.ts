@@ -69,29 +69,38 @@ export const spotlightVariants = {
   },
 };
 
+// Crossfade-only variants for reduced-motion: opacity fade, no spatial transforms
+const crossfadeSectionVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.2, ease: "easeOut" as const } },
+};
+
 /**
- * Returns section motion props, or {} when the user prefers reduced motion.
+ * Returns section motion props with crossfade fallback for reduced-motion.
  * Use as spread: <motion.section {...useSectionMotion()} />
  * Intended for sections inside a staggered parent (no initial/animate needed).
  */
 export function useSectionMotion() {
   const reduced = useReducedMotion();
-  if (reduced) return {};
-  return { variants: sectionVariants };
+  return { variants: reduced ? crossfadeSectionVariants : sectionVariants };
 }
 
 /**
- * Returns standalone section motion props with initial/animate, or {} when reduced motion.
- * Use for sections that are not children of a staggered motion parent.
+ * Returns standalone section motion props with initial/animate.
+ * Crossfade-only (opacity) when user prefers reduced motion.
  */
 export function useStandaloneSection() {
   const reduced = useReducedMotion();
-  if (reduced) return {};
-  return { variants: sectionVariants, initial: "hidden" as const, animate: "show" as const };
+  return {
+    variants: reduced ? crossfadeSectionVariants : sectionVariants,
+    initial: "hidden" as const,
+    animate: "show" as const,
+  };
 }
 
 /**
- * Returns page-level motion props, or {} when the user prefers reduced motion.
+ * Returns page-level motion props. Page variants stagger children — safe for reduced motion
+ * since spatial transforms live in section children, not the page container itself.
  */
 export function usePageMotion() {
   const reduced = useReducedMotion();

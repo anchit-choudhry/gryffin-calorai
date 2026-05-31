@@ -55,6 +55,8 @@ export interface FoodItem {
   isFavorite: boolean;
   mealType?: MealType;
   nutritionData?: Partial<NutritionData>;
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface Recipe {
@@ -90,6 +92,8 @@ export interface WaterLog {
   amount: number; // ml
   dateLogged: ISODate;
   loggedAt: string; // ISO timestamp for intra-day ordering
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface BodyMeasurement {
@@ -101,6 +105,8 @@ export interface BodyMeasurement {
   waist?: number; // cm
   chest?: number; // cm
   hips?: number; // cm
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface UserAchievement {
@@ -116,6 +122,8 @@ export interface StepLog {
   steps: number;
   dateLogged: ISODate;
   loggedAt: string; // ISO timestamp for intra-day ordering
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface TdeeProfile {
@@ -139,6 +147,8 @@ export interface ActivityLog {
   caloriesBurned: number;
   dateLogged: ISODate;
   loggedAt: string;
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface FastingSession {
@@ -149,6 +159,8 @@ export interface FastingSession {
   targetHours: number;
   dateLogged: ISODate;
   completed: boolean;
+  syncId?: string;
+  deletedAt?: string;
 }
 
 export interface DietProfile {
@@ -222,6 +234,27 @@ export interface MealPlan {
   name: string;
   days: MealPlanDay[];
   createdAt: string; // ISO timestamp
+}
+
+export type SyncOperation = "create" | "update" | "delete";
+export type SyncEntityType =
+  | "foodItem"
+  | "waterLog"
+  | "activityLog"
+  | "bodyMeasurement"
+  | "stepLog"
+  | "fastingSession"
+  | "tdeeProfile";
+
+export interface SyncQueueEntry {
+  id?: number;
+  userId: UserId;
+  entityType: SyncEntityType;
+  syncId: string;
+  operation: SyncOperation;
+  payload: unknown;
+  createdAt: string;
+  retries: number;
 }
 
 // 1. Initialize Dexie Database
@@ -503,6 +536,28 @@ db.version(18).stores({
   mealPlans: "++id, userId, createdAt",
 });
 
+// 19. Version 19: B4 Cloud Sync - add syncId index to syncable tables + syncQueue table.
+// syncId stores the server-side UUID so records can be matched during delta sync.
+db.version(19).stores({
+  users: "id, username, email, lastLogin",
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType, syncId",
+  recipes: "++id, name, description, createdBy, dateCreated, userId",
+  waterLogs: "++id, [userId+dateLogged], userId, dateLogged, syncId",
+  bodyMeasurements: "++id, [userId+measuredAt], userId, measuredAt, syncId",
+  userAchievements: "++id, [userId+achievementId], userId, achievementId, unlockedAt",
+  stepLogs: "++id, [userId+dateLogged], userId, dateLogged, syncId",
+  tdeeProfiles: "++id, &userId, updatedAt",
+  activityLogs: "++id, [userId+dateLogged], userId, dateLogged, syncId",
+  fastingSessions: "++id, [userId+dateLogged], userId, dateLogged, endTime, syncId",
+  dietProfiles: "++id, &userId, updatedAt",
+  recurringMeals: "++id, userId, dayMask",
+  reminders: "++id, userId, [userId+type]",
+  mealTemplates: "++id, userId, createdAt",
+  mealPlans: "++id, userId, createdAt",
+  syncQueue: "++id, userId, entityType, syncId, operation, createdAt",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -519,6 +574,7 @@ export const recurringMeals: Table<RecurringMeal> = db.table("recurringMeals");
 export const reminders: Table<Reminder> = db.table("reminders");
 export const mealTemplates: Table<MealTemplate> = db.table("mealTemplates");
 export const mealPlans: Table<MealPlan> = db.table("mealPlans");
+export const syncQueue: Table<SyncQueueEntry> = db.table("syncQueue");
 
 export const initializeDB = async () => {
   try {

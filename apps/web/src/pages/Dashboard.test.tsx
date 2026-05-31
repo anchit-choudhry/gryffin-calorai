@@ -201,7 +201,7 @@ describe("Dashboard init states", () => {
     } as unknown as ReturnType<typeof appState.useAppState>);
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
-    expect(screen.getByText(/nothing logged yet today/i)).toBeInTheDocument();
+    expect(screen.getByText(/nothing logged yet/i)).toBeInTheDocument();
   });
 
   it("shows error message when init.status is error", async () => {

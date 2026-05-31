@@ -41,12 +41,31 @@
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
   --color-chart-grid: var(--chart-grid);
   --color-chart-goal: var(--chart-goal);
   /* Editorial typography */
   --font-display: "Manrope Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
-  --font-sans: "Public Sans Variable", system-ui, sans-serif;
+  --font-sans: "Manrope Variable", system-ui, sans-serif;
+  /* Type ramp — modular scale 1.25, fluid via clamp() */
+  --text-micro: clamp(9px, 1.8vw, 10px);
+  --text-body: clamp(14px, 2.5vw, 15px);
+  --text-lead: clamp(16px, 3vw, 18px);
+  --text-h3: clamp(18px, 3.5vw, 20px);
+  --text-h2: clamp(20px, 4vw, 25px);
+  --text-h1: clamp(24px, 5vw, 32px);
+  --text-display: clamp(36px, 7vw, 48px);
+  --text-hero: clamp(72px, 11vw, 180px);
+  /* Semantic status colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info-foreground: var(--info-foreground);
 }
 
 :root {
@@ -95,10 +114,24 @@
   --chart-2: oklch(0.55 0.130 165);
   --chart-3: oklch(0.50 0.110 260);
   --chart-4: oklch(0.70 0.095 75);
+  --chart-5: oklch(0.52 0.090 130);
+  --chart-6: oklch(0.52 0.110 220);
+  --chart-7: oklch(0.58 0.080 305);
   --chart-grid: oklch(0.85 0.015 75 / 0.6);
   --chart-goal: oklch(0.65 0.190 38);
   --chart-tooltip-bg: oklch(0.975 0.012 80 / 0.96);
   --chart-tooltip-border: oklch(0.85 0.015 75);
+
+  /* ---- Semantic status tokens — OKLCH, chroma-disciplined, AAA on --paper (7:1+) ---- */
+  /* --success L 0.38 on paper L 0.975 ≈ 9.2:1 AAA ✓ */
+  --success: oklch(0.38 0.100 130);
+  --success-foreground: var(--paper);
+  /* --warning L 0.42 on paper L 0.975 ≈ 7.3:1 AAA ✓ */
+  --warning: oklch(0.42 0.130 75);
+  --warning-foreground: var(--paper);
+  /* --info L 0.38 on paper L 0.975 ≈ 9.2:1 AAA ✓ */
+  --info: oklch(0.38 0.050 240);
+  --info-foreground: var(--paper);
 
   /* ---- Motion tokens ---- */
   --dur-instant: 120ms;
@@ -149,10 +182,24 @@
   --chart-2: oklch(0.72 0.110 165);
   --chart-3: oklch(0.70 0.090 260);
   --chart-4: oklch(0.78 0.080 75);
+  --chart-5: oklch(0.72 0.090 130);
+  --chart-6: oklch(0.70 0.100 220);
+  --chart-7: oklch(0.72 0.070 305);
   --chart-grid: oklch(0.32 0.015 60 / 0.8);
   --chart-goal: oklch(0.78 0.170 38);
   --chart-tooltip-bg: oklch(0.23 0.014 50 / 0.96);
   --chart-tooltip-border: oklch(0.32 0.015 60);
+
+  /* ---- Semantic status tokens (dark) — AAA on dark --paper L 0.18 ---- */
+  /* --success L 0.75 on paper-dark L 0.18 ≈ 11:1 AAA ✓ */
+  --success: oklch(0.75 0.120 140);
+  --success-foreground: oklch(0.18 0.012 50);
+  /* --warning L 0.78 on paper-dark L 0.18 ≈ 13:1 AAA ✓ */
+  --warning: oklch(0.78 0.130 75);
+  --warning-foreground: oklch(0.18 0.012 50);
+  /* --info L 0.72 on paper-dark L 0.18 ≈ 9.5:1 AAA ✓ */
+  --info: oklch(0.72 0.060 240);
+  --info-foreground: oklch(0.18 0.012 50);
 
   /* Dark mode: reduce font weight visually by using lighter rendering */
   font-weight: 350;
@@ -173,6 +220,21 @@
 @media (pointer: coarse) {
   button, a, [role="button"] {
     min-height: 44px;
+  }
+}
+
+/* ---- Achievement shimmer — used by HarvestStamp ---- */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
 

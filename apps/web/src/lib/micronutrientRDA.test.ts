@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { getPersonalizedRDA } from "./micronutrientRDA";
+import type { UserId } from "@/types";
 import { MICRONUTRIENT_RDA } from "@/types";
 import type { TdeeProfile } from "../db/dbService";
-import type { UserId } from "@/types";
 
 function makeProfile(sex: "male" | "female", age: number): TdeeProfile {
   return {

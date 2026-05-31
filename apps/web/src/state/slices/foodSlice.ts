@@ -13,6 +13,7 @@ import {
 } from "../../db/dbService";
 import type { FoodItemId } from "@/types";
 import { checkFoodNameRestrictions, RESTRICTION_FLAGS } from "@/types";
+import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface FoodSlice {
   dailyLogs: FoodItem[];
@@ -51,8 +52,16 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
           toast.warning(`"${food.name}" may contain: ${flagLabels}`);
         }
       }
-      await addFoodItemLog({ ...food, userId: state.userId });
+      const syncId = crypto.randomUUID();
+      await addFoodItemLog({ ...food, userId: state.userId, syncId });
       await state.refreshDailyLogs(state.userId);
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "foodItem",
+        syncId,
+        operation: "create",
+        payload: { ...food, userId: state.userId, syncId },
+      });
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add food log");
@@ -65,9 +74,19 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
   deleteFoodLog: async (id: FoodItemId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = [...state.dailyLogs, ...state.allFoodItems].find((f) => f.id === id)?.syncId;
     try {
       await deleteFoodItem(id, state.userId);
       await state.refreshDailyLogs(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "foodItem",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete log");
       if (import.meta.env.DEV) console.error("Error deleting food log:", error);
@@ -78,9 +97,19 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
   updateFoodLog: async (id: FoodItemId, updates: Partial<Omit<FoodItem, "id" | "userId">>) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = [...state.dailyLogs, ...state.allFoodItems].find((f) => f.id === id)?.syncId;
     try {
       await updateFoodItem(id, updates, state.userId);
       await state.refreshDailyLogs(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "foodItem",
+          syncId,
+          operation: "update",
+          payload: updates,
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to update food log");
       if (import.meta.env.DEV) console.error("Error updating food log:", error);
@@ -113,6 +142,7 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
   toggleFavorite: async (id: FoodItemId, isFavorite: boolean) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.allFoodItems.find((f) => f.id === id)?.syncId;
     const prevAllFoodItems = state.allFoodItems;
     const prevFavoriteFoods = state.favoriteFoods;
     const prevDailyLogs = state.dailyLogs;
@@ -130,6 +160,15 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
     });
     try {
       await toggleFavoriteFoodItem(id, isFavorite, state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "foodItem",
+          syncId,
+          operation: "update",
+          payload: { isFavorite },
+        });
+      }
     } catch (error) {
       set({
         allFoodItems: prevAllFoodItems,

@@ -2,6 +2,8 @@ import type { FC } from "react";
 import type { Recipe } from "@/db/dbService";
 import type { RecipeId } from "@/types";
 import RecipeRow from "./RecipeRow";
+import { EmptyState } from "@/components/EmptyState";
+import { RecipeBook } from "@/components/illustrations";
 
 interface Props {
   recipes: Recipe[];
@@ -27,9 +29,14 @@ const RecipeList: FC<Props> = ({ recipes, isLoading, onEdit, onDelete }) => {
 
   if (recipes.length === 0) {
     return (
-      <div className="border border-rule px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <p className="font-sans text-base text-ink-soft">No recipes saved yet.</p>
-        <span className="text-xs text-ink-soft">Compose one above</span>
+      <div className="border border-rule">
+        <EmptyState
+          illustration={<RecipeBook className="w-full h-full" />}
+          eyebrow="Recipe Collection"
+          heading="No recipes saved yet"
+          body="Write your first recipe using the form above - add ingredients, portions, and save for quick logging."
+          variant="illustrated"
+        />
       </div>
     );
   }

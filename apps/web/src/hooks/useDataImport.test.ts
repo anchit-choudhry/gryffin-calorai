@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useDataImport } from "./useDataImport";
 import * as appState from "../state/AppState";
+import type { ConflictSummary } from "../db/dbService";
 import * as dbService from "../db/dbService";
 import { toast } from "sonner";
-import type { ConflictSummary } from "../db/dbService";
 
 vi.mock("sonner");
 vi.mock("../state/AppState");

@@ -3,6 +3,7 @@ import type { AppState } from "../AppState";
 import { mapDbError } from "../../lib/utils";
 import { toast } from "sonner";
 import {
+  addFoodItemLog,
   addMealPlan as addMealPlanToDB,
   addMealTemplate as addMealTemplateToDB,
   addRecurringMeal as addRecurringMealToDB,
@@ -14,10 +15,9 @@ import {
   deleteReminder as deleteReminderFromDB,
   type DietProfile,
   exportAllData,
-  addFoodItemLog,
-  getDailyFoodLogs,
   getAllFoodLogs,
   getAllWaterLogs,
+  getDailyFoodLogs,
   getDietProfile as getDietProfileFromDB,
   getMealPlans as getMealPlansFromDB,
   getMealTemplates as getMealTemplatesFromDB,
@@ -52,8 +52,9 @@ import type {
   UserId,
 } from "@/types";
 import { DIET_PRESETS, getTodayDayIndex, todayISO } from "@/types";
-import { ACHIEVEMENTS, evaluateAchievements } from "../../lib/achievements";
+import { evaluateAchievements } from "../../lib/achievements";
 import { computeCalorieGoal, computeTDEE, mifflinStJeorBMR } from "../../lib/tdee";
+import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface SettingsSlice {
   tdeeProfile: TdeeProfile | null;
@@ -63,6 +64,8 @@ export interface SettingsSlice {
   mealTemplates: MealTemplate[];
   mealPlans: MealPlan[];
   unlockedAchievements: UserAchievement[];
+  pendingAchievementId: string | null;
+  dismissAchievement: () => void;
   fetchTdeeProfile: (userId: UserId) => Promise<void>;
   saveTdeeProfile: (profile: Omit<TdeeProfile, "id" | "userId" | "updatedAt">) => Promise<void>;
   fetchDietProfile: (userId: UserId) => Promise<void>;
@@ -100,6 +103,8 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   mealTemplates: [],
   mealPlans: [],
   unlockedAchievements: [],
+  pendingAchievementId: null,
+  dismissAchievement: () => set({ pendingAchievementId: null }),
 
   fetchTdeeProfile: async (userId: UserId) => {
     try {
@@ -121,6 +126,13 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
       };
       await saveTdeeProfileToDB(profile);
       set({ tdeeProfile: profile });
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "tdeeProfile",
+        syncId: "tdeeProfile",
+        operation: "create",
+        payload: profile,
+      });
       const bmr = mifflinStJeorBMR(profile.sex, profile.weightKg, profile.heightCm, profile.age);
       const tdee = computeTDEE(bmr, profile.activityLevel);
       const goal = computeCalorieGoal(tdee, profile.goal);
@@ -584,13 +596,8 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
       );
       const fresh = await getUnlockedAchievements(state.userId!);
       set({ unlockedAchievements: fresh });
-      for (const id of newIds) {
-        const def = ACHIEVEMENTS.find((a) => a.id === id);
-        if (def)
-          toast.success(`${def.icon} ${def.title}`, {
-            description: def.description,
-            duration: 5000,
-          });
+      if (newIds.length > 0) {
+        set({ pendingAchievementId: newIds[0] });
       }
     } catch (err) {
       if (import.meta.env.DEV) console.error("Achievement check failed:", err);

@@ -34,10 +34,14 @@ function isBlockedHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
   if (h === "localhost") return true;
   if (h === "[::1]" || h === "::1") return true;
+  // IPv6-mapped IPv4 e.g. ::ffff:127.0.0.1 or [::ffff:7f00:1]
+  if (h.startsWith("[::ffff:") || h.startsWith("::ffff:")) return true;
   const parts = h.split(".");
-  if (parts.length === 4) {
-    const a = Number(parts[0]);
-    const b = Number(parts[1]);
+  // Use >= 2 to catch short-notation IPs like 127.1 (resolves to 127.0.0.1 on most systems)
+  if (parts.length >= 2) {
+    // parseInt with radix 8 handles octal notation like 0177 → 127
+    const a = parts[0].startsWith("0") ? parseInt(parts[0], 8) : Number(parts[0]);
+    const b = parts[1].startsWith("0") ? parseInt(parts[1], 8) : Number(parts[1]);
     if (a === 127) return true;
     if (a === 10) return true;
     if (a === 172 && b >= 16 && b <= 31) return true;

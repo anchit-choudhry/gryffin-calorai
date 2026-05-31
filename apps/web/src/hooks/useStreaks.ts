@@ -6,11 +6,13 @@ import { computeStreaks } from "../types";
 export function useStreaks(): {
   currentStreak: number;
   longestStreak: number;
+  loggedDates: Set<string>;
   isLoading: boolean;
 } {
   const { userId } = useAppState();
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
+  const [loggedDates, setLoggedDates] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -24,6 +26,7 @@ export function useStreaks(): {
         const { currentStreak: cur, longestStreak: longest } = computeStreaks(uniqueDates);
         setCurrentStreak(cur);
         setLongestStreak(longest);
+        setLoggedDates(new Set(uniqueDates));
         setIsLoading(false);
       })
       .catch(() => {
@@ -35,5 +38,5 @@ export function useStreaks(): {
     };
   }, [userId]);
 
-  return { currentStreak, longestStreak, isLoading };
+  return { currentStreak, longestStreak, loggedDates, isLoading };
 }

@@ -39,6 +39,7 @@ const defaultFormReturn = () => ({
     register: vi.fn(() => ({})),
     getValues: vi.fn(),
     setValue: vi.fn(),
+    watch: vi.fn(() => []),
     handleSubmit: vi.fn((fn: unknown) => (e: unknown) => {
       if (e && typeof e === "object" && "preventDefault" in e) {
         (e as { preventDefault: () => void }).preventDefault();
@@ -232,5 +233,149 @@ describe("RecipeForm", () => {
       }),
     );
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("renders ingredients section when fields are provided", () => {
+    const append = vi.fn();
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      fields: [
+        {
+          id: "field-1",
+          foodItemId: 1,
+          foodItemName: "chicken",
+          quantity: 1,
+          serving: 100,
+          calories: 165,
+          protein: 31,
+          carbs: 0,
+          fat: 3.6,
+        },
+      ],
+      append,
+    });
+
+    render(<RecipeForm />);
+    expect(screen.getByText("Ingredients")).toBeInTheDocument();
+  });
+
+  it("renders Add Ingredient button", () => {
+    const append = vi.fn();
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      fields: [],
+      append,
+    });
+
+    render(<RecipeForm />);
+    const addBtn = screen.getByText("+ Add Ingredient");
+    expect(addBtn).toBeInTheDocument();
+  });
+
+  it("calls append when Add Ingredient button is clicked", () => {
+    const append = vi.fn();
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      fields: [],
+      append,
+    });
+
+    render(<RecipeForm />);
+    const addBtn = screen.getByText("+ Add Ingredient");
+    fireEvent.click(addBtn);
+    expect(append).toHaveBeenCalledWith({
+      foodItemId: 0,
+      foodItemName: "",
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      quantity: 1,
+      serving: 1,
+    });
+  });
+
+  it("shows loading state on submit button while saving", () => {
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      isLoading: true,
+    });
+
+    render(<RecipeForm />);
+    expect(screen.getByText("Saving...")).toBeInTheDocument();
+  });
+
+  it("renders import URL section with correct text", () => {
+    render(<RecipeForm />);
+    expect(screen.getByText("Import from URL")).toBeInTheDocument();
+    expect(screen.getByText(/recipe urls are fetched via corsproxy/i)).toBeInTheDocument();
+  });
+
+  it("disables import button when url is only whitespace", () => {
+    vi.mocked(recipeImportHook).useRecipeImport.mockReturnValue({
+      ...defaultImportReturn(),
+      url: "   ",
+    });
+
+    render(<RecipeForm />);
+    const importBtn = screen.getByRole("button", { name: /^import$/i });
+    expect(importBtn).toHaveProperty("disabled", true);
+  });
+
+  it("renders form element with space-y-6", () => {
+    render(<RecipeForm />);
+    const form = document.querySelector("form");
+    expect(form?.className).toContain("space-y-6");
+  });
+
+  it("handles textarea for description field", () => {
+    render(<RecipeForm />);
+    const textarea = document.querySelector("textarea");
+    expect(textarea).toBeInTheDocument();
+    expect(textarea).toHaveAttribute("rows", "3");
+    expect(textarea).toHaveAttribute("placeholder", "Briefly describe the meal's purpose.");
+  });
+
+  it("calls remove when ingredient remove button is clicked", () => {
+    const remove = vi.fn();
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      fields: [
+        {
+          id: "field-1",
+          foodItemId: 1,
+          foodItemName: "chicken",
+          quantity: 1,
+          serving: 100,
+          calories: 165,
+          protein: 31,
+          carbs: 0,
+          fat: 3.6,
+        },
+      ],
+      remove,
+    });
+
+    render(<RecipeForm />);
+    const removeBtn = screen.getByLabelText("Remove ingredient");
+    fireEvent.click(removeBtn);
+    expect(remove).toHaveBeenCalledWith(0);
+  });
+
+  it("renders button with disabled state when loading", () => {
+    vi.mocked(recipeFormHook).useRecipeForm.mockReturnValue({
+      ...defaultFormReturn(),
+      isLoading: true,
+    });
+
+    render(<RecipeForm />);
+    const submitBtn = document.querySelector("button[type='submit']");
+    expect(submitBtn).toHaveProperty("disabled", true);
+  });
+
+  it("renders form section with border styling", () => {
+    render(<RecipeForm />);
+    const importSection = document.querySelector(".border.border-rule");
+    expect(importSection).toBeInTheDocument();
   });
 });

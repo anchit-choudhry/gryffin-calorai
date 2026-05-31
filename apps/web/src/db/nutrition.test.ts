@@ -23,7 +23,7 @@ import {
   todayISO,
   UserId,
 } from "../types";
-import { BackupSchema, NutritionDataSchema, FoodFormSchema } from "../forms/schemas";
+import { BackupSchema, FoodFormSchema, NutritionDataSchema } from "../forms/schemas";
 
 const TEST_USER = UserId("nutrition-test-user");
 const TODAY = todayISO();
@@ -445,7 +445,7 @@ describe("BackupSchema - nutritionData in foodItems", () => {
 // --- DB schema version ---
 
 describe("DB schema version", () => {
-  it("is at version 18", () => {
-    expect(db.verno).toBe(18);
+  it("is at version 19", () => {
+    expect(db.verno).toBe(19);
   });
 });

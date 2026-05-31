@@ -26,6 +26,8 @@ import RecurringMeals from "../components/RecurringMeals";
 import MealTemplates from "../components/MealTemplates";
 import { motionTokens, pageVariants, useSectionMotion } from "../lib/motionVariants";
 import { groupLogsByMeal } from "../lib/utils";
+import { EmptyState } from "../components/EmptyState";
+import { EmptyPlate } from "../components/illustrations";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 
@@ -391,9 +393,14 @@ const Dashboard = () => {
               </AnimatePresence>
             </div>
           ) : (
-            <div className="mt-6 border-y border-rule/40 py-8 flex items-center gap-6">
-              <p className="font-sans text-base text-ink-soft">Nothing logged yet today.</p>
-              <span className="text-xs text-ink-soft/50 ml-auto">Use the logger above</span>
+            <div className="mt-4 border border-rule/40">
+              <EmptyState
+                illustration={<EmptyPlate className="w-full h-full" />}
+                eyebrow="Today's Log"
+                heading="Nothing logged yet"
+                body="Use the food logger above to record your first meal of the day."
+                variant="illustrated"
+              />
             </div>
           )}
         </motion.section>

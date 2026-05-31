@@ -263,7 +263,9 @@ describe("AppState", () => {
         mealType: "Breakfast" as const,
       };
       await useAppState.getState().addFoodLog(food);
-      expect(vi.mocked(dbService.addFoodItemLog)).toHaveBeenCalledWith(food);
+      expect(vi.mocked(dbService.addFoodItemLog)).toHaveBeenCalledWith(
+        expect.objectContaining(food),
+      );
       expect(vi.mocked(dbService.getDailyFoodLogs)).toHaveBeenCalled();
     });
 

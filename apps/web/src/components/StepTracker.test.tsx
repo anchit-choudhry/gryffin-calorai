@@ -6,7 +6,12 @@ import * as stepFormHook from "../hooks/useStepForm";
 
 vi.mock("../state/AppState");
 vi.mock("../hooks/useStepForm");
-vi.mock("sonner");
+
+const mockToast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn() }));
+
+vi.mock("sonner", () => ({
+  toast: mockToast,
+}));
 
 describe("StepTracker component", () => {
   beforeEach(() => {
@@ -263,6 +268,44 @@ describe("StepTracker component", () => {
     fireEvent.click(removeButton);
 
     expect(deleteStepLogMock).toHaveBeenCalledWith(1);
+  });
+
+  it("shows undo action in toast after delete", () => {
+    const deleteStepLogMock = vi.fn();
+    const addStepLogMock = vi.fn();
+    vi.mocked(appState).useAppState.mockReturnValue({
+      dailyStepLogs: [
+        {
+          id: 1,
+          userId: "user-1",
+          steps: 5000,
+          dateLogged: "2026-05-17",
+          loggedAt: new Date().toISOString(),
+        },
+      ],
+      addStepLog: addStepLogMock,
+      deleteStepLog: deleteStepLogMock,
+      stepGoal: 10000,
+      setStepGoal: vi.fn(),
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    mockToast.mockClear();
+    mockToast.success?.mockClear?.();
+
+    render(<StepTracker />);
+    const removeButton = screen.getByLabelText(/Remove 5,000 steps entry/);
+    fireEvent.click(removeButton);
+
+    expect(mockToast).toHaveBeenCalled();
+    const callArgs = mockToast.mock.calls[0];
+    expect(callArgs).toBeDefined();
+    expect(callArgs![0]).toBe("Entry removed");
+    const actionObj = callArgs![1];
+    expect(actionObj.action.label).toBe("Undo");
+    expect(typeof actionObj.action.onClick).toBe("function");
+
+    actionObj.action.onClick();
+    expect(addStepLogMock).toHaveBeenCalledWith(5000);
   });
 
   it("calls submitStepLog when Add button is clicked after setting custom value", async () => {

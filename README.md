@@ -1,7 +1,8 @@
 # Gryffin Calorai
 
 Offline-first calorie tracking app with activity logging, intermittent fasting, recipe management,
-and comprehensive progress analytics.
+and comprehensive progress analytics. Designed with an **Almanac / Field Journal** aesthetic -
+persimmon ink, cream paper, hairline rules, Tufte-style charts, and hand-drawn SVG illustrations.
 
 **Frontend:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
 CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • motion 12 • lucide-react • sonner •
@@ -68,11 +69,11 @@ docker compose up -d    # starts all three services in the background
 
 Services started:
 
-| Service  | URL                   | Notes                                          |
-|----------|-----------------------|------------------------------------------------|
-| Backend  | http://localhost:8080 | Spring Boot API; health: /actuator/health      |
-| pgAdmin  | http://localhost:5050 | DB browser (log in with your .env password)    |
-| Postgres | localhost:5432        | DB name / user / password: `gcalorai`          |
+| Service  | URL                   | Notes                                       |
+|----------|-----------------------|---------------------------------------------|
+| Backend  | http://localhost:8080 | Spring Boot API; health: /actuator/health   |
+| pgAdmin  | http://localhost:5050 | DB browser (log in with your .env password) |
+| Postgres | localhost:5432        | DB name / user / password: `gcalorai`       |
 
 ```bash
 docker compose logs -f backend   # tail backend logs

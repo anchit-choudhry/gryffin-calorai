@@ -39,6 +39,8 @@ gha-creds-*.json
 apps/backend/.env
 apps/backend/.env.example
 
+out
+
 # Project knowledge wiki (local session artifacts)
 project-knowledge/
 

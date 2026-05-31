@@ -259,7 +259,11 @@ const Progress = () => {
                     data={chartData}
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      strokeWidth={0.5}
+                      stroke={chartTheme.grid}
+                    />
                     <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                     <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
@@ -281,7 +285,11 @@ const Progress = () => {
                   </ComposedChart>
                 ) : (
                   <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      strokeWidth={0.5}
+                      stroke={chartTheme.grid}
+                    />
                     <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                     <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
@@ -367,7 +375,11 @@ const Progress = () => {
                     data={macroChartData}
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      strokeWidth={0.5}
+                      stroke={chartTheme.grid}
+                    />
                     <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                     <YAxis
                       tick={AXIS_TICK_STYLE}
@@ -473,7 +485,7 @@ const Progress = () => {
                   data={waterChartData}
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <CartesianGrid strokeDasharray="4 4" strokeWidth={0.5} stroke={chartTheme.grid} />
                   <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                   <YAxis
                     tick={AXIS_TICK_STYLE}
@@ -563,7 +575,11 @@ const Progress = () => {
                     data={bodyChartData}
                     margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      strokeWidth={0.5}
+                      stroke={chartTheme.grid}
+                    />
                     <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                     <YAxis tick={AXIS_TICK_STYLE} />
                     <Tooltip content={<ChartTooltip />} />
@@ -687,7 +703,7 @@ const Progress = () => {
                   data={activityChartData}
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <CartesianGrid strokeDasharray="4 4" strokeWidth={0.5} stroke={chartTheme.grid} />
                   <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                   <YAxis tick={AXIS_TICK_STYLE} />
                   <Tooltip content={<ChartTooltip />} />
@@ -728,7 +744,7 @@ const Progress = () => {
                   data={fastingChartData}
                   margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                  <CartesianGrid strokeDasharray="4 4" strokeWidth={0.5} stroke={chartTheme.grid} />
                   <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
                   <YAxis tick={AXIS_TICK_STYLE} />
                   <Tooltip content={<ChartTooltip />} />

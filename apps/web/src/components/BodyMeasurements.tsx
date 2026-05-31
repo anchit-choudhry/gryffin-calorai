@@ -36,6 +36,8 @@ import { EDITORIAL_INPUT_CLS } from "../lib/utils";
 import { BODY_CHART_COLOR, chartTheme } from "@/lib/chartTheme";
 import ChartTooltip from "@/components/charts/ChartTooltip";
 import EditorialChartCard from "@/components/charts/EditorialChartCard";
+import { EmptyState } from "@/components/EmptyState";
+import { BodyScale } from "@/components/illustrations";
 
 const MeasurementForm = ({
   measurementId,
@@ -466,11 +468,14 @@ const BodyMeasurements = () => {
           </table>
         </div>
       ) : (
-        <div className="border border-rule px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <p className="font-display italic text-ink-soft text-lg">No measurements logged yet.</p>
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-            Log one above
-          </span>
+        <div className="border border-rule">
+          <EmptyState
+            illustration={<BodyScale className="w-full h-full" />}
+            eyebrow="Body Measurements"
+            heading="No measurements logged yet"
+            body="Record your first measurement using the form above to start tracking your progress."
+            variant="illustrated"
+          />
         </div>
       )}
 

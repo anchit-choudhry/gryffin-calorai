@@ -6,7 +6,9 @@ import {
   pageVariants,
   sectionVariants,
   spotlightVariants,
+  usePageMotion,
   useSectionMotion,
+  useStandaloneSection,
 } from "./motionVariants";
 
 vi.mock("motion/react", () => ({
@@ -81,10 +83,62 @@ describe("useSectionMotion", () => {
     expect(result.current).toStrictEqual({ variants: sectionVariants });
   });
 
-  it("returns empty object when motion is reduced", async () => {
+  it("returns crossfade (opacity-only) variants when motion is reduced", async () => {
     const { useReducedMotion } = await import("motion/react");
     vi.mocked(useReducedMotion).mockReturnValue(true);
     const { result } = renderHook(() => useSectionMotion());
+    // Crossfade variant: has variants with opacity keys but no spatial transforms
+    expect(result.current.variants).toBeDefined();
+    expect(result.current.variants?.hidden).toStrictEqual({ opacity: 0 });
+    expect((result.current.variants?.show as { opacity: number }).opacity).toBe(1);
+    // No spatial transforms (no y, no scale)
+    expect((result.current.variants?.hidden as Record<string, unknown>).y).toBeUndefined();
+    expect((result.current.variants?.hidden as Record<string, unknown>).scale).toBeUndefined();
+  });
+});
+
+describe("useStandaloneSection", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("returns standalone section with initial and animate when motion is not reduced", async () => {
+    const { useReducedMotion } = await import("motion/react");
+    vi.mocked(useReducedMotion).mockReturnValue(false);
+    const { result } = renderHook(() => useStandaloneSection());
+    expect(result.current.variants).toStrictEqual(sectionVariants);
+    expect(result.current.initial).toBe("hidden");
+    expect(result.current.animate).toBe("show");
+  });
+
+  it("returns crossfade variants when motion is reduced", async () => {
+    const { useReducedMotion } = await import("motion/react");
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+    const { result } = renderHook(() => useStandaloneSection());
+    expect(result.current.initial).toBe("hidden");
+    expect(result.current.animate).toBe("show");
+    expect((result.current.variants?.hidden as { opacity: number }).opacity).toBe(0);
+  });
+});
+
+describe("usePageMotion", () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("returns page variants with stagger when motion is not reduced", async () => {
+    const { useReducedMotion } = await import("motion/react");
+    vi.mocked(useReducedMotion).mockReturnValue(false);
+    const { result } = renderHook(() => usePageMotion());
+    expect(result.current.variants).toStrictEqual(pageVariants);
+    expect(result.current.initial).toBe("hidden");
+    expect(result.current.animate).toBe("show");
+  });
+
+  it("returns empty object when motion is reduced", async () => {
+    const { useReducedMotion } = await import("motion/react");
+    vi.mocked(useReducedMotion).mockReturnValue(true);
+    const { result } = renderHook(() => usePageMotion());
     expect(result.current).toStrictEqual({});
   });
 });

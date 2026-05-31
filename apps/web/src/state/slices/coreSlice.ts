@@ -10,6 +10,7 @@ import {
   getAllRecipes,
   getDailyActivityLogs,
   getDailyFoodLogs,
+  getDailyFoodLogs as getDailyFoodLogsForRefresh,
   getDailyStepLogs,
   getDailyWaterLogs,
   getDietProfile as getDietProfileFromDB,
@@ -22,7 +23,6 @@ import {
   getReminders as getRemindersFromDB,
   getTdeeProfile,
   getUnlockedAchievements,
-  getDailyFoodLogs as getDailyFoodLogsForRefresh,
   updateUserProfile,
 } from "../../db/dbService";
 import type { AppInitState, UserId } from "@/types";

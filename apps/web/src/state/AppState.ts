@@ -1,10 +1,11 @@
 import { create } from "zustand";
-import { createActivitySlice, type ActivitySlice } from "./slices/activitySlice";
-import { createBodySlice, type BodySlice } from "./slices/bodySlice";
-import { createCoreSlice, type CoreSlice } from "./slices/coreSlice";
+import { type ActivitySlice, createActivitySlice } from "./slices/activitySlice";
+import { type BodySlice, createBodySlice } from "./slices/bodySlice";
+import { type CoreSlice, createCoreSlice } from "./slices/coreSlice";
 import { createFoodSlice, type FoodSlice } from "./slices/foodSlice";
 import { createRecipeSlice, type RecipeSlice } from "./slices/recipeSlice";
 import { createSettingsSlice, type SettingsSlice } from "./slices/settingsSlice";
+import { createSyncSlice, type SyncSlice } from "./slices/syncSlice";
 import { createTrackerSlice, type TrackerSlice } from "./slices/trackerSlice";
 
 export type AppState = CoreSlice &
@@ -13,7 +14,8 @@ export type AppState = CoreSlice &
   TrackerSlice &
   BodySlice &
   ActivitySlice &
-  SettingsSlice;
+  SettingsSlice &
+  SyncSlice;
 
 export const useAppState = create<AppState>((...a) => ({
   ...createCoreSlice(...a),
@@ -23,4 +25,5 @@ export const useAppState = create<AppState>((...a) => ({
   ...createBodySlice(...a),
   ...createActivitySlice(...a),
   ...createSettingsSlice(...a),
+  ...createSyncSlice(...a),
 }));

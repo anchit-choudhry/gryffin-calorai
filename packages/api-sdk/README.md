@@ -14,6 +14,7 @@ bash generate.sh
 ```
 
 Generated outputs:
+
 - `typescript/` - axios client (used by apps/web)
 - `kotlin/`     - retrofit2 + coroutines client (used by apps/android)
 - `swift/`      - Swift 5 async/await client (used by apps/ios)

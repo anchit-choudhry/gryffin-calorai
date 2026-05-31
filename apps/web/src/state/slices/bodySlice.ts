@@ -9,6 +9,7 @@ import {
   updateBodyMeasurement as updateBodyMeasurementInDB,
 } from "../../db/dbService";
 import type { BodyMeasurementId, UserId } from "@/types";
+import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface BodySlice {
   bodyMeasurements: BodyMeasurement[];
@@ -38,9 +39,17 @@ export const createBodySlice: StateCreator<AppState, [], [], BodySlice> = (set, 
   addBodyMeasurement: async (m: Omit<BodyMeasurement, "id">) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = crypto.randomUUID();
     try {
-      await addBodyMeasurementToDB({ ...m, userId: state.userId });
+      await addBodyMeasurementToDB({ ...m, userId: state.userId, syncId });
       await state.fetchBodyMeasurements(state.userId);
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "bodyMeasurement",
+        syncId,
+        operation: "create",
+        payload: { ...m, userId: state.userId, syncId },
+      });
       void get().checkAndUnlockAchievements();
     } catch (error) {
       const message = mapDbError(error, "Failed to add measurement");
@@ -52,9 +61,19 @@ export const createBodySlice: StateCreator<AppState, [], [], BodySlice> = (set, 
   deleteBodyMeasurement: async (id: BodyMeasurementId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.bodyMeasurements.find((m) => m.id === id)?.syncId;
     try {
       await deleteBodyMeasurementFromDB(id, state.userId);
       await state.fetchBodyMeasurements(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "bodyMeasurement",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete measurement");
       if (import.meta.env.DEV) console.error("Error deleting body measurement:", error);
@@ -68,9 +87,19 @@ export const createBodySlice: StateCreator<AppState, [], [], BodySlice> = (set, 
   ) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.bodyMeasurements.find((m) => m.id === id)?.syncId;
     try {
       await updateBodyMeasurementInDB(id, state.userId, updates);
       await state.fetchBodyMeasurements(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "bodyMeasurement",
+          syncId,
+          operation: "update",
+          payload: updates,
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to update measurement");
       if (import.meta.env.DEV) console.error("Error updating body measurement:", error);

@@ -6,6 +6,7 @@ import GoalSettings from "../components/settings/GoalSettings";
 import DataExportPanel from "../components/DataExportPanel";
 import DietProfileEditor from "../components/DietProfileEditor";
 import RemindersSettings from "../components/RemindersSettings";
+import { CloudSyncPanel } from "../components/CloudSyncPanel";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
@@ -64,6 +65,14 @@ const Settings = () => {
           <SectionHeader title="Reminders" />
           <div className="mt-6">
             <RemindersSettings />
+          </div>
+        </motion.section>
+
+        {/* Section - Cloud Sync */}
+        <motion.section className="col-span-12 lg:col-span-8" {...sv}>
+          <SectionHeader title="Cloud Sync" />
+          <div className="mt-6">
+            <CloudSyncPanel />
           </div>
         </motion.section>
 

@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { FEATURED_NUTRIENTS, useMicronutrientData } from "./useMicronutrientData";
-import type { FoodItem } from "../db/dbService";
-import type { TdeeProfile } from "../db/dbService";
+import type { FoodItem, TdeeProfile } from "../db/dbService";
 import type { UserId } from "@/types";
 
 const mockDailyLogs = vi.hoisted(() => ({ value: [] as Partial<FoodItem>[] }));
