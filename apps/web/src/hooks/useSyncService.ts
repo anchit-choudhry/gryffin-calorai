@@ -18,6 +18,7 @@ import type { UserId } from "@/types";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RETRIES = 3;
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/;
 
 interface ServerFoodItem {
   id: string;
@@ -336,7 +337,8 @@ export function useSyncService() {
     syncingRef.current = true;
     setSyncStatus("syncing");
     try {
-      const since = lastSyncedAt ?? new Date(0).toISOString();
+      const raw = lastSyncedAt;
+      const since = raw !== null && ISO_RE.test(raw) ? raw : new Date(0).toISOString();
       await flushQueue();
       await Promise.all([
         pullFoodItems(userId, since),
@@ -356,7 +358,8 @@ export function useSyncService() {
       } else if (!navigator.onLine) {
         setSyncStatus("offline");
       } else {
-        setSyncError(err instanceof Error ? err.message : "Sync failed");
+        const raw = err instanceof Error ? err.message : "";
+        setSyncError(raw.length > 0 && raw.length <= 120 ? raw : "Sync failed");
       }
     } finally {
       syncingRef.current = false;

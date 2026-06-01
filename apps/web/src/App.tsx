@@ -1,5 +1,6 @@
 // src/App.tsx
 import {
+  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -51,6 +52,25 @@ const Settings = lazy(() => import("./pages/Settings"));
 
 const MOCK_USER_ID = UserId("1");
 const BOTTOM_NAV_HASHES = ["#dashboard", "#recipes", "#progress"] as const;
+
+interface NavLinkProps {
+  hash: string;
+  label: string;
+  isActive: boolean;
+}
+
+function NavLink({ hash, label, isActive }: NavLinkProps) {
+  return (
+    <a
+      href={hash}
+      className={`font-sans text-sm transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 ${
+        isActive ? "text-ink font-semibold" : "text-ink-soft hover:text-ink"
+      }`}
+    >
+      {label}
+    </a>
+  );
+}
 type BottomNavHash = (typeof BOTTOM_NAV_HASHES)[number];
 
 function App() {
@@ -171,6 +191,23 @@ function App() {
   useReminders();
   useSyncService();
 
+  const closeShortcuts = useCallback(() => setShowShortcuts(false), []);
+  const closeQuickAdd = useCallback(() => setShowQuickAdd(false), []);
+  const handleQuickAddAction = useCallback((action: "write" | "scan" | "speak") => {
+    setShowQuickAdd(false);
+    window.location.hash = "#dashboard";
+    setCurrentPath(normalizeHash("#dashboard"));
+    requestAnimationFrame(() => {
+      if (action === "write") {
+        document.querySelector<HTMLInputElement>('#main input[name="name"]')?.focus();
+      } else if (action === "scan") {
+        document.querySelector<HTMLButtonElement>('#main [aria-label*="arcode"]')?.click();
+      } else if (action === "speak") {
+        document.querySelector<HTMLButtonElement>('#main [aria-label*="oice"]')?.click();
+      }
+    });
+  }, []);
+
   const tablistRef = useRef<HTMLDivElement>(null);
   const onTablistKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -189,20 +226,6 @@ function App() {
     },
     [currentPath],
   );
-
-  const navLink = (hash: string, label: string) => {
-    const isActive = currentPath === hash;
-    return (
-      <a
-        href={hash}
-        className={`font-sans text-sm transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 ${
-          isActive ? "text-ink font-semibold" : "text-ink-soft hover:text-ink"
-        }`}
-      >
-        {label}
-      </a>
-    );
-  };
 
   return (
     <TooltipProvider>
@@ -233,10 +256,22 @@ function App() {
               </button>
               <div className="flex items-center gap-6">
                 <div className="hidden md:flex items-center gap-6">
-                  {navLink("#dashboard", "Dashboard")}
-                  {navLink("#recipes", "Recipes")}
-                  {navLink("#progress", "Progress")}
-                  {navLink("#settings", "Settings")}
+                  <NavLink
+                    hash="#dashboard"
+                    label="Dashboard"
+                    isActive={currentPath === "#dashboard"}
+                  />
+                  <NavLink hash="#recipes" label="Recipes" isActive={currentPath === "#recipes"} />
+                  <NavLink
+                    hash="#progress"
+                    label="Progress"
+                    isActive={currentPath === "#progress"}
+                  />
+                  <NavLink
+                    hash="#settings"
+                    label="Settings"
+                    isActive={currentPath === "#settings"}
+                  />
                 </div>
                 <SyncStatusChip />
                 <button
@@ -278,17 +313,15 @@ function App() {
               ).map(({ hash, label, Icon }, idx) => {
                 const isActive = currentPath === hash;
                 return (
-                  <>
+                  <Fragment key={hash}>
                     {/* Coarse-pointer: insert center spacer for FAB between 2nd and 3rd item */}
                     {idx === 2 && (
                       <div
-                        key="fab-spacer"
                         className="hidden [@media(pointer:coarse)]:block w-16 shrink-0"
                         aria-hidden="true"
                       />
                     )}
                     <a
-                      key={hash}
                       href={hash}
                       role="tab"
                       aria-selected={isActive}
@@ -303,7 +336,7 @@ function App() {
                       <Icon className="size-5" />
                       <span className="text-[10px] font-sans">{label}</span>
                     </a>
-                  </>
+                  </Fragment>
                 );
               })}
             </div>
@@ -319,28 +352,11 @@ function App() {
           </div>
         </nav>
       </div>
-      <KeyboardShortcutsOverlay open={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <KeyboardShortcutsOverlay open={showShortcuts} onClose={closeShortcuts} />
       <ProductTourOverlay />
       <HarvestStamp />
       <Toaster richColors />
-      <QuickAddSheet
-        open={showQuickAdd}
-        onClose={() => setShowQuickAdd(false)}
-        onAction={(action) => {
-          setShowQuickAdd(false);
-          window.location.hash = "#dashboard";
-          setCurrentPath(normalizeHash("#dashboard"));
-          requestAnimationFrame(() => {
-            if (action === "write") {
-              document.querySelector<HTMLInputElement>('#main input[name="name"]')?.focus();
-            } else if (action === "scan") {
-              document.querySelector<HTMLButtonElement>('#main [aria-label*="arcode"]')?.click();
-            } else if (action === "speak") {
-              document.querySelector<HTMLButtonElement>('#main [aria-label*="oice"]')?.click();
-            }
-          });
-        }}
-      />
+      <QuickAddSheet open={showQuickAdd} onClose={closeQuickAdd} onAction={handleQuickAddAction} />
     </TooltipProvider>
   );
 }
@@ -351,31 +367,37 @@ interface QuickAddSheetProps {
   onAction: (action: "write" | "scan" | "speak") => void;
 }
 
+const QUICK_ADD_ACTIONS = [
+  { id: "write" as const, label: "Log Food", sub: "Type a food name", Icon: Pencil },
+  { id: "scan" as const, label: "Scan Barcode", sub: "Use your camera", Icon: QrCode },
+  { id: "speak" as const, label: "Voice Log", sub: "Speak your meal", Icon: Mic },
+] as const;
+
 function QuickAddSheet({ open, onClose, onAction }: QuickAddSheetProps) {
   const reducedMotion = useReducedMotion();
 
-  const sheetVariants = {
-    hidden: { y: reducedMotion ? 0 : "100%", opacity: reducedMotion ? 0 : 1 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: reducedMotion ? 0.15 : 0.3,
-        ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+  const sheetVariants = useMemo(
+    () => ({
+      hidden: { y: reducedMotion ? 0 : "100%", opacity: reducedMotion ? 0 : 1 },
+      visible: {
+        y: 0,
+        opacity: 1,
+        transition: {
+          duration: reducedMotion ? 0.15 : 0.3,
+          ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+        },
       },
-    },
-    exit: {
-      y: reducedMotion ? 0 : "100%",
-      opacity: reducedMotion ? 0 : 1,
-      transition: { duration: 0.2, ease: [0.65, 0, 0.35, 1] as [number, number, number, number] },
-    },
-  };
-
-  const actions = [
-    { id: "write" as const, label: "Log Food", sub: "Type a food name", Icon: Pencil },
-    { id: "scan" as const, label: "Scan Barcode", sub: "Use your camera", Icon: QrCode },
-    { id: "speak" as const, label: "Voice Log", sub: "Speak your meal", Icon: Mic },
-  ];
+      exit: {
+        y: reducedMotion ? 0 : "100%",
+        opacity: reducedMotion ? 0 : 1,
+        transition: {
+          duration: 0.2,
+          ease: [0.65, 0, 0.35, 1] as [number, number, number, number],
+        },
+      },
+    }),
+    [reducedMotion],
+  );
 
   return (
     <AnimatePresence>
@@ -416,7 +438,7 @@ function QuickAddSheet({ open, onClose, onAction }: QuickAddSheetProps) {
               </button>
             </div>
             <div className="grid grid-cols-3 gap-px bg-rule mt-px">
-              {actions.map(({ id, label, sub, Icon }) => (
+              {QUICK_ADD_ACTIONS.map(({ id, label, sub, Icon }) => (
                 <button
                   key={id}
                   onClick={() => onAction(id)}

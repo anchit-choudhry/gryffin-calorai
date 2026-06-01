@@ -1075,18 +1075,43 @@ export interface ImportResult {
   skipped: number;
 }
 
+// Structural type accepted by importBackup and detectConflicts.
+// Uses readonly unknown[] for table arrays so both BackupPayload (branded entity arrays)
+// and ParsedBackup (Zod-inferred unbranded arrays) satisfy it via covariance,
+// eliminating the need for double assertions at call sites.
+export interface ImportableBackup {
+  version: number;
+  exportedAt: string;
+  userId: string;
+  tables: {
+    foodItems: readonly unknown[];
+    recipes: readonly unknown[];
+    waterLogs: readonly unknown[];
+    bodyMeasurements: readonly unknown[];
+    userAchievements: readonly unknown[];
+    stepLogs: readonly unknown[];
+    tdeeProfile: unknown;
+    activityLogs: readonly unknown[];
+    fastingSessions: readonly unknown[];
+  };
+}
+
 export const importBackup = async (
-  payload: BackupPayload,
+  payload: ImportableBackup,
   userId: UserId,
 ): Promise<ImportResult> => {
   const result: ImportResult = { imported: {}, skipped: 0 };
   const t = payload.tables;
 
-  const addAll = async <T extends { id?: unknown }>(table: Table<T>, rows: T[], label: string) => {
+  const addAll = async <T extends { id?: unknown }>(
+    table: Table<T>,
+    rows: readonly unknown[],
+    label: string,
+  ) => {
     let count = 0;
     for (const row of rows) {
       try {
-        const { id: _, ...rest } = row as T & { id?: unknown };
+        const { id: _, ...rest } = row as Record<string, unknown>;
         await table.add({ ...rest, userId } as unknown as T);
         count++;
       } catch {
@@ -1106,7 +1131,7 @@ export const importBackup = async (
 
   if (t.tdeeProfile) {
     try {
-      await saveTdeeProfile({ ...t.tdeeProfile, userId, id: undefined });
+      await saveTdeeProfile({ ...(t.tdeeProfile as TdeeProfile), userId, id: undefined });
       result.imported["tdeeProfile"] = 1;
     } catch {
       result.skipped++;
@@ -1132,7 +1157,7 @@ export interface ConflictSummary {
 }
 
 export const detectConflicts = async (
-  payload: BackupPayload,
+  payload: ImportableBackup,
   userId: UserId,
 ): Promise<ConflictSummary> => {
   const t = payload.tables;

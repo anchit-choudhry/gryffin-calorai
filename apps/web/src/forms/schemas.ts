@@ -213,7 +213,7 @@ export type TdeeProfileFormValues = z.infer<typeof TdeeProfileSchema>;
 
 // Activity logging schema
 export const ActivitySchema = z.object({
-  activityType: z.string().min(1, "Select an activity"),
+  activityType: z.string().min(1, "Select an activity").max(100, "Activity name too long"),
   durationMin: z
     .number({ invalid_type_error: "Duration must be a number" })
     .int("Duration must be a whole number")

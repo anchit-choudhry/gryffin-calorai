@@ -24,6 +24,13 @@ const foods: FoodItem[] = [
   makeFood(4, "garlic", 4),
 ];
 
+const makeOkResponse = (html: string) =>
+  ({
+    ok: true,
+    headers: { get: (_name: string) => null } as unknown as Headers,
+    text: async () => html,
+  }) as Response;
+
 const makeJsonLdHtml = (recipe: Record<string, unknown>) => `
   <html>
     <head>
@@ -209,10 +216,7 @@ describe("useRecipeImport", () => {
       description: "Desc",
       recipeIngredient: [],
     });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      text: async () => html,
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(makeOkResponse(html));
 
     const { result } = renderHook(() => useRecipeImport(foods));
     act(() => result.current.setUrl("https://example.com/recipe"));
@@ -226,10 +230,9 @@ describe("useRecipeImport", () => {
   });
 
   it("importFromUrl calls fetch with CORS proxy URL", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      text: async () => makeJsonLdHtml({ "@type": "Recipe", name: "Test" }),
-    } as Response);
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(makeOkResponse(makeJsonLdHtml({ "@type": "Recipe", name: "Test" })));
 
     const { result } = renderHook(() => useRecipeImport(foods));
     act(() => result.current.setUrl("https://example.com/recipe"));
@@ -247,10 +250,7 @@ describe("useRecipeImport", () => {
       description: "Quick meal",
       recipeIngredient: ["chicken breast"],
     });
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      text: async () => html,
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(makeOkResponse(html));
 
     const { result } = renderHook(() => useRecipeImport(foods));
     act(() => result.current.setUrl("https://example.com/recipe"));
@@ -287,10 +287,9 @@ describe("useRecipeImport", () => {
   });
 
   it("importFromUrl sets error when no Recipe JSON-LD found", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      text: async () => "<html><body>just a page</body></html>",
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      makeOkResponse("<html><body>just a page</body></html>"),
+    );
 
     const { result } = renderHook(() => useRecipeImport(foods));
     act(() => result.current.setUrl("https://example.com/recipe"));
@@ -373,10 +372,9 @@ describe("useRecipeImport", () => {
   });
 
   it("importFromUrl sets isLoading to false after completion", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      text: async () => makeJsonLdHtml({ "@type": "Recipe", name: "Test" }),
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      makeOkResponse(makeJsonLdHtml({ "@type": "Recipe", name: "Test" })),
+    );
 
     const { result } = renderHook(() => useRecipeImport(foods));
     act(() => result.current.setUrl("https://example.com/recipe"));

@@ -94,13 +94,13 @@ export const REMINDER_TYPES: readonly ReminderType[] = [
   "fasting_check",
 ] as const;
 
-export const REMINDER_LABELS: Record<ReminderType, string> = {
+export const REMINDER_LABELS = {
   log_meal: "Log a Meal",
   drink_water: "Drink Water",
   weigh_in: "Weigh In",
   log_steps: "Log Steps",
   fasting_check: "Fasting Check",
-};
+} satisfies Record<ReminderType, string>;
 
 // --- Feature 15: Diet Profiles ---
 
@@ -125,10 +125,7 @@ export type RestrictionFlag =
   | "alcohol"
   | "pork";
 
-export const DIET_PRESETS: Record<
-  DietPreset,
-  { label: string; macros: { protein: number; carbs: number; fat: number } }
-> = {
+export const DIET_PRESETS = {
   generic: { label: "Generic", macros: { protein: 25, carbs: 50, fat: 25 } },
   keto: { label: "Keto", macros: { protein: 25, carbs: 5, fat: 70 } },
   paleo: { label: "Paleo", macros: { protein: 30, carbs: 35, fat: 35 } },
@@ -138,12 +135,12 @@ export const DIET_PRESETS: Record<
   high_protein: { label: "High Protein", macros: { protein: 40, carbs: 35, fat: 25 } },
   low_sodium: { label: "Low Sodium", macros: { protein: 25, carbs: 50, fat: 25 } },
   low_carb: { label: "Low Carb", macros: { protein: 30, carbs: 20, fat: 50 } },
-};
+} satisfies Record<
+  DietPreset,
+  { label: string; macros: { protein: number; carbs: number; fat: number } }
+>;
 
-export const RESTRICTION_FLAGS: Record<
-  RestrictionFlag,
-  { label: string; keywords: readonly string[] }
-> = {
+export const RESTRICTION_FLAGS = {
   gluten: {
     label: "Gluten",
     keywords: ["wheat", "gluten", "bread", "pasta", "flour", "barley", "rye", "oat", "cereal"],
@@ -170,7 +167,7 @@ export const RESTRICTION_FLAGS: Record<
     label: "Pork",
     keywords: ["pork", "bacon", "ham", "sausage", "salami", "prosciutto"],
   },
-};
+} satisfies Record<RestrictionFlag, { label: string; keywords: readonly string[] }>;
 
 export function checkFoodNameRestrictions(
   foodName: string,
@@ -204,47 +201,47 @@ export const ACTIVITY_LEVELS: readonly ActivityLevel[] = [
   "very_active",
 ] as const;
 
-export const ACTIVITY_LEVEL_FACTORS: Record<ActivityLevel, number> = {
+export const ACTIVITY_LEVEL_FACTORS = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
   active: 1.725,
   very_active: 1.9,
-};
+} satisfies Record<ActivityLevel, number>;
 
-export const ACTIVITY_LEVEL_LABELS: Record<ActivityLevel, string> = {
+export const ACTIVITY_LEVEL_LABELS = {
   sedentary: "Sedentary",
   light: "Lightly Active",
   moderate: "Moderately Active",
   active: "Very Active",
   very_active: "Extra Active",
-};
+} satisfies Record<ActivityLevel, string>;
 
-export const ACTIVITY_LEVEL_DESCRIPTIONS: Record<ActivityLevel, string> = {
+export const ACTIVITY_LEVEL_DESCRIPTIONS = {
   sedentary: "Little or no exercise, desk job",
   light: "Light exercise 1-3 days/week",
   moderate: "Moderate exercise 3-5 days/week",
   active: "Heavy exercise 6-7 days/week",
   very_active: "Very heavy exercise, physical job, or twice-daily training",
-};
+} satisfies Record<ActivityLevel, string>;
 
-export const GOAL_OFFSETS: Record<GoalType, number> = {
+export const GOAL_OFFSETS = {
   lose: -500,
   maintain: 0,
   gain: 300,
-};
+} satisfies Record<GoalType, number>;
 
-export const GOAL_LABELS: Record<GoalType, string> = {
+export const GOAL_LABELS = {
   lose: "Lose Weight",
   maintain: "Maintain Weight",
   gain: "Gain Weight",
-};
+} satisfies Record<GoalType, string>;
 
-export const GOAL_DESCRIPTIONS: Record<GoalType, string> = {
+export const GOAL_DESCRIPTIONS = {
   lose: "500 kcal/day deficit - lose ~0.5 kg/week",
   maintain: "Eat at maintenance - no change",
   gain: "300 kcal/day surplus - gain ~0.3 kg/week",
-};
+} satisfies Record<GoalType, string>;
 
 export const FASTING_PRESETS: readonly { hours: number; label: string }[] = [
   { hours: 12, label: "12:12" },

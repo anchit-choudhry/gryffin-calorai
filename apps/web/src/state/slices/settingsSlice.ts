@@ -9,6 +9,7 @@ import {
   addRecurringMeal as addRecurringMealToDB,
   addUserAchievement as addUserAchievementToDB,
   type BackupPayload,
+  type ImportableBackup,
   deleteMealPlan as deleteMealPlanFromDB,
   deleteMealTemplate as deleteMealTemplateFromDB,
   deleteRecurringMeal as deleteRecurringMealFromDB,
@@ -90,7 +91,7 @@ export interface SettingsSlice {
   deleteMealPlan: (id: MealPlanId) => Promise<void>;
   applyWeekPlan: (planId: MealPlanId) => Promise<void>;
   exportData: () => Promise<BackupPayload | null>;
-  importData: (payload: BackupPayload) => Promise<ImportResult | null>;
+  importData: (payload: ImportableBackup) => Promise<ImportResult | null>;
   fetchAchievements: (userId: UserId) => Promise<void>;
   checkAndUnlockAchievements: () => Promise<void>;
 }
@@ -538,7 +539,7 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
     }
   },
 
-  importData: async (payload: BackupPayload) => {
+  importData: async (payload: ImportableBackup) => {
     const state = get();
     if (!state.userId) return null;
     try {

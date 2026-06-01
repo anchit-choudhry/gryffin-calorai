@@ -2,12 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BackupSchema, type ParsedBackup } from "../forms/schemas";
 import { useAppState } from "../state/AppState";
-import {
-  BACKUP_VERSION,
-  type BackupPayload,
-  type ConflictSummary,
-  detectConflicts,
-} from "../db/dbService";
+import { BACKUP_VERSION, type ConflictSummary, detectConflicts } from "../db/dbService";
 
 const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 
@@ -46,7 +41,7 @@ export function useDataImport() {
           return;
         }
         if (userId) {
-          const summary = await detectConflicts(result.data as unknown as BackupPayload, userId);
+          const summary = await detectConflicts(result.data, userId);
           setConflicts(summary);
         }
         setPendingPayload(result.data);
@@ -63,7 +58,7 @@ export function useDataImport() {
     setPendingPayload(null);
     setConflicts(null);
     try {
-      const importResult = await importData(pendingPayload as unknown as BackupPayload);
+      const importResult = await importData(pendingPayload);
       if (importResult) {
         const total = Object.values(importResult.imported).reduce((a, b) => a + b, 0);
         toast.success(

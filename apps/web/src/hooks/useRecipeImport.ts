@@ -29,6 +29,7 @@ type UseRecipeImportReturn = {
 };
 
 const CORS_PROXY = "https://corsproxy.io/?url=";
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 function isBlockedHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
@@ -38,10 +39,11 @@ function isBlockedHost(hostname: string): boolean {
   if (h.startsWith("[::ffff:") || h.startsWith("::ffff:")) return true;
   const parts = h.split(".");
   // Use >= 2 to catch short-notation IPs like 127.1 (resolves to 127.0.0.1 on most systems)
-  if (parts.length >= 2) {
+  const [first, second] = parts;
+  if (first !== undefined && second !== undefined) {
     // parseInt with radix 8 handles octal notation like 0177 → 127
-    const a = parts[0].startsWith("0") ? parseInt(parts[0], 8) : Number(parts[0]);
-    const b = parts[1].startsWith("0") ? parseInt(parts[1], 8) : Number(parts[1]);
+    const a = first.startsWith("0") ? parseInt(first, 8) : Number(first);
+    const b = second.startsWith("0") ? parseInt(second, 8) : Number(second);
     if (a === 127) return true;
     if (a === 10) return true;
     if (a === 172 && b >= 16 && b <= 31) return true;
@@ -159,7 +161,17 @@ export function useRecipeImport(foodItems: readonly FoodItem[]): UseRecipeImport
         return;
       }
 
+      const contentLength = response.headers.get("content-length");
+      if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_BYTES) {
+        setError("Page is too large to import (max 5 MB).");
+        return;
+      }
+
       const html = await response.text();
+      if (html.length > MAX_RESPONSE_BYTES) {
+        setError("Page is too large to import (max 5 MB).");
+        return;
+      }
       const result = parseRecipeFromHtml(html, foodItems);
 
       if (!result) {
@@ -169,7 +181,8 @@ export function useRecipeImport(foodItems: readonly FoodItem[]): UseRecipeImport
 
       setImportedRecipe(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to import recipe");
+      const raw = err instanceof Error ? err.message : "";
+      setError(raw.length > 0 && raw.length <= 120 ? raw : "Failed to import recipe.");
     } finally {
       setIsLoading(false);
     }

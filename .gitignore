@@ -43,6 +43,7 @@ out
 
 # Project knowledge wiki (local session artifacts)
 project-knowledge/
+.remember
 
 # Maven build output
 apps/backend/target/
