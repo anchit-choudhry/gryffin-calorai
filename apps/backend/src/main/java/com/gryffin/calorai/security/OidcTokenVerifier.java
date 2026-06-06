@@ -5,5 +5,6 @@ package com.gryffin.calorai.security;
  * Implementations will call the provider's JWKS endpoint to validate the signature.
  */
 public interface OidcTokenVerifier {
-    OidcClaims verify(String idToken) throws OidcVerificationException;
+
+  OidcClaims verify(String idToken) throws OidcVerificationException;
 }

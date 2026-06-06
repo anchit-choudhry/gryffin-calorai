@@ -1,9 +1,18 @@
 package com.gryffin.calorai.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.time.LocalDate;
 
+/**
+ * Food item log entry.
+ */
 @Schema(description = "Food item log entry")
 public record FoodItemDto(
     @Schema(description = "Unique ID (UUID)", accessMode = Schema.AccessMode.READ_ONLY)
@@ -32,6 +41,23 @@ public record FoodItemDto(
 
     @Schema(description = "Whether marked as favourite") boolean isFavorite,
 
-    @Pattern(regexp = "^(Breakfast|Lunch|Snacks|Dinner)$", message = "mealType must be Breakfast, Lunch, Snacks, or Dinner")
-    @Schema(description = "Meal type: Breakfast | Lunch | Snacks | Dinner") String mealType
-) {}
+    @Pattern(
+        regexp = "^(Breakfast|Lunch|Snacks|Dinner)$",
+        message = "mealType must be Breakfast, Lunch, Snacks, or Dinner"
+    )
+    @Schema(description = "Meal type: Breakfast | Lunch | Snacks | Dinner") String mealType,
+
+    @Schema(
+        description = "Last updated timestamp (server-managed)",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
+    Instant updatedAt,
+
+    @Schema(
+        description = "Soft-delete timestamp; non-null means deleted",
+        accessMode = Schema.AccessMode.READ_ONLY
+    )
+    Instant deletedAt
+) {
+
+}

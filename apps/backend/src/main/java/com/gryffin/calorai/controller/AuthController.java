@@ -10,35 +10,39 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+/** REST controller for OAuth2 token exchange and JWT refresh. */
 @Tag(name = "Auth", description = "OAuth2 token exchange and JWT refresh")
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/v1/auth")
 public class AuthController {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+  public AuthController(AuthService authService) {
+    this.authService = authService;
+  }
 
-    @Operation(summary = "Exchange an OAuth2 ID token for a Calorai JWT pair")
-    @PostMapping("/token")
-    public ResponseEntity<AuthResponse> token(@Valid @RequestBody AuthRequest request) {
-        return ResponseEntity.ok(authService.authenticate(request));
-    }
+  @Operation(summary = "Exchange an OAuth2 ID token for a Calorai JWT pair")
+  @PostMapping("/token")
+  public ResponseEntity<AuthResponse> token(@Valid @RequestBody AuthRequest request) {
+    return ResponseEntity.ok(authService.authenticate(request));
+  }
 
-    @Operation(summary = "Refresh an expired access token using a valid refresh token")
-    @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
-        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
-    }
+  @Operation(summary = "Refresh an expired access token using a valid refresh token")
+  @PostMapping("/refresh")
+  public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+    return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+  }
 
-    @Operation(summary = "Revoke the current refresh token and sign out", security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
-        authService.logout(request.refreshToken());
-        return ResponseEntity.noContent().build();
-    }
+  @Operation(summary = "Revoke the current refresh token and sign out", security = @SecurityRequirement(name = "bearerAuth"))
+  @PostMapping("/logout")
+  public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+    authService.logout(request.refreshToken());
+    return ResponseEntity.noContent().build();
+  }
 }

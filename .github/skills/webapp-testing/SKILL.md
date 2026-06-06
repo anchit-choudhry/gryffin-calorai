@@ -1,11 +1,10 @@
 # Webapp Testing Skill
 
-> Full skill instructions and examples: `.claude/skills/webapp-testing/SKILL.md`
-> Example scripts: `.claude/skills/webapp-testing/examples/`
-> Helper scripts: `.claude/skills/webapp-testing/scripts/`
+> Full test generation methodology: `.claude/skills/generate-vitest/SKILL.md`
+> Project testing rules: `.claude/rules/testing.md`
 
-Apply the webapp testing approach documented in those files when running browser/UI tests against
-this app.
+Apply the Vitest + jsdom testing approach documented in those files when writing or reviewing tests
+for this app.
 
 ## Project dev server
 

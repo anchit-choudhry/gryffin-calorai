@@ -5,4 +5,6 @@ public record OidcClaims(
     String email,
     String name,
     String provider
-) {}
+) {
+
+}

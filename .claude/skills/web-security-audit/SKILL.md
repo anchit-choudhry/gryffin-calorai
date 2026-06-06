@@ -502,7 +502,8 @@ SQL injection occurs when user input is incorporated into SQL queries without pr
 
 ```sql
 -- VULNERABLE
-query = "SELECT * FROM users WHERE id = " + userId
+query
+= "SELECT * FROM users WHERE id = " + userId
 
 -- SECURE
 query = "SELECT * FROM users WHERE id = ?"
@@ -568,10 +569,18 @@ XXE vulnerabilities occur when XML parsers process external entity references in
 
 ```java
 DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
-dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-dbf.setExpandEntityReferences(false);
+dbf.
+
+setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);
+dbf.
+
+setFeature("http://xml.org/sax/features/external-general-entities",false);
+dbf.
+
+setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+dbf.
+
+setExpandEntityReferences(false);
 ```
 
 **Python (lxml):**
@@ -735,7 +744,7 @@ res.cookie("token", token, {
 
 // 3. VERIFYING
 // CRITICAL: Whitelist the allowed algorithm
-jwt.verify(token, secret, { algorithms: ["HS256"] }, (err, decoded) => {
+jwt.verify(token, secret, {algorithms: ["HS256"]}, (err, decoded) => {
   if (err) {
     // Handle invalid token
   }
@@ -784,7 +793,7 @@ This applies to any ORM/framework - always explicitly define which fields a requ
 ```javascript
 const server = new ApolloServer({
   introspection: process.env.NODE_ENV !== "production",
-  validationRules: [depthLimit(10), costAnalysis({ maximumCost: 1000 })],
+  validationRules: [depthLimit(10), costAnalysis({maximumCost: 1000})],
 });
 ```
 

@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+target/
+*.md
+*.log
+openapi-codegen/
+style/
+.idea/
+*.iml
+src/test/

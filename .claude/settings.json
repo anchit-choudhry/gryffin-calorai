@@ -13,5 +13,70 @@
       "Bash(git status*)",
       "Bash(git show *)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/block-env-edit.sh'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/warn-core-files.sh'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/block-dangerous-git.sh'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/lint-web-on-edit.sh'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/typescript-check-on-edit.sh'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/run-web-related-tests.sh'"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/notification-alert.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/stop-remind-checklist.sh'"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -267,7 +267,9 @@ Object obj = ois.readObject();
 
 // SAFE: Use allowlist or JSON
 ObjectMapper mapper = new ObjectMapper();
-mapper.readValue(json, SafeClass.class);
+mapper.
+
+readValue(json, SafeClass .class);
 ```
 
 **Watch for:** `ObjectInputStream`, `Runtime.exec()`, XML parsers without XXE protection, JNDI
@@ -580,7 +582,8 @@ Get-Content $userPath
 
 ```sql
 -- UNSAFE: String concatenation
-"SELECT * FROM users WHERE id = " + userId
+"SELECT * FROM users WHERE id = "
++ userId
 
 -- SAFE: Parameterized query (language-specific)
 -- Use prepared statements in ALL cases

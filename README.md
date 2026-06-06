@@ -33,8 +33,8 @@ gryffin-calorai/
 ├── apps/
 │   ├── web/        React + Vite + TypeScript (this app)
 │   ├── backend/    Spring Boot 4.0 + PostgreSQL
-│   ├── android/    Kotlin/Compose (planned v0.8)
-│   └── ios/        Swift/SwiftUI (planned v0.9)
+│   ├── android/    Kotlin/Compose (planned v0.9)
+│   └── ios/        Swift/SwiftUI (planned v1.0)
 └── packages/
     └── api-sdk/    Auto-generated OpenAPI clients
 ```
@@ -69,11 +69,12 @@ docker compose up -d    # starts all three services in the background
 
 Services started:
 
-| Service  | URL                   | Notes                                       |
-|----------|-----------------------|---------------------------------------------|
-| Backend  | http://localhost:8080 | Spring Boot API; health: /actuator/health   |
-| pgAdmin  | http://localhost:5050 | DB browser (log in with your .env password) |
-| Postgres | localhost:5432        | DB name / user / password: `gcalorai`       |
+| Service  | URL                   | Notes                                                                            |
+|----------|-----------------------|----------------------------------------------------------------------------------|
+| Backend  | http://localhost:8080 | API base: `/gryffin/calorai/api`; health: `/gryffin/calorai/api/actuator/health` |
+| pgAdmin  | http://localhost:5050 | DB browser (log in with your .env credentials)                                   |
+| Postgres | localhost:5432        | DB name / user: `gcalorai`; password: from `.env`                                |
+| Valkey   | localhost:6379        | Redis-compatible store used for rate-limit buckets (internal only)               |
 
 ```bash
 docker compose logs -f backend   # tail backend logs
@@ -81,10 +82,10 @@ docker compose down              # stop all services (data volumes preserved)
 docker compose down -v           # stop and delete all data volumes
 ```
 
-> `docker compose up` will fail with a clear error if `JWT_SECRET` or `PGADMIN_DEFAULT_PASSWORD`
+> `docker compose up` will fail with a clear error if `POSTGRES_PASSWORD` or `JWT_SECRET`
 > is missing from `.env` - this is intentional. The backend also refuses to start with a
 > known-placeholder secret. Swagger UI is disabled by default; set `SWAGGER_ENABLED=true` in
-> `.env` to enable it at http://localhost:8080/swagger-ui.html.
+> `.env` to enable it at http://localhost:8080/gryffin/calorai/api/swagger-ui/index.html.
 
 **With Maven only (requires PostgreSQL running locally):**
 
@@ -101,19 +102,20 @@ export DATABASE_USER=gcalorai
 export DATABASE_PASSWORD=<your-password>
 export JWT_SECRET=$(openssl rand -hex 32)   # must be a real random value
 export CORS_ALLOWED_ORIGINS=http://localhost:5173
-export SWAGGER_ENABLED=true                 # optional: enables Swagger UI at /swagger-ui.html
+export SWAGGER_ENABLED=true                 # optional: enables Swagger UI at /gryffin/calorai/api/swagger-ui/index.html
 
 # 3. Start the backend:
 mvn spring-boot:run     # http://localhost:8080
 ```
 
-Health check: `curl http://localhost:8080/actuator/health`
+API base path: `http://localhost:8080/gryffin/calorai/api`  
+Health check: `curl http://localhost:8080/gryffin/calorai/api/actuator/health`
 
 ### OpenAPI codegen
 
 ```bash
-# Export spec from running backend, then regenerate SDK clients:
-curl http://localhost:8080/api-docs > apps/backend/api-docs/openapi.json
+# Export spec from running backend (SWAGGER_ENABLED=true required), then regenerate SDK clients:
+curl http://localhost:8080/gryffin/calorai/api/api-docs > apps/backend/api-docs/openapi.json
 cd apps/backend/openapi-codegen && bash generate.sh
 ```
 

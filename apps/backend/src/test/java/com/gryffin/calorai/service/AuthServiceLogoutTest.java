@@ -5,72 +5,71 @@ import com.gryffin.calorai.repository.UserRepository;
 import com.gryffin.calorai.security.JwtService;
 import com.gryffin.calorai.security.OidcTokenVerifier;
 import io.jsonwebtoken.JwtException;
+import java.util.Map;
+import java.util.UUID;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Map;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class AuthServiceLogoutTest {
 
-    @Mock
-    private Map<String, OidcTokenVerifier> verifiers;
+  @Mock
+  private Map<String, OidcTokenVerifier> verifiers;
 
-    @Mock
-    private UserRepository userRepository;
+  @Mock
+  private UserRepository userRepository;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
+  @Mock
+  private RefreshTokenRepository refreshTokenRepository;
 
-    @Mock
-    private JwtService jwtService;
+  @Mock
+  private JwtService jwtService;
 
-    @InjectMocks
-    private AuthService authService;
+  @InjectMocks
+  private AuthService authService;
 
-    @Test
-    void logout_validRefreshToken_deletesJti() {
-        var jti = UUID.randomUUID();
-        when(jwtService.isRefreshToken("valid-refresh")).thenReturn(true);
-        when(jwtService.extractJti("valid-refresh")).thenReturn(jti);
+  @Test
+  void logoutValidRefreshTokenDeletesJti() {
+    var jti = UUID.randomUUID();
+    BDDMockito.given(jwtService.isRefreshToken("valid-refresh")).willReturn(true);
+    BDDMockito.given(jwtService.extractJti("valid-refresh")).willReturn(jti);
 
-        authService.logout("valid-refresh");
+    authService.logout("valid-refresh");
 
-        verify(refreshTokenRepository).deleteByJti(jti);
-    }
+    BDDMockito.then(refreshTokenRepository).should().deleteByJti(jti);
+  }
 
-    @Test
-    void logout_malformedToken_noExceptionAndNoDelete() {
-        when(jwtService.isRefreshToken("bad-token")).thenThrow(new JwtException("malformed"));
+  @Test
+  void logoutMalformedTokenNoExceptionAndNoDelete() {
+    BDDMockito.given(jwtService.isRefreshToken("bad-token"))
+        .willThrow(new JwtException("malformed"));
 
-        assertThatNoException().isThrownBy(() -> authService.logout("bad-token"));
-        verifyNoInteractions(refreshTokenRepository);
-    }
+    Assertions.assertThatNoException().isThrownBy(() -> authService.logout("bad-token"));
+    BDDMockito.then(refreshTokenRepository).shouldHaveNoInteractions();
+  }
 
-    @Test
-    void logout_accessTokenInsteadOfRefresh_noDelete() {
-        when(jwtService.isRefreshToken("access-token")).thenReturn(false);
+  @Test
+  void logoutAccessTokenInsteadOfRefreshNoDelete() {
+    BDDMockito.given(jwtService.isRefreshToken("access-token")).willReturn(false);
 
-        authService.logout("access-token");
+    authService.logout("access-token");
 
-        verifyNoInteractions(refreshTokenRepository);
-    }
+    BDDMockito.then(refreshTokenRepository).shouldHaveNoInteractions();
+  }
 
-    @Test
-    void logout_idempotent_secondCallNoException() {
-        var jti = UUID.randomUUID();
-        when(jwtService.isRefreshToken("used-refresh")).thenReturn(true);
-        when(jwtService.extractJti("used-refresh")).thenReturn(jti);
-        when(refreshTokenRepository.deleteByJti(jti)).thenReturn(0);
+  @Test
+  void logoutIdempotentSecondCallNoException() {
+    var jti = UUID.randomUUID();
+    BDDMockito.given(jwtService.isRefreshToken("used-refresh")).willReturn(true);
+    BDDMockito.given(jwtService.extractJti("used-refresh")).willReturn(jti);
+    BDDMockito.given(refreshTokenRepository.deleteByJti(jti)).willReturn(0);
 
-        assertThatNoException().isThrownBy(() -> authService.logout("used-refresh"));
-        verify(refreshTokenRepository).deleteByJti(jti);
-    }
+    Assertions.assertThatNoException().isThrownBy(() -> authService.logout("used-refresh"));
+    BDDMockito.then(refreshTokenRepository).should().deleteByJti(jti);
+  }
 }
