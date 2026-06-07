@@ -17,6 +17,7 @@ export function useFoodForm(initialFood?: FoodItem): {
   isEditMode: boolean;
   submitFoodLog: () => Promise<boolean>;
   resetForm: () => void;
+  prefillFromFood: (food: FoodItem) => void;
 } {
   const { userId, addFoodLog, updateFoodLog } = useAppState();
   const [isLoading, setIsLoading] = useState(false);
@@ -29,9 +30,9 @@ export function useFoodForm(initialFood?: FoodItem): {
       name: initialFood?.name ?? "",
       calories: initialFood?.calories ?? 0,
       servingSize: initialFood?.servingSize ?? 1,
-      protein: initialFood?.protein ?? 0,
-      carbs: initialFood?.carbs ?? 0,
-      fat: initialFood?.fat ?? 0,
+      protein: initialFood?.protein,
+      carbs: initialFood?.carbs,
+      fat: initialFood?.fat,
       mealType: initialFood?.mealType ?? DEFAULT_MEAL_TYPE,
       nutritionData: initialFood?.nutritionData,
     },
@@ -99,13 +100,26 @@ export function useFoodForm(initialFood?: FoodItem): {
       name: "",
       calories: 0,
       servingSize: 1,
-      protein: 0,
-      carbs: 0,
-      fat: 0,
+      protein: undefined,
+      carbs: undefined,
+      fat: undefined,
       mealType: DEFAULT_MEAL_TYPE,
       nutritionData: undefined,
     });
   };
 
-  return { form, isLoading, isEditMode, submitFoodLog, resetForm };
+  const prefillFromFood = (food: FoodItem) => {
+    form.reset({
+      name: food.name,
+      calories: food.calories,
+      servingSize: food.servingSize,
+      protein: food.protein,
+      carbs: food.carbs,
+      fat: food.fat,
+      mealType: food.mealType ?? DEFAULT_MEAL_TYPE,
+      nutritionData: food.nutritionData,
+    });
+  };
+
+  return { form, isLoading, isEditMode, submitFoodLog, resetForm, prefillFromFood };
 }

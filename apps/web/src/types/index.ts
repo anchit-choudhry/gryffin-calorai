@@ -45,6 +45,7 @@ export type RecurringMealId = Brand<number, "RecurringMealId">;
 export type ReminderId = Brand<number, "ReminderId">;
 export type MealTemplateId = Brand<number, "MealTemplateId">;
 export type MealPlanId = Brand<number, "MealPlanId">;
+export type FoodPhotoId = Brand<number, "FoodPhotoId">;
 
 export const ActivityLogId = (id: number): ActivityLogId => id as ActivityLogId;
 export const FastingSessionId = (id: number): FastingSessionId => id as FastingSessionId;
@@ -53,6 +54,7 @@ export const RecurringMealId = (id: number): RecurringMealId => id as RecurringM
 export const ReminderId = (id: number): ReminderId => id as ReminderId;
 export const MealTemplateId = (id: number): MealTemplateId => id as MealTemplateId;
 export const MealPlanId = (id: number): MealPlanId => id as MealPlanId;
+export const FoodPhotoId = (id: number): FoodPhotoId => id as FoodPhotoId;
 
 export function isActivityLogId(value: unknown): value is ActivityLogId {
   return isPositiveIntegerId(value);
@@ -81,6 +83,21 @@ export function isMealTemplateId(value: unknown): value is MealTemplateId {
 export function isMealPlanId(value: unknown): value is MealPlanId {
   return isPositiveIntegerId(value);
 }
+
+export function isFoodPhotoId(value: unknown): value is FoodPhotoId {
+  return isPositiveIntegerId(value);
+}
+
+export type CaptureMethod = "manual" | "voice" | "photo" | "barcode" | "recurring" | "template";
+
+export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
+  manual: "Manual",
+  voice: "Voice",
+  photo: "Photo",
+  barcode: "Scan",
+  recurring: "Recurring",
+  template: "Template",
+};
 
 // --- Feature 17: Reminders ---
 

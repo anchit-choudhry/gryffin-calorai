@@ -9,6 +9,7 @@ interface Handlers {
   onToggleHelp: () => void;
   onToggleDark: () => void;
   onNavigate: (page: "dashboard" | "recipes" | "progress") => void;
+  onOpenQuickAdd: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: Handlers) {
@@ -22,6 +23,7 @@ export function useKeyboardShortcuts(handlers: Handlers) {
         target.tagName === "INPUT" ||
         target.tagName === "TEXTAREA" ||
         target.isContentEditable ||
+        // jsdom does not compute isContentEditable reliably; check the attribute directly for test fidelity.
         (target instanceof HTMLElement && target.contentEditable === "true");
 
       if (e.key === "g" && !inInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -47,6 +49,12 @@ export function useKeyboardShortcuts(handlers: Handlers) {
             handlers.onNavigate("progress");
             return;
         }
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        handlers.onOpenQuickAdd();
+        return;
       }
 
       if (inInput || e.metaKey || e.ctrlKey || e.altKey) return;

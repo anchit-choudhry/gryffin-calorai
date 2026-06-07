@@ -119,7 +119,7 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
 
   fetchAllFoodItems: async (userId) => {
     try {
-      const items = await getRecentFoodItems(userId);
+      const items = await getRecentFoodItems(userId, 90);
       set({ allFoodItems: items });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch food items");

@@ -7,6 +7,9 @@ import * as appState from "../state/AppState";
 vi.mock("../state/AppState");
 vi.mock("sonner");
 vi.mock("../db/dbService");
+vi.mock("../hooks/useFastingTimer", () => ({
+  useFastingTimer: () => ({ formattedRemaining: "8h 00m", isComplete: false }),
+}));
 
 // Mock all heavy child components to isolate Dashboard.tsx behavior
 vi.mock("../components/FoodLogger", () => ({ default: () => <div>FoodLogger</div> }));
@@ -39,8 +42,15 @@ vi.mock("../components/RecurringMeals", () => ({ default: () => <div>RecurringMe
 vi.mock("../components/MealTemplates", () => ({ default: () => <div>MealTemplates</div> }));
 vi.mock("../components/BarcodeScanner", () => ({ default: () => <div>BarcodeScanner</div> }));
 vi.mock("../components/PageLoading", () => ({ default: () => <div>PageLoading</div> }));
+vi.mock("../components/PhotoFoodLogger", () => ({ default: () => <div>PhotoFoodLogger</div> }));
+vi.mock("../components/dashboard/PhotoStrip", () => ({
+  PhotoStrip: () => null,
+}));
 vi.mock("../components/dashboard/DashboardHero", () => ({
   default: () => <div>DashboardHero</div>,
+}));
+vi.mock("../components/dashboard/DailyVitalsStrip", () => ({
+  DailyVitalsStrip: () => <div data-testid="daily-vitals-strip">DailyVitalsStrip</div>,
 }));
 vi.mock("../components/dashboard/SectionHeader", () => ({
   default: ({ title, subtitle }: { title: string; subtitle?: string }) => (
@@ -128,8 +138,10 @@ const dailyLogs: FoodItem[] = [
   makeLog(4, "Pasta", "Dinner"),
 ];
 
-beforeEach(() => {
-  vi.mocked(appState.useAppState).mockReturnValue({
+function makeMock(
+  overrides: Partial<ReturnType<typeof appState.useAppState>> = {},
+): ReturnType<typeof appState.useAppState> {
+  return {
     init: {
       status: "ready",
       user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
@@ -142,7 +154,18 @@ beforeEach(() => {
     userId,
     allFoodItems: [],
     tdeeProfile: null,
-  } as unknown as ReturnType<typeof appState.useAppState>);
+    dailyWaterLogs: [],
+    dailyStepLogs: [],
+    dailyActivityLogs: [],
+    activeFastingSession: null,
+    waterGoalMl: 2000,
+    openQuickAdd: vi.fn(),
+    ...overrides,
+  } as unknown as ReturnType<typeof appState.useAppState>;
+}
+
+beforeEach(() => {
+  vi.mocked(appState.useAppState).mockReturnValue(makeMock());
 });
 
 describe("Dashboard log meal-type filter", () => {
@@ -185,74 +208,44 @@ describe("Dashboard log meal-type filter", () => {
 
 describe("Dashboard init states", () => {
   it("shows nothing-logged message when dailyLogs is empty", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(makeMock({ dailyLogs: [] }));
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     expect(screen.getByText(/nothing logged yet/i)).toBeInTheDocument();
   });
 
   it("shows error message when init.status is error", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: { status: "error", message: "Failed to load data" },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        init: { status: "error", message: "Failed to load data" },
+        dailyLogs: [],
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     expect(screen.getByText(/failed to load data/i)).toBeInTheDocument();
   });
 
   it("shows loading skeleton when init.status is loading", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: { status: "loading" },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ init: { status: "loading" }, dailyLogs: [] }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     const { container } = render(<Dashboard />);
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("shows onboarding banner when user has not completed onboarding and no tdeeProfile", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        init: {
+          status: "ready",
+          user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
+        },
+        dailyLogs: [],
+        tdeeProfile: null,
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     expect(screen.getByText("OnboardingBanner")).toBeInTheDocument();
@@ -261,20 +254,12 @@ describe("Dashboard init states", () => {
 
 describe("Dashboard quick-add sections", () => {
   it("shows Recently Logged section when allFoodItems is populated", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [makeLog(10, "Banana", "Snacks")],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        dailyLogs: [],
+        allFoodItems: [makeLog(10, "Banana", "Snacks")],
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     expect(screen.getByText(/recently logged/i)).toBeInTheDocument();
@@ -282,20 +267,12 @@ describe("Dashboard quick-add sections", () => {
   });
 
   it("shows From the Pantry section when favoriteFoods is populated", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [makeLog(20, "Greek Yogurt", "Breakfast")],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        dailyLogs: [],
+        favoriteFoods: [makeLog(20, "Greek Yogurt", "Breakfast")],
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     expect(screen.getByText(/from the pantry/i)).toBeInTheDocument();
@@ -304,20 +281,13 @@ describe("Dashboard quick-add sections", () => {
 
   it("calls addFoodLog when a recently logged food button is clicked", async () => {
     const addFoodLog = vi.fn();
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog,
-      userId,
-      allFoodItems: [makeLog(10, "Banana", "Snacks")],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        dailyLogs: [],
+        addFoodLog,
+        allFoodItems: [makeLog(10, "Banana", "Snacks")],
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByText(/banana · 300 kcal/i));
@@ -326,20 +296,13 @@ describe("Dashboard quick-add sections", () => {
 
   it("calls addFoodLog when a pantry favorite button is clicked", async () => {
     const addFoodLog = vi.fn();
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [makeLog(20, "Greek Yogurt", "Breakfast")],
-      toggleFavorite: vi.fn(),
-      addFoodLog,
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        dailyLogs: [],
+        addFoodLog,
+        favoriteFoods: [makeLog(20, "Greek Yogurt", "Breakfast")],
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByText(/greek yogurt · 300 kcal/i));
@@ -350,20 +313,7 @@ describe("Dashboard quick-add sections", () => {
 describe("Dashboard delete with undo", () => {
   it("calls deleteFoodLog when a log entry is deleted", async () => {
     const deleteFoodLog = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs,
-      deleteFoodLog,
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(makeMock({ deleteFoodLog }));
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /delete oatmeal/i }));
@@ -372,20 +322,9 @@ describe("Dashboard delete with undo", () => {
 
   it("skips toast when userId is absent after delete", async () => {
     const deleteFoodLog = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: true, calorieGoal: 2000 },
-      },
-      dailyLogs,
-      deleteFoodLog,
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId: undefined,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ deleteFoodLog, userId: undefined as unknown as typeof userId }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /delete oatmeal/i }));
@@ -414,20 +353,16 @@ describe("Dashboard edit log dialog", () => {
 
 describe("Dashboard onboarding flow", () => {
   it("shows onboarding modal when banner button is clicked", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        init: {
+          status: "ready",
+          user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
+        },
+        dailyLogs: [],
+        tdeeProfile: null,
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /open onboarding/i }));
@@ -435,25 +370,60 @@ describe("Dashboard onboarding flow", () => {
   });
 
   it("closes onboarding modal when close button is clicked", async () => {
-    vi.mocked(appState.useAppState).mockReturnValue({
-      init: {
-        status: "ready",
-        user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
-      },
-      dailyLogs: [],
-      deleteFoodLog: vi.fn(),
-      favoriteFoods: [],
-      toggleFavorite: vi.fn(),
-      addFoodLog: vi.fn(),
-      userId,
-      allFoodItems: [],
-      tdeeProfile: null,
-    } as unknown as ReturnType<typeof appState.useAppState>);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({
+        init: {
+          status: "ready",
+          user: { id: userId, hasCompletedOnboarding: false, calorieGoal: 2000 },
+        },
+        dailyLogs: [],
+        tdeeProfile: null,
+      }),
+    );
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /open onboarding/i }));
     expect(screen.getByText("OnboardingModal")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /close onboarding/i }));
     expect(screen.queryByText("OnboardingModal")).not.toBeInTheDocument();
+  });
+});
+
+describe("Dashboard Today/Week tabs", () => {
+  it("renders Today tab by default", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByRole("button", { name: /^today$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^this week$/i })).toBeInTheDocument();
+  });
+
+  it("renders DailyVitalsStrip on the Today view", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByTestId("daily-vitals-strip")).toBeInTheDocument();
+  });
+
+  it("calls openQuickAdd when Log Food button is clicked", async () => {
+    const openQuickAdd = vi.fn();
+    vi.mocked(appState.useAppState).mockReturnValue(makeMock({ openQuickAdd }));
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /log food/i }));
+    expect(openQuickAdd).toHaveBeenCalledOnce();
+  });
+
+  it("switches to the week view when This Week tab is clicked", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /this week/i }));
+    expect(screen.getByRole("button", { name: /this week/i })).toBeInTheDocument();
+  });
+
+  it("toggles tracker expansion when Show Trackers is clicked", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    const toggleBtn = screen.getByRole("button", { name: /show trackers/i });
+    fireEvent.click(toggleBtn);
+    expect(screen.getByRole("button", { name: /hide trackers/i })).toBeInTheDocument();
   });
 });

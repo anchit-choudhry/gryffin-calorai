@@ -13,17 +13,11 @@ import {
 import {
   BookOpen,
   LayoutDashboard,
-  Mic,
   Moon,
-  Pencil,
-  Plus,
-  QrCode,
   Settings as SettingsIcon,
   Sun,
   TrendingUp,
-  X,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
@@ -44,6 +38,8 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReminders } from "./hooks/useReminders";
 import { useSyncService } from "./hooks/useSyncService";
 import { SyncStatusChip } from "./components/SyncStatusChip";
+import { QuickAddModal } from "./components/QuickAddModal";
+import { QuickAddFab } from "./components/QuickAddFab";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
@@ -75,20 +71,20 @@ type BottomNavHash = (typeof BOTTOM_NAV_HASHES)[number];
 
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
+    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const stored = localStorage.getItem("darkMode");
-    if (!stored) return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (!stored) return systemDark;
     try {
       const parsed = JSON.parse(stored);
-      return typeof parsed === "boolean"
-        ? parsed
-        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return typeof parsed === "boolean" ? parsed : systemDark;
     } catch {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return systemDark;
     }
   });
   const [currentPath, setCurrentPath] = useState<ValidHash>(normalizeHash(window.location.hash));
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const openQuickAdd = useAppState((s) => s.openQuickAdd);
+  const closeQuickAdd = useAppState((s) => s.closeQuickAdd);
 
   useLayoutEffect(() => {
     if (darkMode) {
@@ -123,6 +119,11 @@ function App() {
       localStorage.setItem("darkMode", JSON.stringify(isDark));
       return isDark;
     });
+  }, []);
+
+  const navigate = useCallback((hash: ValidHash) => {
+    window.location.hash = hash;
+    setCurrentPath(hash);
   }, []);
 
   const page = useMemo(() => {
@@ -173,18 +174,14 @@ function App() {
         const btn = document.querySelector<HTMLButtonElement>('#main [aria-label*="arcode"]');
         btn?.click();
       },
-      onFocusRecipeSearch: () => {
-        window.location.hash = "#recipes";
-        setCurrentPath(normalizeHash("#recipes"));
-      },
+      onFocusRecipeSearch: () => navigate(normalizeHash("#recipes")),
       onToggleHelp: () => setShowShortcuts((v) => !v),
       onToggleDark: toggleDarkMode,
-      onNavigate: (page: "dashboard" | "recipes" | "progress") => {
-        window.location.hash = `#${page}`;
-        setCurrentPath(normalizeHash(`#${page}`));
-      },
+      onNavigate: (page: "dashboard" | "recipes" | "progress") =>
+        navigate(normalizeHash(`#${page}`)),
+      onOpenQuickAdd: openQuickAdd,
     }),
-    [toggleDarkMode],
+    [toggleDarkMode, openQuickAdd, navigate],
   );
 
   useKeyboardShortcuts(kbHandlers);
@@ -192,21 +189,13 @@ function App() {
   useSyncService();
 
   const closeShortcuts = useCallback(() => setShowShortcuts(false), []);
-  const closeQuickAdd = useCallback(() => setShowQuickAdd(false), []);
-  const handleQuickAddAction = useCallback((action: "write" | "scan" | "speak") => {
-    setShowQuickAdd(false);
-    window.location.hash = "#dashboard";
-    setCurrentPath(normalizeHash("#dashboard"));
-    requestAnimationFrame(() => {
-      if (action === "write") {
-        document.querySelector<HTMLInputElement>('#main input[name="name"]')?.focus();
-      } else if (action === "scan") {
-        document.querySelector<HTMLButtonElement>('#main [aria-label*="arcode"]')?.click();
-      } else if (action === "speak") {
-        document.querySelector<HTMLButtonElement>('#main [aria-label*="oice"]')?.click();
-      }
-    });
-  }, []);
+  const handleAction = useCallback(
+    (_action: "write" | "scan" | "speak") => {
+      closeQuickAdd();
+      navigate(normalizeHash("#dashboard"));
+    },
+    [closeQuickAdd, navigate],
+  );
 
   const tablistRef = useRef<HTMLDivElement>(null);
   const onTablistKeyDown = useCallback(
@@ -221,15 +210,17 @@ function App() {
       const hash = BOTTOM_NAV_HASHES[next];
       if (!hash) return;
       tablistRef.current?.querySelectorAll<HTMLAnchorElement>("[role=tab]")[next]?.focus();
-      window.location.hash = hash;
-      setCurrentPath(hash);
+      navigate(hash);
     },
-    [currentPath],
+    [currentPath, navigate],
   );
 
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-paper transition-colors duration-300">
+        {/* Paper-grain texture overlay — fixed, pointer-events:none, behind all content */}
+        <div className="grain-overlay" aria-hidden="true" />
+
         {/* Skip link for keyboard users */}
         <a
           href="#main"
@@ -314,13 +305,8 @@ function App() {
                 const isActive = currentPath === hash;
                 return (
                   <Fragment key={hash}>
-                    {/* Coarse-pointer: insert center spacer for FAB between 2nd and 3rd item */}
-                    {idx === 2 && (
-                      <div
-                        className="hidden [@media(pointer:coarse)]:block w-16 shrink-0"
-                        aria-hidden="true"
-                      />
-                    )}
+                    {/* Center spacer keeps FAB clear of nav tabs on all pointer types */}
+                    {idx === 2 && <div className="w-16 shrink-0" aria-hidden="true" />}
                     <a
                       href={hash}
                       role="tab"
@@ -341,14 +327,7 @@ function App() {
               })}
             </div>
 
-            {/* Quick-add FAB — coarse-pointer devices only (touch screens) */}
-            <button
-              onClick={() => setShowQuickAdd(true)}
-              aria-label="Quick add"
-              className="hidden [@media(pointer:coarse)]:flex items-center justify-center absolute left-1/2 -translate-x-1/2 -top-5 size-12 bg-persimmon text-paper border-2 border-paper rounded-full shadow-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-offset-2"
-            >
-              <Plus className="size-5" />
-            </button>
+            <QuickAddFab />
           </div>
         </nav>
       </div>
@@ -356,104 +335,8 @@ function App() {
       <ProductTourOverlay />
       <HarvestStamp />
       <Toaster richColors />
-      <QuickAddSheet open={showQuickAdd} onClose={closeQuickAdd} onAction={handleQuickAddAction} />
+      <QuickAddModal onAction={handleAction} />
     </TooltipProvider>
-  );
-}
-
-interface QuickAddSheetProps {
-  open: boolean;
-  onClose: () => void;
-  onAction: (action: "write" | "scan" | "speak") => void;
-}
-
-const QUICK_ADD_ACTIONS = [
-  { id: "write" as const, label: "Log Food", sub: "Type a food name", Icon: Pencil },
-  { id: "scan" as const, label: "Scan Barcode", sub: "Use your camera", Icon: QrCode },
-  { id: "speak" as const, label: "Voice Log", sub: "Speak your meal", Icon: Mic },
-] as const;
-
-function QuickAddSheet({ open, onClose, onAction }: QuickAddSheetProps) {
-  const reducedMotion = useReducedMotion();
-
-  const sheetVariants = useMemo(
-    () => ({
-      hidden: { y: reducedMotion ? 0 : "100%", opacity: reducedMotion ? 0 : 1 },
-      visible: {
-        y: 0,
-        opacity: 1,
-        transition: {
-          duration: reducedMotion ? 0.15 : 0.3,
-          ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
-        },
-      },
-      exit: {
-        y: reducedMotion ? 0 : "100%",
-        opacity: reducedMotion ? 0 : 1,
-        transition: {
-          duration: 0.2,
-          ease: [0.65, 0, 0.35, 1] as [number, number, number, number],
-        },
-      },
-    }),
-    [reducedMotion],
-  );
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key="qa-backdrop"
-            className="fixed inset-0 z-[60] bg-ink/20"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onClose}
-            aria-hidden="true"
-          />
-          <motion.div
-            key="qa-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Quick add"
-            className="fixed bottom-0 left-0 right-0 z-[61] bg-paper border-t border-rule"
-            style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom, 0px))" }}
-            variants={sheetVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-rule">
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-                Quick Add
-              </span>
-              <button
-                onClick={onClose}
-                aria-label="Close quick add"
-                className="flex items-center justify-center size-9 text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-px bg-rule mt-px">
-              {QUICK_ADD_ACTIONS.map(({ id, label, sub, Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => onAction(id)}
-                  className="flex flex-col items-center gap-2 py-6 bg-paper text-center hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset"
-                >
-                  <Icon className="size-6 text-persimmon" />
-                  <span className="font-sans text-sm font-semibold text-ink">{label}</span>
-                  <span className="font-mono text-[10px] text-ink-soft">{sub}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
   );
 }
 

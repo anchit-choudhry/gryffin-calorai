@@ -11,6 +11,7 @@ const makeHandlers = () => ({
   onToggleHelp: vi.fn(),
   onToggleDark: vi.fn(),
   onNavigate: vi.fn(),
+  onOpenQuickAdd: vi.fn(),
 });
 
 const fire = (key: string, opts: Partial<KeyboardEventInit> = {}, target?: EventTarget) => {
@@ -141,6 +142,40 @@ describe("useKeyboardShortcuts", () => {
       div.dispatchEvent(new KeyboardEvent("keydown", { key: "b", bubbles: true }));
       expect(h.onOpenBarcode).not.toHaveBeenCalled();
       document.body.removeChild(div);
+    });
+  });
+
+  describe("Cmd/Ctrl-K opens quick-add modal", () => {
+    it("metaKey+K calls onOpenQuickAdd", () => {
+      const h = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(h));
+      fire("k", { metaKey: true });
+      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+    });
+
+    it("ctrlKey+K calls onOpenQuickAdd", () => {
+      const h = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(h));
+      fire("k", { ctrlKey: true });
+      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+    });
+
+    it("metaKey+K does not trigger other handlers", () => {
+      const h = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(h));
+      fire("k", { metaKey: true });
+      expect(h.onFocusLogger).not.toHaveBeenCalled();
+      expect(h.onToggleDark).not.toHaveBeenCalled();
+    });
+
+    it("metaKey+K works even when focus is inside an input", () => {
+      const h = makeHandlers();
+      renderHook(() => useKeyboardShortcuts(h));
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
+      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+      document.body.removeChild(input);
     });
   });
 

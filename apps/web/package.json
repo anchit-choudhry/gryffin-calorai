@@ -1,7 +1,7 @@
 {
   "name": "@gryffin-calorai/web",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.9.0",
   "type": "module",
   "engines": {
     "node": "^24",
@@ -22,6 +22,7 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/manrope": "^5.2.8",
     "@fontsource-variable/public-sans": "^5.2.7",
+    "@fontsource/spectral": "^5.2.8",
     "@hookform/resolvers": "^5.4.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",

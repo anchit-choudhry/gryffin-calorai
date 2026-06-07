@@ -442,10 +442,63 @@ describe("BackupSchema - nutritionData in foodItems", () => {
   });
 });
 
+// --- Photo CRUD ---
+
+describe("Photo CRUD", () => {
+  const photoBase: Omit<FoodPhoto, "id"> = {
+    userId: TEST_USER,
+    imageData: "data:image/png;base64,original",
+    thumbnailData: "data:image/png;base64,thumb",
+    mimeType: "image/png",
+    createdAt: `${TODAY}T12:00:00.000Z`,
+  };
+
+  // Share a single inserted photo across read tests to avoid auto-increment issues
+  let sharedId: Awaited<ReturnType<typeof addFoodPhoto>>;
+
+  beforeAll(async () => {
+    sharedId = await addFoodPhoto(photoBase);
+  });
+
+  it("addFoodPhoto returns a numeric FoodPhotoId", () => {
+    expect(typeof sharedId).toBe("number");
+    expect(sharedId).toBeGreaterThan(0);
+  });
+
+  it("getFoodPhoto retrieves the stored photo", async () => {
+    const photo = await getFoodPhoto(sharedId, TEST_USER);
+    expect(photo).toBeDefined();
+    expect(photo?.imageData).toBe("data:image/png;base64,original");
+    expect(photo?.thumbnailData).toBe("data:image/png;base64,thumb");
+  });
+
+  it("getFoodPhoto returns undefined for wrong userId", async () => {
+    const photo = await getFoodPhoto(sharedId, UserId("other-user-x"));
+    expect(photo).toBeUndefined();
+  });
+
+  it("getFoodPhotosByUser returns photos for the given user and date", async () => {
+    const result = await getFoodPhotosByUser(TEST_USER, TODAY);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.every((p) => p.userId === TEST_USER)).toBe(true);
+  });
+
+  it("getFoodPhotosByUser returns empty array for a date with no photos", async () => {
+    const result = await getFoodPhotosByUser(TEST_USER, ISODate("2000-01-01"));
+    expect(result).toStrictEqual([]);
+  });
+
+  it("deleteFoodPhoto removes the photo", async () => {
+    await deleteFoodPhoto(sharedId, TEST_USER);
+    const photo = await getFoodPhoto(sharedId, TEST_USER);
+    expect(photo).toBeUndefined();
+  });
+});
+
 // --- DB schema version ---
 
 describe("DB schema version", () => {
-  it("is at version 19", () => {
-    expect(db.verno).toBe(19);
+  it("is at version 20", () => {
+    expect(db.verno).toBe(20);
   });
 });

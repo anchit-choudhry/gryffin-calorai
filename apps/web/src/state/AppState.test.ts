@@ -460,7 +460,7 @@ describe("AppState", () => {
     it("should fetch all food items", async () => {
       const userId = UserId("test-user");
       await useAppState.getState().fetchAllFoodItems(userId);
-      expect(vi.mocked(dbService).getRecentFoodItems).toHaveBeenCalledWith(userId);
+      expect(vi.mocked(dbService).getRecentFoodItems).toHaveBeenCalledWith(userId, 90);
     });
 
     it("should handle error when fetching food items fails", async () => {

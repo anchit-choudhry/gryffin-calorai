@@ -53,15 +53,18 @@ export const FoodFormSchema = z.object({
   protein: z
     .number({ invalid_type_error: "Enter a valid number" })
     .min(0, "Cannot be negative")
-    .max(500, "Cannot exceed 500g"),
+    .max(500, "Cannot exceed 500g")
+    .optional(),
   carbs: z
     .number({ invalid_type_error: "Enter a valid number" })
     .min(0, "Cannot be negative")
-    .max(500, "Cannot exceed 500g"),
+    .max(500, "Cannot exceed 500g")
+    .optional(),
   fat: z
     .number({ invalid_type_error: "Enter a valid number" })
     .min(0, "Cannot be negative")
-    .max(500, "Cannot exceed 500g"),
+    .max(500, "Cannot exceed 500g")
+    .optional(),
   mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"] as const),
   nutritionData: NutritionDataSchema.optional(),
 });
@@ -262,9 +265,9 @@ export const RecurringMealSchema = z.object({
         name: z.string().min(1),
         calories: z.number().min(0).max(10000),
         servingSize: z.number().min(1).max(100),
-        protein: z.number().min(0).max(500),
-        carbs: z.number().min(0).max(500),
-        fat: z.number().min(0).max(500),
+        protein: z.number().min(0).max(500).optional(),
+        carbs: z.number().min(0).max(500).optional(),
+        fat: z.number().min(0).max(500).optional(),
         mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"] as const),
       }),
     )
@@ -325,9 +328,9 @@ const BackupFoodItemRowSchema = z.object({
   name: z.string().max(100),
   calories: z.number().min(0).max(10_000),
   servingSize: z.number().min(0).max(100),
-  protein: z.number().min(0).max(500),
-  carbs: z.number().min(0).max(500),
-  fat: z.number().min(0).max(500),
+  protein: z.number().min(0).max(500).optional(),
+  carbs: z.number().min(0).max(500).optional(),
+  fat: z.number().min(0).max(500).optional(),
   dateLogged: z.string().max(10),
   isFavorite: z.boolean(),
   mealType: z.enum(["Breakfast", "Lunch", "Snacks", "Dinner"]).optional(),

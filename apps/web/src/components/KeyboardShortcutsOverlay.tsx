@@ -8,6 +8,7 @@ interface Props {
 }
 
 const shortcuts = [
+  { keys: ["Cmd/Ctrl", "K"], description: "Open quick-add modal" },
   { keys: ["L"], description: "Focus food logger" },
   { keys: ["W"], description: "Add 250ml water" },
   { keys: ["S"], description: "Log steps" },

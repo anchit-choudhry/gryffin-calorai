@@ -759,7 +759,7 @@ describe("dbService", () => {
         isFavorite: false,
       });
 
-      const recent = await getRecentFoodItems(userId);
+      const recent = await getRecentFoodItems(userId, 30);
       expect(recent.length).toBeGreaterThanOrEqual(2);
       expect(recent.some((i) => i.name === "Apple")).toBe(true);
       expect(recent.some((i) => i.name === "Banana")).toBe(true);
@@ -986,7 +986,7 @@ describe("dbService", () => {
       expect(after.some((f) => f.name === "Temp Food")).toBe(false);
     });
 
-    it("should deduplicate by name in getRecentFoodItems", async () => {
+    it("returns all matching items within the date range without deduplication", async () => {
       const userId = UserId("recent-dedup");
       const today = todayISO();
       const yesterday = ISODate(
@@ -1016,9 +1016,10 @@ describe("dbService", () => {
         isFavorite: false,
       });
 
-      const recent = await getRecentFoodItems(userId);
+      // getRecentFoodItems returns raw DB results; deduplication is the caller's job.
+      const recent = await getRecentFoodItems(userId, 30);
       const apples = recent.filter((i) => i.name === "Apple");
-      expect(apples).toHaveLength(1);
+      expect(apples.length).toBeGreaterThanOrEqual(2);
     });
 
     it("should reject toggle favorite for non-existent food item", async () => {
@@ -1163,7 +1164,7 @@ describe("dbService", () => {
 
     it("should return undefined when getRecentFoodItems called with no items", async () => {
       const userId = UserId("no-recent-items");
-      const recent = await getRecentFoodItems(userId);
+      const recent = await getRecentFoodItems(userId, 14);
       expect(Array.isArray(recent)).toBe(true);
       expect(recent.length).toBeGreaterThanOrEqual(0);
     });

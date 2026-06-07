@@ -33,11 +33,11 @@ synchronizing with a PostgreSQL database.
 - **State:** Zustand 5 (composed slices)
 - **Database:** IndexedDB via Dexie.js 4 (v19 schema)
 - **Styling:** Tailwind CSS 4 + shadcn/ui primitives (Radix UI)
-- **Forms:** react-hook-form 7 + zod (via `zod/v3` or zod 4) + @hookform/resolvers
+- **Forms:** react-hook-form 7 + zod (imported via `zod/v3` or zod 4) + @hookform/resolvers
 - **Testing:** Vitest 4 + jsdom + fake-indexeddb
 - **Charts:** Recharts 3
 - **Animation:** motion 12 (`motion/react`)
-- **Toast:** sonner
+- **Toast:** sonner (via `<Toaster />` in App.tsx)
 - **Icons:** lucide-react
 - **Libraries:** date-fns 4.3.0, fflate 0.8 (ZIP), @zxing/library (barcode)
 
@@ -48,6 +48,41 @@ synchronizing with a PostgreSQL database.
 - **Rate Limiting:** Valkey 9.1.0-alpine + bucket4j_jdk17 (8.19.0)
 - **Security:** Spring Security + JJWT (Google OIDC via JWKS, refresh token rotation)
 - **API:** OpenAPI 3 (docs) + generated SDKs (TypeScript, Kotlin, Swift)
+
+## Critical File Locations
+
+| Category              | File                                                                                                                                                                                                                                                                                                                                                                                                             | Key Info                                                                                                                                                                                                        |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **State**             | `apps/web/src/state/AppState.ts`                                                                                                                                                                                                                                                                                                                                                                                 | Single Zustand store; all mutations here                                                                                                                                                                        |
+| **DB**                | `apps/web/src/db/dbService.ts`                                                                                                                                                                                                                                                                                                                                                                                   | Dexie schema v19, CRUD, compound indices; `syncQueue` table + `SyncQueueEntry`; `syncId` on 6 entity interfaces                                                                                                 |
+| **Types**             | `apps/web/src/types/index.ts`                                                                                                                                                                                                                                                                                                                                                                                    | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS, DietPreset, RestrictionFlag, getTodayDayIndex, checkFoodNameRestrictions, ReminderId, REMINDER_LABELS                                     |
+| **Pages**             | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx`                                                                                                                                                                                                                                                                                                                                                   | Main views (lazy-loaded); Settings at `#/settings`                                                                                                                                                              |
+| **Components**        | `apps/web/src/components/{ErrorBoundary,FoodLogger,VoiceFoodLogger,WaterTracker,StepTracker,BodyMeasurements,StreakCard,WeeklySummary,KeyboardShortcutsOverlay,FastingTimer,ActivityLogger,ActivityTracker,OnboardingModal,OnboardingBanner,DataExportPanel,DataImportConflictModal,DietProfileEditor,RecurringMeals,RemindersSettings,MealTemplates,CloudSyncPanel,SyncStatusChip,HarvestStamp,EmptyState}.tsx` | UI components incl. v0.7.0 + B4 + UI v2                                                                                                                                                                         |
+| **Illustrations**     | `apps/web/src/components/illustrations/{EmptyPlate,EmptyCup,BodyScale,Footsteps,RecipeBook,HarvestBasket}.tsx` + `index.ts`                                                                                                                                                                                                                                                                                      | Stroke-only SVG React components for empty states; tree-shakeable                                                                                                                                               |
+| **Almanac icons**     | `apps/web/src/components/icons/almanac/{WheatSprig,MoonPhase,SunRay,RuleCorner,SeasonalFlourish}.tsx` + `index.ts`                                                                                                                                                                                                                                                                                               | SVG ornaments for section dividers and empty-state subjects                                                                                                                                                     |
+| **Settings**          | `apps/web/src/components/settings/{TdeeProfilePanel,GoalSettings}.tsx`                                                                                                                                                                                                                                                                                                                                           | Settings sub-components; TdeeProfilePanel is lazy-loaded                                                                                                                                                        |
+| **Dashboard**         | `apps/web/src/components/dashboard/{DashboardHero,DateKicker,EditorialFrame,LogEntry,MacroStat,SectionHeader}.tsx`                                                                                                                                                                                                                                                                                               | Dashboard sub-components                                                                                                                                                                                        |
+| **Tour**              | `apps/web/src/components/tour/{ProductTourOverlay,CoachmarkCard,tourSteps,useSpotlightRect}.tsx/.ts`                                                                                                                                                                                                                                                                                                             | Product tour system with spotlight and coachmarks                                                                                                                                                               |
+| **Charts**            | `apps/web/src/components/charts/{ChartLegend,ChartTooltip,EditorialChartCard}.tsx`                                                                                                                                                                                                                                                                                                                               | Shared chart primitives                                                                                                                                                                                         |
+| **Progress**          | `apps/web/src/components/progress/{ProgressHero,MicronutrientPanel}.tsx`                                                                                                                                                                                                                                                                                                                                         | Progress page hero + micronutrient panel                                                                                                                                                                        |
+| **Recipes**           | `apps/web/src/components/recipes/{IngredientRow,RecipeForm,RecipeList,RecipeRow,RecipesHero}.tsx`                                                                                                                                                                                                                                                                                                                | Recipe sub-components                                                                                                                                                                                           |
+| **Hooks**             | `apps/web/src/hooks/{useFoodForm,useVoiceCapture,useWaterForm,useWaterHistoryData,useStepForm,useBodyForm,useStreaks,useProgressData,useRecipeForm,useWeeklySummary,useKeyboardShortcuts,useFastingTimer,useActivityForm,useOnboarding,useDataExport,useDataImport,useRecipeImport,useDietProfile,useRecurringMealForm,useReminders,useMicronutrientData,useMealTemplates,useBarcodeScanner,useSyncService}.ts`  | Core logic; useSyncService drives B4 bidirectional sync (pull + push queue flush); useFastingTimer uses date-fns differenceInSeconds + setInterval; useReminders schedules browser Notifications via setTimeout |
+| **Forms**             | `apps/web/src/forms/schemas.ts`                                                                                                                                                                                                                                                                                                                                                                                  | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup, diet profile, recurring meal                                                                                                      |
+| **Motion**            | `apps/web/src/lib/motionVariants.ts`                                                                                                                                                                                                                                                                                                                                                                             | Shared page, section, coachmark, spotlight, arrow variants; `useSectionMotion()` returns crossfade under reduced-motion                                                                                         |
+| **a11y lib**          | `apps/web/src/lib/a11y.ts`                                                                                                                                                                                                                                                                                                                                                                                       | `MAIN_CONTENT_ID`, `liveRegionProps`, `assertiveRegionProps`, `visuallyHiddenProps`, `useReducedMotion` re-export, `useMotionPreset(name)` for named crossfade alternatives                                     |
+| **Anchor lib**        | `apps/web/src/lib/anchor.ts`                                                                                                                                                                                                                                                                                                                                                                                     | CSS anchor positioning helpers (`anchorName`, `positionAnchor`, `supportsAnchorPositioning`); Chrome 125+ forward-adoption pattern                                                                              |
+| **Imagery lib**       | `apps/web/src/lib/imagery.ts`                                                                                                                                                                                                                                                                                                                                                                                    | Typed Unsplash photo catalog by category; `ImageEntry` type with id, alt, crop                                                                                                                                  |
+| **Charts lib**        | `apps/web/src/lib/chartTheme.ts`                                                                                                                                                                                                                                                                                                                                                                                 | 7-stop semantic chart palette; domain color mapping (water, protein, carbs, fat, fiber)                                                                                                                         |
+| **API client**        | `apps/web/src/lib/apiClient.ts`                                                                                                                                                                                                                                                                                                                                                                                  | JWT-aware HTTP client; token storage in localStorage; auto-refresh 60s before expiry; `ApiError`; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()`                               |
+| **TDEE lib**          | `apps/web/src/lib/tdee.ts`                                                                                                                                                                                                                                                                                                                                                                                       | mifflinStJeorBMR, computeTDEE, computeCalorieGoal, computeMacroTargets                                                                                                                                          |
+| **MET lib**           | `apps/web/src/lib/metTable.ts`                                                                                                                                                                                                                                                                                                                                                                                   | ~60 activities with ACSM MET values for calorie burn calculation                                                                                                                                                |
+| **Achievements lib**  | `apps/web/src/lib/achievements.ts`                                                                                                                                                                                                                                                                                                                                                                               | Achievement definitions and unlock logic                                                                                                                                                                        |
+| **Micronutrient RDA** | `apps/web/src/lib/micronutrientRDA.ts`                                                                                                                                                                                                                                                                                                                                                                           | `getPersonalizedRDA()` - RDA values by sex/age; powers MicronutrientPanel + useMicronutrientData                                                                                                                |
+| **Tests**             | `apps/web/src/**/*.test.{ts,tsx}` (90 test files, 1796 tests)                                                                                                                                                                                                                                                                                                                                                    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                      |
+| **Config**            | `apps/web/vite.config.ts`, `apps/web/vitest.config.ts`, `apps/web/tsconfig.json`                                                                                                                                                                                                                                                                                                                                 | Build (with CSP) & test setup                                                                                                                                                                                   |
+| **Backend**           | `apps/backend/src/main/java/com/gryffin/calorai/`                                                                                                                                                                                                                                                                                                                                                                | Spring Boot 4.0 + Java 25; entities, controllers, services, security                                                                                                                                            |
+| **DB migrate**        | `apps/backend/src/main/resources/db/migration/`                                                                                                                                                                                                                                                                                                                                                                  | Flyway SQL migrations                                                                                                                                                                                           |
+| **Codegen**           | `apps/backend/openapi-codegen/`                                                                                                                                                                                                                                                                                                                                                                                  | OpenAPI generator configs + generate.sh for TS/Kotlin/Swift SDKs                                                                                                                                                |
 
 ## Core File Documentation
 
@@ -129,9 +164,13 @@ synchronizing with a PostgreSQL database.
 
 ## Operational Standards
 
-- **Strict Development Rules:**
-  - **Tailwind Only:** No inline styles or CSS modules. Use `cn()` for conditional classes and
-    `EDITORIAL_INPUT_CLS` on inputs.
+- **Naming Conventions:**
+  - **Components:** PascalCase (`FoodLogger.tsx`)
+  - **Functions/hooks:** camelCase (`useFoodForm()`)
+  - **Types:** PascalCase (`FoodItem`, `UserId`)
+  - **Constants:** UPPER_SNAKE_CASE (`DB_SCHEMA_VERSION`)
+  - **Folders:** kebab-case (`apps/web/src/hooks/`)
+  - **Booleans:** Prefix with `is`, `has`, `can`, `should`, or `did`.
   - **Branded Types:** Use branded types for all IDs (UserId, FoodItemId, RecipeId, WaterLogId,
     BodyMeasurementId, UserAchievementId, StepLogId, FastingSessionId, ActivityLogId, ISODate) to
     prevent ID mix-ups.
@@ -152,26 +191,38 @@ synchronizing with a PostgreSQL database.
   - **HTML/CSS Conventions:** Semantic HTML, `type="button"` on non-submit buttons, alt text on all
     images, `aria-label`/`sr-only` text on icon-only buttons.
 - **Backend Standards (Java/Spring Boot):**
-  - **Javadoc:** Required on all public classes, records, interfaces, and public methods.
-  - **Indentation:** Strict 2-space basic offset, 4 spaces class members, 6+ spaces continuations.
-  - **Line Length:** Max 100 characters; break annotations and signatures across lines where needed.
+  - **Javadoc:** Required on all public classes, records, interfaces, and public methods. Checkstyle
+    rules: `MissingJavadocType`, `MissingJavadocMethod`.
+  - **Indentation:** Base class level = 0 spaces, Class members = 2 spaces, Record parameters/method
+    bodies = 4 spaces, Continuation lines = 6+ spaces.
+  - **Line Length:** Max 100 characters; break annotations and signatures across lines.
   - **Naming:** camelCase throughout; no underscores in test method names.
-  - **Build Failures:** Checkstyle plugin runs at the validate phase; the build will fail on any
-    style violation. Run `mvn clean install` to check.
+  - **Build Failures:** Checkstyle plugin runs at the validate phase. Run `mvn clean install` to
+    check.
 - **Security:** Strict CSP (Google Sign-In integration), HSTS, Valkey rate limiting, JWT type claim
   validation, JTI-based refresh token rotation, unverified Google email checking, and 5 MB URL
   recipe response size caps.
-- **Git:** Commit format `<type>(<scope>): <subject>`. Atomic commits only.
+- **Workflow & Git:**
+  - **Pre-commit Workflow:** Run `pnpm lint:fix` and `pnpm build` (frontend) and
+    `mvn clean install` (backend) before every commit.
+  - **Commit Format:** `<type>(<scope>): <subject>`. Atomic commits only.
 
 ### Development Guidelines for Gemini CLI
 
 - **Primary Source of Truth:** Refer to the `.claude/` directory and `.github/instructions/` for
   detailed agent-specific rules.
 - **Frontend Rules:** See `src/GEMINI.md` (subdirectory) for detailed UI conventions.
-- **Testing Principles:**
-  - **Framework:** Vitest + @testing-library/react + jsdom + fake-indexeddb.
-  - **TDD:** Write failing tests first.
-  - **Assertions:** Prefer `toStrictEqual` for deep equality.
+
+### Testing Principles
+
+- **Framework:** Vitest 4 + `@testing-library/react` + jsdom + `fake-indexeddb/auto`.
+- **TDD:** Write failing tests first.
+- **Coverage Targets:** 90% statements, 90% functions, 80% branches, 90% lines.
+- **Assertions:** Prefer `toStrictEqual` for deep equality checks on objects and arrays (enforced by
+  ESLint).
+- **Mocking Patterns:**
+  - `motion/react`: Use `vi.mock("motion/react", ...)` to mock `motion` components as needed.
+  - `shadcn Form`: Use the required `Form`/`FormField` mock pattern when components render forms.
 
 ### Architectural Baseline (Adding New Features)
 
@@ -194,5 +245,29 @@ synchronizing with a PostgreSQL database.
 - [ ] AI Photo Logging (Backend B5 milestone) - **Planned**
 - [ ] Native iOS/Android apps (v0.9.0-v1.0.0 milestone) - **Planned**
 
----
-**Last Updated:** June 6, 2026 (v0.8.0 Cloud Sync Complete)
+## Quick Commands
+
+### Frontend (run from repo root or `apps/web/`)
+
+```bash
+pnpm dev              # Start dev server at http://localhost:5173
+pnpm test             # Run all tests with coverage
+pnpm test --watch     # Watch mode
+pnpm test --ui        # Interactive UI
+pnpm lint:fix         # ESLint + Prettier
+pnpm audit            # Check for known CVEs
+pnpm build            # Production build (outputs to apps/web/dist/)
+```
+
+### Backend (run from `apps/backend/`)
+
+```bash
+docker compose up -d  # Start backend services
+mvn clean install     # Build and validate style
+```
+
+### OpenAPI Codegen (run from `apps/backend/openapi-codegen/`)
+
+```bash
+bash generate.sh      # Regenerate SDK clients
+```

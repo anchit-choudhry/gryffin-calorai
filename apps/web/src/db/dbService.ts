@@ -4,10 +4,12 @@ import type {
   ActivityLevel,
   ActivityLogId,
   BodyMeasurementId,
+  CaptureMethod,
   DietPreset,
   DietProfileId,
   FastingSessionId,
   FoodItemId,
+  FoodPhotoId,
   GoalType,
   ISODate,
   MealPlanId,
@@ -31,6 +33,7 @@ import {
   DietProfileId as makeDietProfileId,
   FastingSessionId as makeFastingSessionId,
   FoodItemId as makeFoodItemId,
+  FoodPhotoId as makeFoodPhotoId,
   MealPlanId as makeMealPlanId,
   MealTemplateId as makeMealTemplateId,
   RecipeId as makeRecipeId,
@@ -47,9 +50,9 @@ export interface FoodItem {
   name: string;
   calories: number;
   servingSize: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
   dateLogged: ISODate;
   userId: UserId;
   isFavorite: boolean;
@@ -57,6 +60,17 @@ export interface FoodItem {
   nutritionData?: Partial<NutritionData>;
   syncId?: string;
   deletedAt?: string;
+  photoId?: FoodPhotoId;
+  captureMethod?: CaptureMethod;
+}
+
+export interface FoodPhoto {
+  id?: FoodPhotoId;
+  userId: UserId;
+  imageData: string;
+  thumbnailData: string;
+  mimeType: string;
+  createdAt: string;
 }
 
 export interface Recipe {
@@ -175,9 +189,9 @@ export interface RecurringMealFood {
   name: string;
   calories: number;
   servingSize: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
   mealType: MealType;
   nutritionData?: Partial<NutritionData>;
 }
@@ -207,9 +221,9 @@ export interface MealTemplateFood {
   name: string;
   calories: number;
   servingSize: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
   mealType: MealType;
   nutritionData?: Partial<NutritionData>;
 }
@@ -558,6 +572,14 @@ db.version(19).stores({
   syncQueue: "++id, userId, entityType, syncId, operation, createdAt",
 });
 
+// 20. Version 20: B5 Photo Logging - add photos table + photoId index on foodItems.
+// captureMethod is stored as a plain field (not indexed) since filter-by-method is not needed.
+db.version(20).stores({
+  foodItems:
+    "++id, [userId+dateLogged], userId, name, calories, servingSize, dateLogged, isFavorite, mealType, syncId, photoId",
+  photos: "++id, userId, createdAt",
+});
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -575,6 +597,7 @@ export const reminders: Table<Reminder> = db.table("reminders");
 export const mealTemplates: Table<MealTemplate> = db.table("mealTemplates");
 export const mealPlans: Table<MealPlan> = db.table("mealPlans");
 export const syncQueue: Table<SyncQueueEntry> = db.table("syncQueue");
+export const photos: Table<FoodPhoto> = db.table("photos");
 
 export const initializeDB = async () => {
   try {
@@ -638,6 +661,16 @@ export const getDailyFoodLogs = async (userId: UserId, date: ISODate): Promise<F
   return foodItems.where("[userId+dateLogged]").equals([userId, date]).toArray();
 };
 
+export const getRecentFoodItems = async (userId: UserId, daysBack: number): Promise<FoodItem[]> => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - daysBack);
+  const cutoffISO = cutoff.toISOString().slice(0, 10) as ISODate;
+  return foodItems
+    .where("[userId+dateLogged]")
+    .between([userId, cutoffISO], [userId, "￿"], true, true)
+    .toArray();
+};
+
 export const saveRecipe = async (recipe: Recipe): Promise<RecipeId> => {
   const id = await recipes.add(recipe);
   return makeRecipeId(id);
@@ -687,15 +720,6 @@ export const getFoodItemById = async (
 ): Promise<FoodItem | undefined> => {
   const item = await foodItems.get(id);
   return item?.userId === userId ? item : undefined;
-};
-
-export const getRecentFoodItems = async (userId: UserId): Promise<FoodItem[]> => {
-  const allItems = await foodItems.where("userId").equals(userId).toArray();
-  const seen = new Map<string, FoodItem>();
-  for (const item of allItems.reverse()) {
-    if (!seen.has(item.name)) seen.set(item.name, item);
-  }
-  return Array.from(seen.values());
 };
 
 export const toggleFavoriteFoodItem = async (
@@ -851,6 +875,33 @@ export const deleteActivityLog = async (id: ActivityLogId, userId: UserId): Prom
   const log = await activityLogs.get(id);
   if (!log || log.userId !== userId) return;
   await activityLogs.delete(id);
+};
+
+// --- B5 Photo Logging ---
+
+export const addFoodPhoto = async (photo: Omit<FoodPhoto, "id">): Promise<FoodPhotoId> => {
+  const id = await photos.add(photo);
+  return makeFoodPhotoId(id as number);
+};
+
+export const getFoodPhoto = async (
+  id: FoodPhotoId,
+  userId: UserId,
+): Promise<FoodPhoto | undefined> => {
+  const photo = await photos.get(id);
+  if (!photo || photo.userId !== userId) return undefined;
+  return photo;
+};
+
+export const getFoodPhotosByUser = async (userId: UserId, date: ISODate): Promise<FoodPhoto[]> => {
+  const all = await photos.where("userId").equals(userId).toArray();
+  return all.filter((p) => p.createdAt.startsWith(date));
+};
+
+export const deleteFoodPhoto = async (id: FoodPhotoId, userId: UserId): Promise<void> => {
+  const photo = await photos.get(id);
+  if (!photo || photo.userId !== userId) return;
+  await photos.delete(id);
 };
 
 // --- Fasting Session CRUD ---

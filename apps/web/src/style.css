@@ -46,10 +46,11 @@
   --color-chart-7: var(--chart-7);
   --color-chart-grid: var(--chart-grid);
   --color-chart-goal: var(--chart-goal);
-  /* Editorial typography */
+  /* Editorial typography — three-voice system */
   --font-display: "Manrope Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   --font-sans: "Manrope Variable", system-ui, sans-serif;
+  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
   /* Type ramp — modular scale 1.25, fluid via clamp() */
   --text-micro: clamp(9px, 1.8vw, 10px);
   --text-body: clamp(14px, 2.5vw, 15px);
@@ -144,9 +145,19 @@
 
   /* ---- Safe area ---- */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ---- Paper-grain texture ----
+     Low-opacity tiled SVG noise layered over the paper background.
+     Light: 3% opacity — perceptible warmth, never distracting.
+     Verify: grain + paper passes AAA (7:1) for all text colours. */
+  --grain-opacity: 0.03;
+  --grain-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
 }
 
 .dark {
+  /* ---- Paper-grain (dark) — slightly higher opacity to read on warm-dark paper ---- */
+  --grain-opacity: 0.045;
+
   /* ---- Editorial primitive tokens (dark) ---- */
   --paper: oklch(0.18 0.012 50);
   --paper-muted: oklch(0.23 0.014 50);
@@ -243,6 +254,37 @@
   body {
     color: var(--color-foreground);
   }
+}
+
+/* ---- Paper-grain overlay ----
+   A single fixed element added to App.tsx covers the full viewport
+   with tiled noise texture without creating a stacking context on the
+   content wrapper. pointer-events:none keeps it fully inert. z-index:-1
+   places it behind all content while still sitting on top of the body bg. */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--grain-url);
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
+
+.dark .grain-overlay {
+  mix-blend-mode: screen;
+}
+
+/* ---- Serif voice utility ----
+   font-serif is registered as a Tailwind token above.
+   This class provides the default Spectral rendering config
+   for editorial headings: slightly open tracking, lining figures. */
+.editorial-serif {
+  font-family: var(--font-serif);
+  font-variant-numeric: lining-nums;
+  letter-spacing: -0.01em;
 }
 
 /* ---- Reduced motion: disable all spatial animations ---- */

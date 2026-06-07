@@ -10,7 +10,7 @@ import { CloudSyncPanel } from "../components/CloudSyncPanel";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.9.0";
 
 const Settings = () => {
   const shouldReduceMotion = useReducedMotion();

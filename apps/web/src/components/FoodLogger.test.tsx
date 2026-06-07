@@ -14,9 +14,11 @@ const mockForm = vi.hoisted(() => ({
   control: {},
   setValue: vi.fn(),
   formState: {},
+  watch: vi.fn((_name: string) => ""),
 }));
 const mockSubmitFoodLog = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const mockResetForm = vi.hoisted(() => vi.fn());
+const mockPrefillFromFood = vi.hoisted(() => vi.fn());
 const mockIsLoading = vi.hoisted(() => ({ value: false }));
 const mockIsEditMode = vi.hoisted(() => ({ value: false }));
 const mockFieldValue = vi.hoisted(() => ({ current: "" as string | number | undefined }));
@@ -28,7 +30,16 @@ vi.mock("../hooks/useFoodForm", () => ({
     isEditMode: mockIsEditMode.value,
     submitFoodLog: mockSubmitFoodLog,
     resetForm: mockResetForm,
+    prefillFromFood: mockPrefillFromFood,
   }),
+}));
+
+vi.mock("../hooks/useRecentFoods", () => ({
+  useRecentFoods: () => [],
+}));
+
+vi.mock("./FoodSearchCombobox", () => ({
+  FoodSearchCombobox: () => null,
 }));
 
 vi.mock("@/components/ui/form", () => ({
@@ -88,6 +99,7 @@ describe("FoodLogger", () => {
     mockIsEditMode.value = false;
     mockFieldValue.current = "";
     mockSubmitFoodLog.mockResolvedValue(true);
+    mockForm.watch.mockReturnValue("");
   });
 
   it("renders Food Name label", () => {
@@ -212,6 +224,55 @@ describe("FoodLogger", () => {
       });
       const nameCalls = mockForm.setValue.mock.calls.filter(([f]) => f === "name");
       expect(nameCalls[0]?.[1]).toHaveLength(100);
+    });
+  });
+
+  describe("Macros section (progressive disclosure)", () => {
+    it("renders the Macros toggle button", () => {
+      render(<FoodLogger />);
+      expect(screen.getByRole("button", { name: /macros/i })).toBeTruthy();
+    });
+
+    it("macro fields are hidden by default", () => {
+      render(<FoodLogger />);
+      expect(screen.queryByText("Protein (g)")).toBeNull();
+      expect(screen.queryByText("Carbs (g)")).toBeNull();
+      expect(screen.queryByText("Fat (g)")).toBeNull();
+    });
+
+    it("clicking the Macros toggle reveals macro fields", async () => {
+      render(<FoodLogger />);
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /macros/i }));
+      });
+      expect(screen.getByText("Protein (g)")).toBeTruthy();
+      expect(screen.getByText("Carbs (g)")).toBeTruthy();
+      expect(screen.getByText("Fat (g)")).toBeTruthy();
+    });
+
+    it("clicking the Macros toggle twice collapses the section", async () => {
+      render(<FoodLogger />);
+      const toggleBtn = screen.getByRole("button", { name: /macros/i });
+      await act(async () => {
+        fireEvent.click(toggleBtn);
+      });
+      expect(screen.getByText("Protein (g)")).toBeTruthy();
+      await act(async () => {
+        fireEvent.click(toggleBtn);
+      });
+      expect(screen.queryByText("Protein (g)")).toBeNull();
+    });
+
+    it("auto-expands macros when initialFood has protein set", () => {
+      const foodWithProtein = { id: 1, protein: 25 } as unknown as FoodItem;
+      render(<FoodLogger initialFood={foodWithProtein} />);
+      expect(screen.getByText("Protein (g)")).toBeTruthy();
+    });
+
+    it("keeps macros collapsed when initialFood has no macros", () => {
+      const foodNoMacros = { id: 1 } as unknown as FoodItem;
+      render(<FoodLogger initialFood={foodNoMacros} />);
+      expect(screen.queryByText("Protein (g)")).toBeNull();
     });
   });
 

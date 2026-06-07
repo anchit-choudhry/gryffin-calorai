@@ -6,6 +6,7 @@ import { DEFAULT_MEAL_TYPE } from "@/types";
 import type { FoodItem } from "@/db/dbService.ts";
 import { motionTokens } from "@/lib/motionVariants";
 import { ICON_BTN_CLS } from "@/lib/utils";
+import { ProvenanceBadge } from "../ProvenanceBadge";
 
 interface Props {
   log: FoodItem;
@@ -72,7 +73,12 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
           {log.mealType ?? DEFAULT_MEAL_TYPE}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="font-sans text-base font-semibold text-ink truncate">{log.name}</p>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="font-sans text-base font-semibold text-ink truncate">{log.name}</p>
+            {log.captureMethod && log.captureMethod !== "manual" && (
+              <ProvenanceBadge method={log.captureMethod} />
+            )}
+          </div>
           <p className="font-mono text-[11px] text-ink-soft mt-0.5 tabular-nums">
             P {log.protein ?? 0}g · C {log.carbs ?? 0}g · F {log.fat ?? 0}g
             {log.servingSize !== 1 && (

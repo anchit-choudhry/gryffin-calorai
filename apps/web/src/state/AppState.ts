@@ -7,6 +7,7 @@ import { createRecipeSlice, type RecipeSlice } from "./slices/recipeSlice";
 import { createSettingsSlice, type SettingsSlice } from "./slices/settingsSlice";
 import { createSyncSlice, type SyncSlice } from "./slices/syncSlice";
 import { createTrackerSlice, type TrackerSlice } from "./slices/trackerSlice";
+import { createUiSlice, type UiSlice } from "./slices/uiSlice";
 
 export type AppState = CoreSlice &
   FoodSlice &
@@ -15,7 +16,8 @@ export type AppState = CoreSlice &
   BodySlice &
   ActivitySlice &
   SettingsSlice &
-  SyncSlice;
+  SyncSlice &
+  UiSlice;
 
 export const useAppState = create<AppState>((...a) => ({
   ...createCoreSlice(...a),
@@ -26,4 +28,5 @@ export const useAppState = create<AppState>((...a) => ({
   ...createActivitySlice(...a),
   ...createSettingsSlice(...a),
   ...createSyncSlice(...a),
+  ...createUiSlice(...a),
 }));

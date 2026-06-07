@@ -102,7 +102,7 @@ export const createCoreSlice: StateCreator<AppState, [], [], CoreSlice> = (set, 
       ] = await Promise.all([
         getDailyFoodLogs(userId, today),
         getAllRecipes(userId),
-        getRecentFoodItems(userId),
+        getRecentFoodItems(userId, 90),
         getFavoriteFoodItems(userId),
         getDailyWaterLogs(userId, today),
         getDailyStepLogs(userId, today),
