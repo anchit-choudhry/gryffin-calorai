@@ -302,8 +302,9 @@ async function flushQueueEntry(entry: SyncQueueEntry): Promise<void> {
   }
 }
 
-async function flushQueue(): Promise<void> {
+async function flushQueue(onStart?: (count: number) => void): Promise<void> {
   const entries = await syncQueue.orderBy("createdAt").toArray();
+  onStart?.(entries.length);
   for (const entry of entries) {
     try {
       await flushQueueEntry(entry);
@@ -327,6 +328,7 @@ export function useSyncService() {
   const setSyncStatus = useAppState((s) => s.setSyncStatus);
   const setLastSyncedAt = useAppState((s) => s.setLastSyncedAt);
   const setSyncError = useAppState((s) => s.setSyncError);
+  const setPendingSyncCount = useAppState((s) => s.setPendingSyncCount);
   const lastSyncedAt = useAppState((s) => s.lastSyncedAt);
   const userId = useAppState((s) => s.userId);
   const fetchInitialData = useAppState((s) => s.fetchInitialData);
@@ -339,7 +341,8 @@ export function useSyncService() {
     try {
       const raw = lastSyncedAt;
       const since = raw !== null && ISO_RE.test(raw) ? raw : new Date(0).toISOString();
-      await flushQueue();
+      await flushQueue((count) => setPendingSyncCount(count));
+      setPendingSyncCount(0);
       await Promise.all([
         pullFoodItems(userId, since),
         pullWaterLogs(userId, since),
@@ -364,7 +367,15 @@ export function useSyncService() {
     } finally {
       syncingRef.current = false;
     }
-  }, [userId, lastSyncedAt, setSyncStatus, setLastSyncedAt, setSyncError, fetchInitialData]);
+  }, [
+    userId,
+    lastSyncedAt,
+    setSyncStatus,
+    setLastSyncedAt,
+    setSyncError,
+    setPendingSyncCount,
+    fetchInitialData,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated()) return;

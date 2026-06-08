@@ -51,7 +51,7 @@ export function useBodyForm(options?: UseBodyFormOptions): {
 
   const submitMeasurement = async (): Promise<boolean> => {
     if (!userId) {
-      toast.error("User not initialized. Please refresh.");
+      toast.error("Not ready - please refresh");
       return false;
     }
 

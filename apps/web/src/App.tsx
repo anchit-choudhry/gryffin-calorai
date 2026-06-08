@@ -12,6 +12,7 @@ import {
 } from "react";
 import {
   BookOpen,
+  Keyboard,
   LayoutDashboard,
   Moon,
   Settings as SettingsIcon,
@@ -40,6 +41,7 @@ import { useSyncService } from "./hooks/useSyncService";
 import { SyncStatusChip } from "./components/SyncStatusChip";
 import { QuickAddModal } from "./components/QuickAddModal";
 import { QuickAddFab } from "./components/QuickAddFab";
+import { CommandPalette } from "./components/CommandPalette";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
@@ -85,6 +87,8 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const openQuickAdd = useAppState((s) => s.openQuickAdd);
   const closeQuickAdd = useAppState((s) => s.closeQuickAdd);
+  const openCommandPalette = useAppState((s) => s.openCommandPalette);
+  const density = useAppState((s) => s.density);
 
   useLayoutEffect(() => {
     if (darkMode) {
@@ -93,6 +97,14 @@ function App() {
       document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
+
+  useLayoutEffect(() => {
+    if (density === "compact") {
+      document.documentElement.classList.add("compact");
+    } else {
+      document.documentElement.classList.remove("compact");
+    }
+  }, [density]);
 
   useEffect(() => {
     const setupApp = async () => {
@@ -180,8 +192,9 @@ function App() {
       onNavigate: (page: "dashboard" | "recipes" | "progress") =>
         navigate(normalizeHash(`#${page}`)),
       onOpenQuickAdd: openQuickAdd,
+      onOpenCommandPalette: openCommandPalette,
     }),
-    [toggleDarkMode, openQuickAdd, navigate],
+    [toggleDarkMode, openQuickAdd, openCommandPalette, navigate],
   );
 
   useKeyboardShortcuts(kbHandlers);
@@ -266,6 +279,16 @@ function App() {
                 </div>
                 <SyncStatusChip />
                 <button
+                  type="button"
+                  onClick={() => setShowShortcuts((v) => !v)}
+                  className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
+                  aria-label="Show keyboard shortcuts"
+                  aria-haspopup="dialog"
+                >
+                  <Keyboard className="size-3.5" aria-hidden="true" />
+                  <kbd className="font-mono text-[10px]">?</kbd>
+                </button>
+                <button
                   onClick={toggleDarkMode}
                   className="flex items-center justify-center size-11 border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
                   aria-label="Toggle dark mode"
@@ -336,6 +359,15 @@ function App() {
       <HarvestStamp />
       <Toaster richColors />
       <QuickAddModal onAction={handleAction} />
+      <CommandPalette
+        onNavigate={(hash) => navigate(normalizeHash(hash))}
+        onAction={(action) => {
+          openQuickAdd();
+          handleAction(action);
+        }}
+        onToggleDark={toggleDarkMode}
+        onToggleHelp={() => setShowShortcuts((v) => !v)}
+      />
     </TooltipProvider>
   );
 }

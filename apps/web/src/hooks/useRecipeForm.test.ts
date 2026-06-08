@@ -152,7 +152,7 @@ describe("useRecipeForm", () => {
     const success = await result.current.saveRecipeForm();
 
     expect(success).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith("User not initialized. Please refresh the page.");
+    expect(toast.error).toHaveBeenCalledWith("Not ready - please refresh");
   });
 
   it("should have saveRecipeForm function", () => {
@@ -245,7 +245,7 @@ describe("useRecipeForm", () => {
           totalCalories: 220,
         }),
       );
-      expect(toast.success).toHaveBeenCalledWith('Recipe "Pasta Aglio e Olio" saved successfully!');
+      expect(toast.success).toHaveBeenCalledWith('"Pasta Aglio e Olio" saved');
     });
 
     it("should successfully update an existing recipe", async () => {
@@ -290,7 +290,7 @@ describe("useRecipeForm", () => {
         }),
         userId,
       );
-      expect(toast.success).toHaveBeenCalledWith('Recipe "New Recipe Name" updated successfully!');
+      expect(toast.success).toHaveBeenCalledWith('"New Recipe Name" saved');
     });
 
     it("should handle save failure gracefully", async () => {
@@ -321,7 +321,7 @@ describe("useRecipeForm", () => {
       const success = await result.current.saveRecipeForm();
 
       expect(success).toBe(false);
-      expect(toast.error).toHaveBeenCalledWith("Failed to save recipe. Check console for details.");
+      expect(toast.error).toHaveBeenCalledWith("Failed to save recipe");
     });
 
     it("should handle validation errors", async () => {

@@ -12,6 +12,7 @@ const makeHandlers = () => ({
   onToggleDark: vi.fn(),
   onNavigate: vi.fn(),
   onOpenQuickAdd: vi.fn(),
+  onOpenCommandPalette: vi.fn(),
 });
 
 const fire = (key: string, opts: Partial<KeyboardEventInit> = {}, target?: EventTarget) => {
@@ -145,19 +146,19 @@ describe("useKeyboardShortcuts", () => {
     });
   });
 
-  describe("Cmd/Ctrl-K opens quick-add modal", () => {
-    it("metaKey+K calls onOpenQuickAdd", () => {
+  describe("Cmd/Ctrl-K opens command palette", () => {
+    it("metaKey+K calls onOpenCommandPalette", () => {
       const h = makeHandlers();
       renderHook(() => useKeyboardShortcuts(h));
       fire("k", { metaKey: true });
-      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+      expect(h.onOpenCommandPalette).toHaveBeenCalledOnce();
     });
 
-    it("ctrlKey+K calls onOpenQuickAdd", () => {
+    it("ctrlKey+K calls onOpenCommandPalette", () => {
       const h = makeHandlers();
       renderHook(() => useKeyboardShortcuts(h));
       fire("k", { ctrlKey: true });
-      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+      expect(h.onOpenCommandPalette).toHaveBeenCalledOnce();
     });
 
     it("metaKey+K does not trigger other handlers", () => {
@@ -174,7 +175,7 @@ describe("useKeyboardShortcuts", () => {
       const input = document.createElement("input");
       document.body.appendChild(input);
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
-      expect(h.onOpenQuickAdd).toHaveBeenCalledOnce();
+      expect(h.onOpenCommandPalette).toHaveBeenCalledOnce();
       document.body.removeChild(input);
     });
   });

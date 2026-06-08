@@ -8,7 +8,7 @@ interface Props {
 }
 
 const shortcuts = [
-  { keys: ["Cmd/Ctrl", "K"], description: "Open quick-add modal" },
+  { keys: ["Cmd/Ctrl", "K"], description: "Open command palette" },
   { keys: ["L"], description: "Focus food logger" },
   { keys: ["W"], description: "Add 250ml water" },
   { keys: ["S"], description: "Log steps" },
@@ -18,7 +18,7 @@ const shortcuts = [
   { keys: ["g", "d"], description: "Go to Dashboard" },
   { keys: ["g", "r"], description: "Go to Recipes" },
   { keys: ["g", "p"], description: "Go to Progress" },
-  { keys: ["?"], description: "Show this overlay" },
+  { keys: ["?"], description: "Show keyboard shortcuts" },
 ];
 
 const KeyboardShortcutsOverlay: FC<Props> = ({ open, onClose }) => {

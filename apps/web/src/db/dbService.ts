@@ -11,7 +11,6 @@ import type {
   FoodItemId,
   FoodPhotoId,
   GoalType,
-  ISODate,
   MealPlanId,
   MealTemplateId,
   MealType,
@@ -34,6 +33,7 @@ import {
   FastingSessionId as makeFastingSessionId,
   FoodItemId as makeFoodItemId,
   FoodPhotoId as makeFoodPhotoId,
+  ISODate,
   MealPlanId as makeMealPlanId,
   MealTemplateId as makeMealTemplateId,
   RecipeId as makeRecipeId,
@@ -625,6 +625,21 @@ export const addFoodItemLog = async (foodLog: FoodItem): Promise<FoodItemId> => 
   return makeFoodItemId(id);
 };
 
+export const copyFoodLogs = async (
+  fromDate: ISODate,
+  toDate: ISODate,
+  userId: UserId,
+): Promise<void> => {
+  const logs = await getDailyFoodLogs(userId, fromDate);
+  if (logs.length === 0) return;
+  const copies = logs.map(({ id: _id, syncId: _syncId, deletedAt: _deletedAt, ...rest }) => ({
+    ...rest,
+    dateLogged: toDate,
+    syncId: crypto.randomUUID(),
+  }));
+  await foodItems.bulkAdd(copies);
+};
+
 export const clearDatabase = async (): Promise<void> => {
   if (import.meta.env.MODE === "production") {
     throw new Error("clearDatabase must not be called in production");
@@ -664,7 +679,7 @@ export const getDailyFoodLogs = async (userId: UserId, date: ISODate): Promise<F
 export const getRecentFoodItems = async (userId: UserId, daysBack: number): Promise<FoodItem[]> => {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
-  const cutoffISO = cutoff.toISOString().slice(0, 10) as ISODate;
+  const cutoffISO = ISODate(cutoff.toISOString().slice(0, 10));
   return foodItems
     .where("[userId+dateLogged]")
     .between([userId, cutoffISO], [userId, "￿"], true, true)

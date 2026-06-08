@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Camera, Mic, QrCode, RefreshCw, LayoutTemplate } from "lucide-react";
+import { Camera, LayoutTemplate, Mic, QrCode, RefreshCw } from "lucide-react";
 import type { CaptureMethod } from "@/types";
 import { CAPTURE_METHOD_LABELS } from "@/types";
 import { cn } from "@/lib/utils";

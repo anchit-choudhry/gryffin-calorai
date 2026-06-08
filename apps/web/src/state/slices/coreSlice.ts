@@ -10,7 +10,6 @@ import {
   getAllRecipes,
   getDailyActivityLogs,
   getDailyFoodLogs,
-  getDailyFoodLogs as getDailyFoodLogsForRefresh,
   getDailyStepLogs,
   getDailyWaterLogs,
   getDietProfile as getDietProfileFromDB,
@@ -25,7 +24,7 @@ import {
   getUnlockedAchievements,
   updateUserProfile,
 } from "../../db/dbService";
-import type { AppInitState, UserId } from "@/types";
+import type { AppInitState, ISODate, UserId } from "@/types";
 import { DAILY_STEP_GOAL, DAILY_WATER_GOAL_ML, todayISO } from "@/types";
 import { TOUR_TOTAL_STEPS } from "../../components/tour/tourSteps";
 
@@ -35,11 +34,13 @@ export interface CoreSlice {
   error: string | null;
   waterGoalMl: number;
   stepGoal: number;
+  selectedDate: ISODate;
   tourActive: boolean;
   tourStep: number;
   tourTotalSteps: number;
   fetchInitialData: (userId: UserId) => Promise<void>;
   refreshDailyLogs: (userId: UserId) => Promise<void>;
+  setSelectedDate: (date: ISODate) => Promise<void>;
   updateCalorieGoal: (goal: number) => Promise<void>;
   setWaterGoalMl: (ml: number) => void;
   setStepGoal: (steps: number) => void;
@@ -55,6 +56,7 @@ export const createCoreSlice: StateCreator<AppState, [], [], CoreSlice> = (set, 
   init: { status: "idle" },
   userId: null,
   error: null,
+  selectedDate: todayISO(),
   waterGoalMl: (() => {
     const stored = localStorage.getItem("waterGoalMl");
     if (stored) {
@@ -149,11 +151,37 @@ export const createCoreSlice: StateCreator<AppState, [], [], CoreSlice> = (set, 
 
   refreshDailyLogs: async (userId: UserId) => {
     try {
-      const logs = await getDailyFoodLogsForRefresh(userId, todayISO());
+      const date = get().selectedDate;
+      const logs = await getDailyFoodLogs(userId, date);
       set({ dailyLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to refresh logs");
       if (import.meta.env.DEV) console.error("Error refreshing daily logs:", error);
+      set({ error: message });
+    }
+  },
+
+  setSelectedDate: async (date: ISODate) => {
+    const { userId } = get();
+    if (!userId) return;
+    set({ selectedDate: date });
+    try {
+      const [logs, waterLogs, stepLogs, activityLogs] = await Promise.all([
+        getDailyFoodLogs(userId, date),
+        getDailyWaterLogs(userId, date),
+        getDailyStepLogs(userId, date),
+        getDailyActivityLogs(userId, date),
+      ]);
+      set({
+        dailyLogs: logs,
+        dailyWaterLogs: waterLogs,
+        dailyStepLogs: stepLogs,
+        dailyActivityLogs: activityLogs,
+        error: null,
+      });
+    } catch (error) {
+      const message = mapDbError(error, "Failed to load data for date");
+      if (import.meta.env.DEV) console.error("Error setting selected date:", error);
       set({ error: message });
     }
   },

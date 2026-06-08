@@ -41,7 +41,7 @@ function makeSlice(initial: Partial<AppState> = {}): ActivitySlice & { _set: Set
     get,
     {} as never,
   );
-  state = { ...slice, userId, ...initial };
+  state = { ...slice, userId, selectedDate: "2026-01-01" as unknown as ISODate, ...initial };
   return { ...slice, _set: set };
 }
 

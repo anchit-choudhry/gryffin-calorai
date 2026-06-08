@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import StepTracker from "./StepTracker";
 import * as appState from "../state/AppState";
 import * as stepFormHook from "../hooks/useStepForm";
@@ -65,9 +65,9 @@ describe("StepTracker component", () => {
 
   it("renders quick-add step buttons", () => {
     render(<StepTracker />);
+    expect(screen.getByText(/\+1,000/)).toBeDefined();
     expect(screen.getByText(/\+2,000/)).toBeDefined();
     expect(screen.getByText(/\+5,000/)).toBeDefined();
-    expect(screen.getByText(/\+8,000/)).toBeDefined();
     expect(screen.getByText(/\+10,000/)).toBeDefined();
   });
 
@@ -207,42 +207,38 @@ describe("StepTracker component", () => {
     expect(submitStepLogMock).toHaveBeenCalledWith(1500);
   });
 
-  it("clicking a quick-add button calls submitStepLog with that step count", async () => {
-    const submitStepLogMock = vi.fn().mockResolvedValue(true);
-    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
-      form: {
-        register: vi.fn(() => ({})),
-        getValues: vi.fn(() => 1000),
-        setValue: vi.fn(),
-      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
-      isLoading: false,
-      submitStepLog: submitStepLogMock,
-    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+  it("clicking a quick-add button calls addStepLog with that step count", async () => {
+    const addStepLogMock = vi.fn().mockResolvedValue(1);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      dailyStepLogs: [],
+      addStepLog: addStepLogMock,
+      deleteStepLog: vi.fn(),
+      stepGoal: 10000,
+      setStepGoal: vi.fn(),
+    } as unknown as ReturnType<typeof appState.useAppState>);
 
     render(<StepTracker />);
-    const btn = screen.getByText(/\+2,000/);
-    fireEvent.click(btn);
-    expect(submitStepLogMock).toHaveBeenCalledWith(2000);
+    await act(async () => {
+      fireEvent.click(screen.getByText(/\+2,000/));
+    });
+    expect(addStepLogMock).toHaveBeenCalledWith(2000);
   });
 
-  it("does not show success toast when quick-add returns false", async () => {
-    const { toast } = await import("sonner");
-    const submitStepLogMock = vi.fn().mockResolvedValue(false);
-    vi.mocked(stepFormHook).useStepForm.mockReturnValue({
-      form: {
-        register: vi.fn(() => ({})),
-        getValues: vi.fn(() => 1000),
-        setValue: vi.fn(),
-      } as unknown as ReturnType<typeof stepFormHook.useStepForm>["form"],
-      isLoading: false,
-      submitStepLog: submitStepLogMock,
-    } as unknown as ReturnType<typeof stepFormHook.useStepForm>);
+  it("does not show success toast when addStepLog returns undefined", async () => {
+    const addStepLogMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      dailyStepLogs: [],
+      addStepLog: addStepLogMock,
+      deleteStepLog: vi.fn(),
+      stepGoal: 10000,
+      setStepGoal: vi.fn(),
+    } as unknown as ReturnType<typeof appState.useAppState>);
 
     render(<StepTracker />);
-    const btn = screen.getByText(/\+2,000/);
-    fireEvent.click(btn);
-    await Promise.resolve();
-    expect(vi.mocked(toast).success).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByText(/\+2,000/));
+    });
+    expect(mockToast.success).not.toHaveBeenCalled();
   });
 
   it("deletes a step log entry when remove button is clicked", () => {
@@ -406,10 +402,14 @@ describe("progress percentage calculation", () => {
 });
 
 describe("quick-add step amounts", () => {
-  const QUICK_STEPS = [2000, 5000, 8000, 10000] as const;
+  const QUICK_STEPS = [1000, 2000, 5000, 10000] as const;
 
   it("defines four quick-add amounts", () => {
     expect(QUICK_STEPS).toHaveLength(4);
+  });
+
+  it("includes 1,000 steps as a quick option", () => {
+    expect(QUICK_STEPS).toContain(1000);
   });
 
   it("includes 10,000 steps as a quick option", () => {

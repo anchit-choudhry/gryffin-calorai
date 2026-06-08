@@ -290,6 +290,13 @@ export const ISODate = (date: string): ISODate => {
 // Helper to get ISO date for today
 export const todayISO = (): ISODate => ISODate(new Date().toISOString().split("T")[0]!);
 
+// Helper to shift an ISO date by n days (positive = future, negative = past)
+export function shiftISODate(date: ISODate, n: number): ISODate {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return ISODate(d.toISOString().split("T")[0]!);
+}
+
 // Type guards
 export function isFoodItemId(value: unknown): value is FoodItemId {
   return typeof value === "number" && value > 0;

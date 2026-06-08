@@ -59,7 +59,7 @@ const makeLog = (id: number, amount: number): WaterLog => ({
 
 const baseState = {
   dailyWaterLogs: [] as WaterLog[],
-  addWaterLog: vi.fn(),
+  addWaterLog: vi.fn().mockResolvedValue(WaterLogId(42)),
   deleteWaterLog: vi.fn(),
   waterGoalMl: 2000,
   setWaterGoalMl: vi.fn(),
@@ -95,20 +95,23 @@ describe("WaterTracker", () => {
     expect(screen.getByText("+750")).toBeTruthy();
   });
 
-  it("clicking +250 calls submitWaterLog with 250", async () => {
+  it("clicking +250 calls addWaterLog with 250", async () => {
     render(<WaterTracker />);
     await act(async () => {
       fireEvent.click(screen.getByText("+250"));
     });
-    expect(mockSubmitWaterLog).toHaveBeenCalledWith(250);
+    expect(baseState.addWaterLog).toHaveBeenCalledWith(250);
   });
 
-  it("clicking +500 shows success toast", async () => {
+  it("clicking +500 shows success toast with undo action", async () => {
     render(<WaterTracker />);
     await act(async () => {
       fireEvent.click(screen.getByText("+500"));
     });
-    expect(toast.success).toHaveBeenCalledWith("+500 ml logged");
+    expect(toast.success).toHaveBeenCalledWith(
+      "+500 ml logged",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) }),
+    );
   });
 
   it("custom input is hidden by default", () => {

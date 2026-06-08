@@ -3,11 +3,16 @@ import "fake-indexeddb/auto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addFoodItemLog,
+  addFoodPhoto,
   clearDatabase,
   db,
+  deleteFoodPhoto,
   type FoodItem,
+  type FoodPhoto,
   getAllFoodLogs,
   getDailyFoodLogs,
+  getFoodPhoto,
+  getFoodPhotosByUser,
   getOrCreateUser,
   initializeDB,
   updateFoodItem,

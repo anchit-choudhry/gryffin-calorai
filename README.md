@@ -4,10 +4,14 @@ Offline-first calorie tracking app with activity logging, intermittent fasting, 
 and comprehensive progress analytics. Designed with an **Almanac / Field Journal** aesthetic -
 persimmon ink, cream paper, hairline rules, Tufte-style charts, and hand-drawn SVG illustrations.
 
-**Frontend:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 • Dexie.js 4 • Tailwind
-CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • motion 12 • lucide-react • sonner •
-date-fns • @zxing/library (barcode) • fflate (ZIP) • vite-plugin-pwa  
-**Backend:** Spring Boot 4.0 • Java 25 • PostgreSQL 18 • Flyway • Spring Security • JJWT
+**Frontend:** React 19 • Vite 8 • TypeScript 6 • Recharts 3 • Zustand 5 (9 slices) • Dexie.js 4 (
+schema v20) • Tailwind CSS 4 • shadcn/ui • Radix UI • react-hook-form 7 • zod 4 • motion 12 •
+lucide-react • sonner • date-fns • @zxing/library (barcode) • fflate (ZIP) • vite-plugin-pwa  
+**Backend:** Spring Boot 4.0 • Java 25 • PostgreSQL 18 • Flyway • Spring Security • JJWT •
+Bucket4j + Valkey (rate limiting)
+
+**Status:** v0.8.0 released (June 7, 2026) • v0.9.0 in progress (WS A-J complete; 107 test files,
+2025 tests)
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)

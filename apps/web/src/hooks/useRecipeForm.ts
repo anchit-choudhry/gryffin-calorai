@@ -55,7 +55,7 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
 
   const saveRecipeForm = async (): Promise<boolean> => {
     if (!userId) {
-      toast.error("User not initialized. Please refresh the page.");
+      toast.error("Not ready - please refresh");
       return false;
     }
 
@@ -101,7 +101,7 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
                 },
                 userId,
               );
-              toast.success(`Recipe "${data.recipeName}" updated successfully!`);
+              toast.success(`"${data.recipeName}" saved`);
             } else {
               await saveRecipe({
                 name: data.recipeName,
@@ -115,7 +115,7 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
                 dateCreated: new Date().toISOString(),
                 userId,
               });
-              toast.success(`Recipe "${data.recipeName}" saved successfully!`);
+              toast.success(`"${data.recipeName}" saved`);
               form.reset();
             }
 
@@ -123,7 +123,7 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
             resolve(true);
           } catch (error) {
             if (import.meta.env.DEV) console.error("Error saving recipe:", error);
-            toast.error("Failed to save recipe. Check console for details.");
+            toast.error("Failed to save recipe");
             resolve(false);
           } finally {
             setIsLoading(false);

@@ -6,7 +6,7 @@ import { SyncStatusChip } from "./SyncStatusChip";
 const mockIsAuthenticated = vi.hoisted(() => vi.fn().mockReturnValue(true));
 const mockUseAppState = vi.hoisted(() =>
   vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ syncStatus: "idle", lastSyncedAt: null }),
+    selector({ syncStatus: "idle", lastSyncedAt: null, pendingSyncCount: 0 }),
   ),
 );
 
@@ -23,7 +23,7 @@ describe("SyncStatusChip", () => {
     vi.clearAllMocks();
     mockIsAuthenticated.mockReturnValue(true);
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "idle", lastSyncedAt: null }),
+      selector({ syncStatus: "idle", lastSyncedAt: null, pendingSyncCount: 0 }),
     );
   });
 
@@ -38,17 +38,25 @@ describe("SyncStatusChip", () => {
     expect(screen.getByText("Not signed in")).toBeTruthy();
   });
 
-  it("shows 'Syncing...' label for syncing status", () => {
+  it("shows 'Syncing' label for syncing status", () => {
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "syncing", lastSyncedAt: null }),
+      selector({ syncStatus: "syncing", lastSyncedAt: null, pendingSyncCount: 0 }),
     );
     render(<SyncStatusChip />);
-    expect(screen.getByText("Syncing...")).toBeTruthy();
+    expect(screen.getByText("Syncing")).toBeTruthy();
+  });
+
+  it("shows pending count when syncing with items in queue", () => {
+    mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
+      selector({ syncStatus: "syncing", lastSyncedAt: null, pendingSyncCount: 3 }),
+    );
+    render(<SyncStatusChip />);
+    expect(screen.getByText("Syncing (3)")).toBeTruthy();
   });
 
   it("shows 'Synced' label for synced status", () => {
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "synced", lastSyncedAt: null }),
+      selector({ syncStatus: "synced", lastSyncedAt: null, pendingSyncCount: 0 }),
     );
     render(<SyncStatusChip />);
     expect(screen.getByText("Synced")).toBeTruthy();
@@ -56,7 +64,11 @@ describe("SyncStatusChip", () => {
 
   it("includes last-synced time in aria-label when synced with a timestamp", () => {
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "synced", lastSyncedAt: "2026-05-31T10:00:00.000Z" }),
+      selector({
+        syncStatus: "synced",
+        lastSyncedAt: "2026-05-31T10:00:00.000Z",
+        pendingSyncCount: 0,
+      }),
     );
     render(<SyncStatusChip />);
     const chip = screen.getByText("Synced").closest("span");
@@ -65,7 +77,7 @@ describe("SyncStatusChip", () => {
 
   it("shows 'Offline' label for offline status", () => {
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "offline", lastSyncedAt: null }),
+      selector({ syncStatus: "offline", lastSyncedAt: null, pendingSyncCount: 0 }),
     );
     render(<SyncStatusChip />);
     expect(screen.getByText("Offline")).toBeTruthy();
@@ -73,7 +85,7 @@ describe("SyncStatusChip", () => {
 
   it("shows 'Sync error' label for error status", () => {
     mockUseAppState.mockImplementation((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({ syncStatus: "error", lastSyncedAt: null }),
+      selector({ syncStatus: "error", lastSyncedAt: null, pendingSyncCount: 0 }),
     );
     render(<SyncStatusChip />);
     expect(screen.getByText("Sync error")).toBeTruthy();

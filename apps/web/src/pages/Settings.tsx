@@ -7,14 +7,24 @@ import DataExportPanel from "../components/DataExportPanel";
 import DietProfileEditor from "../components/DietProfileEditor";
 import RemindersSettings from "../components/RemindersSettings";
 import { CloudSyncPanel } from "../components/CloudSyncPanel";
+import { useAppState } from "../state/AppState";
+import type { Density } from "../state/slices/uiSlice";
+import { cn } from "../lib/utils";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
 const APP_VERSION = "0.9.0";
 
+const DENSITY_OPTIONS: { value: Density; label: string; description: string }[] = [
+  { value: "comfortable", label: "Comfortable", description: "Standard spacing" },
+  { value: "compact", label: "Compact", description: "Tighter layout" },
+];
+
 const Settings = () => {
   const shouldReduceMotion = useReducedMotion();
   const sv = useSectionMotion();
+  const density = useAppState((s) => s.density);
+  const setDensity = useAppState((s) => s.setDensity);
 
   return (
     <div className="bg-paper text-ink font-sans min-h-[calc(100vh-4rem)]">
@@ -28,7 +38,7 @@ const Settings = () => {
         <motion.header className="col-span-12 border-b border-rule pb-8" {...sv}>
           <h1 className="font-display text-4xl font-light text-ink">Settings</h1>
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-ink-soft mt-2">
-            Profile · Diet · Goals · Reminders · Data · About
+            Profile · Diet · Goals · Display · Reminders · Data · About
           </p>
         </motion.header>
 
@@ -57,6 +67,38 @@ const Settings = () => {
           <SectionHeader title="Goals" />
           <div className="mt-6">
             <GoalSettings />
+          </div>
+        </motion.section>
+
+        {/* Section - Display */}
+        <motion.section className="col-span-12 lg:col-span-4" {...sv}>
+          <SectionHeader title="Display" />
+          <div className="mt-6 space-y-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              Layout density
+            </p>
+            <div role="radiogroup" aria-label="Layout density" className="flex gap-2">
+              {DENSITY_OPTIONS.map(({ value, label, description }) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={density === value}
+                  onClick={() => setDensity(value)}
+                  className={cn(
+                    "flex-1 border px-3 py-2.5 text-left transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2",
+                    density === value
+                      ? "border-persimmon bg-persimmon-soft text-ink"
+                      : "border-rule bg-paper-muted text-ink-soft hover:text-ink hover:border-ink",
+                  )}
+                >
+                  <span className="block font-sans text-sm font-medium">{label}</span>
+                  <span className="block font-mono text-[10px] text-ink-soft mt-0.5">
+                    {description}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </motion.section>
 

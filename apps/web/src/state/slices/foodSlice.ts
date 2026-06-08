@@ -4,6 +4,7 @@ import { mapDbError } from "../../lib/utils";
 import { toast } from "sonner";
 import {
   addFoodItemLog,
+  copyFoodLogs,
   deleteFoodItem,
   type FoodItem,
   getFavoriteFoodItems,
@@ -12,7 +13,7 @@ import {
   updateFoodItem,
 } from "../../db/dbService";
 import type { FoodItemId } from "@/types";
-import { checkFoodNameRestrictions, RESTRICTION_FLAGS } from "@/types";
+import { checkFoodNameRestrictions, RESTRICTION_FLAGS, shiftISODate } from "@/types";
 import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface FoodSlice {
@@ -28,6 +29,7 @@ export interface FoodSlice {
   fetchAllFoodItems: (userId: import("@/types").UserId) => Promise<void>;
   fetchFavorites: (userId: import("@/types").UserId) => Promise<void>;
   toggleFavorite: (id: FoodItemId, isFavorite: boolean) => Promise<void>;
+  copyYesterdayLogs: () => Promise<void>;
 }
 
 export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, get) => ({
@@ -136,6 +138,22 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
       const message = mapDbError(error, "Failed to fetch favorites");
       if (import.meta.env.DEV) console.error("Error fetching favorites:", error);
       set({ error: message });
+    }
+  },
+
+  copyYesterdayLogs: async () => {
+    const state = get();
+    if (!state.userId) return;
+    const yesterdayISO = shiftISODate(state.selectedDate, -1);
+    try {
+      await copyFoodLogs(yesterdayISO, state.selectedDate, state.userId);
+      await state.refreshDailyLogs(state.userId);
+      toast.success("Yesterday's meals copied");
+    } catch (error) {
+      const message = mapDbError(error, "Failed to copy yesterday's logs");
+      if (import.meta.env.DEV) console.error("Error copying logs:", error);
+      set({ error: message });
+      toast.error(message);
     }
   },
 

@@ -102,7 +102,7 @@ describe("useBodyForm", () => {
     const success = await result.current.submitMeasurement();
 
     expect(success).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith("User not initialized. Please refresh.");
+    expect(toast.error).toHaveBeenCalledWith("Not ready - please refresh");
   });
 
   it("should have setWeightUnit function that accepts kg", () => {

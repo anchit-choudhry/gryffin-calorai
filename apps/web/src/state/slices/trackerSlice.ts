@@ -13,17 +13,16 @@ import {
   type WaterLog,
 } from "../../db/dbService";
 import type { StepLogId, UserId, WaterLogId } from "@/types";
-import { todayISO } from "@/types";
 import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface TrackerSlice {
   dailyWaterLogs: WaterLog[];
   dailyStepLogs: StepLog[];
   fetchDailyWaterLogs: (userId: UserId) => Promise<void>;
-  addWaterLog: (amount: number) => Promise<void>;
+  addWaterLog: (amount: number) => Promise<WaterLogId | undefined>;
   deleteWaterLog: (id: WaterLogId) => Promise<void>;
   fetchDailyStepLogs: (userId: UserId) => Promise<void>;
-  addStepLog: (steps: number) => Promise<void>;
+  addStepLog: (steps: number) => Promise<StepLogId | undefined>;
   deleteStepLog: (id: StepLogId) => Promise<void>;
 }
 
@@ -33,7 +32,7 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
 
   fetchDailyWaterLogs: async (userId: UserId) => {
     try {
-      const logs = await getDailyWaterLogs(userId, todayISO());
+      const logs = await getDailyWaterLogs(userId, get().selectedDate);
       set({ dailyWaterLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch water logs");
@@ -42,21 +41,21 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
     }
   },
 
-  addWaterLog: async (amount: number) => {
+  addWaterLog: async (amount: number): Promise<WaterLogId | undefined> => {
     const state = get();
-    if (!state.userId) return;
+    if (!state.userId) return undefined;
     const syncId = crypto.randomUUID();
     const optimisticLog: WaterLog = {
       userId: state.userId,
       amount,
-      dateLogged: todayISO(),
+      dateLogged: state.selectedDate,
       loggedAt: new Date().toISOString(),
       syncId,
     };
     const prevWaterLogs = state.dailyWaterLogs;
     set({ dailyWaterLogs: [...state.dailyWaterLogs, optimisticLog] });
     try {
-      await addWaterLogToDB(optimisticLog);
+      const id = await addWaterLogToDB(optimisticLog);
       await get().fetchDailyWaterLogs(state.userId);
       void enqueueSyncOperation({
         userId: state.userId,
@@ -66,12 +65,14 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
         payload: optimisticLog,
       });
       void get().checkAndUnlockAchievements();
+      return id;
     } catch (error) {
       set({ dailyWaterLogs: prevWaterLogs });
       const message = mapDbError(error, "Failed to add water log");
       if (import.meta.env.DEV) console.error("Error adding water log:", error);
       set({ error: message });
       toast.error(message);
+      return undefined;
     }
   },
 
@@ -100,7 +101,7 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
 
   fetchDailyStepLogs: async (userId: UserId) => {
     try {
-      const logs = await getDailyStepLogs(userId, todayISO());
+      const logs = await getDailyStepLogs(userId, get().selectedDate);
       set({ dailyStepLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch step logs");
@@ -109,21 +110,21 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
     }
   },
 
-  addStepLog: async (steps: number) => {
+  addStepLog: async (steps: number): Promise<StepLogId | undefined> => {
     const state = get();
-    if (!state.userId) return;
+    if (!state.userId) return undefined;
     const syncId = crypto.randomUUID();
     const optimisticLog: StepLog = {
       userId: state.userId,
       steps,
-      dateLogged: todayISO(),
+      dateLogged: state.selectedDate,
       loggedAt: new Date().toISOString(),
       syncId,
     };
     const prevStepLogs = state.dailyStepLogs;
     set({ dailyStepLogs: [...state.dailyStepLogs, optimisticLog] });
     try {
-      await addStepLogToDB(optimisticLog);
+      const id = await addStepLogToDB(optimisticLog);
       await get().fetchDailyStepLogs(state.userId);
       void enqueueSyncOperation({
         userId: state.userId,
@@ -133,12 +134,14 @@ export const createTrackerSlice: StateCreator<AppState, [], [], TrackerSlice> = 
         payload: optimisticLog,
       });
       void get().checkAndUnlockAchievements();
+      return id;
     } catch (error) {
       set({ dailyStepLogs: prevStepLogs });
       const message = mapDbError(error, "Failed to add step log");
       if (import.meta.env.DEV) console.error("Error adding step log:", error);
       set({ error: message });
       toast.error(message);
+      return undefined;
     }
   },
 

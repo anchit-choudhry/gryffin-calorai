@@ -76,11 +76,37 @@ function DashboardHero({ totalCalories, totals }: Props) {
 
   const username = init.status === "ready" ? init.user.username : "";
 
+  if (init.status === "loading") {
+    return (
+      <>
+        <div className="col-span-1 hidden md:block" aria-hidden="true" />
+        <div className="col-span-12 md:col-span-8 md:col-start-2 animate-pulse space-y-5">
+          <div className="h-[clamp(72px,11vw,120px)] w-48 bg-rule rounded-sm" />
+          <div className="h-[3px] w-full bg-rule" />
+          <div className="h-3 w-32 bg-rule rounded-sm" />
+        </div>
+        <div className="col-span-12 md:col-span-3 animate-pulse space-y-3 pb-2">
+          <div className="h-3 w-24 bg-rule rounded-sm" />
+          <div className="h-3 w-20 bg-rule rounded-sm" />
+          <div className="h-3 w-28 bg-rule rounded-sm" />
+        </div>
+        <div className="col-span-12 flex border-y border-rule bg-paper-muted animate-pulse">
+          {(["Protein", "Carbs", "Fat", "Calories"] as const).map((label) => (
+            <div key={label} className="flex-1 px-6 py-4 border-r border-rule last:border-r-0">
+              <div className="h-2.5 w-10 bg-rule rounded-sm mb-2" />
+              <div className="h-5 w-8 bg-rule rounded-sm" />
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       {/* Vertical date kicker */}
       <div className="col-span-1 hidden md:block">
-        <DateKicker date={today} />
+        <DateKicker date={today} interactive />
       </div>
 
       {/* Hero numeral */}

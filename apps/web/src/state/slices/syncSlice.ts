@@ -7,9 +7,11 @@ export interface SyncSlice {
   syncStatus: SyncStatus;
   lastSyncedAt: string | null;
   syncError: string | null;
+  pendingSyncCount: number;
   setSyncStatus: (status: SyncStatus) => void;
   setLastSyncedAt: (at: string) => void;
   setSyncError: (err: string | null) => void;
+  setPendingSyncCount: (n: number) => void;
 }
 
 const LAST_SYNCED_AT_KEY = "gc_last_synced_at";
@@ -18,6 +20,7 @@ export const createSyncSlice: StateCreator<AppState, [], [], SyncSlice> = (set) 
   syncStatus: "idle",
   lastSyncedAt: localStorage.getItem(LAST_SYNCED_AT_KEY),
   syncError: null,
+  pendingSyncCount: 0,
 
   setSyncStatus: (status) => set({ syncStatus: status }),
 
@@ -27,4 +30,6 @@ export const createSyncSlice: StateCreator<AppState, [], [], SyncSlice> = (set) 
   },
 
   setSyncError: (err) => set({ syncError: err, syncStatus: err ? "error" : "idle" }),
+
+  setPendingSyncCount: (n) => set({ pendingSyncCount: n }),
 });

@@ -2,6 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StreakCard from "./StreakCard";
 import * as streaksHook from "../hooks/useStreaks";
 
+vi.mock("motion/react", () => ({
+  motion: {
+    p: ({ children, ...rest }: { children: React.ReactNode; [key: string]: unknown }) => (
+      <p {...(rest as Record<string, unknown>)}>{children}</p>
+    ),
+  },
+  useReducedMotion: () => false,
+}));
+
 vi.mock("../hooks/useStreaks");
 
 const baseReturn = {

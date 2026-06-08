@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import type { FoodItem } from "../db/dbService";
 import { useAppState } from "../state/AppState";
-import { DEFAULT_MEAL_TYPE, todayISO } from "../types";
+import { DEFAULT_MEAL_TYPE } from "../types";
 import { FoodFormSchema, type FoodFormValues } from "../forms/schemas";
 
 export function calculateTotalCalories(caloriesPerServing: number, servingSize: number): number {
@@ -18,8 +18,9 @@ export function useFoodForm(initialFood?: FoodItem): {
   submitFoodLog: () => Promise<boolean>;
   resetForm: () => void;
   prefillFromFood: (food: FoodItem) => void;
+  applyPortionMultiplier: (factor: number) => void;
 } {
-  const { userId, addFoodLog, updateFoodLog } = useAppState();
+  const { userId, addFoodLog, updateFoodLog, selectedDate } = useAppState();
   const [isLoading, setIsLoading] = useState(false);
   const isEditMode = !!initialFood?.id;
 
@@ -40,7 +41,7 @@ export function useFoodForm(initialFood?: FoodItem): {
 
   const submitFoodLog = async (): Promise<boolean> => {
     if (!userId) {
-      toast.error("User not initialized. Please refresh the page.");
+      toast.error("Not ready - please refresh");
       return false;
     }
 
@@ -62,7 +63,7 @@ export function useFoodForm(initialFood?: FoodItem): {
                 mealType: data.mealType,
                 nutritionData: data.nutritionData,
               });
-              toast.success(`Updated ${data.name}!`);
+              toast.success(`${data.name} updated`);
             } else {
               await addFoodLog({
                 userId,
@@ -72,19 +73,19 @@ export function useFoodForm(initialFood?: FoodItem): {
                 protein: data.protein,
                 carbs: data.carbs,
                 fat: data.fat,
-                dateLogged: todayISO(),
+                dateLogged: selectedDate,
                 isFavorite: false,
                 mealType: data.mealType,
                 nutritionData: data.nutritionData,
               });
-              toast.success(`Successfully logged ${data.name}! Macros updated.`);
+              toast.success(`${data.name} logged`);
             }
 
             resetForm();
             resolve(true);
           } catch (error) {
             if (import.meta.env.DEV) console.error("Error logging food:", error);
-            toast.error("Failed to save food log. Check console for details.");
+            toast.error("Failed to save entry");
             resolve(false);
           } finally {
             setIsLoading(false);
@@ -121,5 +122,17 @@ export function useFoodForm(initialFood?: FoodItem): {
     });
   };
 
-  return { form, isLoading, isEditMode, submitFoodLog, resetForm, prefillFromFood };
+  const applyPortionMultiplier = (factor: number) => {
+    form.setValue("servingSize", factor, { shouldValidate: true });
+  };
+
+  return {
+    form,
+    isLoading,
+    isEditMode,
+    submitFoodLog,
+    resetForm,
+    prefillFromFood,
+    applyPortionMultiplier,
+  };
 }

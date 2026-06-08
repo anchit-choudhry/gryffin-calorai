@@ -15,9 +15,14 @@ import ActivityLogger from "../components/ActivityLogger";
 import FastingTimer from "../components/FastingTimer";
 import OnboardingBanner from "../components/OnboardingBanner";
 import OnboardingModal from "../components/OnboardingModal";
+import { WeeklyHarvestModal } from "../components/WeeklyHarvestModal";
+import { InsightCard } from "../components/dashboard/InsightCard";
 import { useAppState } from "../state/AppState";
 import type { MealType } from "@/types";
 import { DAILY_WATER_GOAL_ML, MEAL_TYPES, todayISO } from "@/types";
+import { useDashboardInsights } from "@/hooks/useDashboardInsights";
+import { useStreaks } from "@/hooks/useStreaks";
+import { useWeeklySummary } from "@/hooks/useWeeklySummary";
 import type { FoodItem } from "../db/dbService";
 import { addFoodPhoto } from "../db/dbService";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,7 +34,12 @@ import { DailyVitalsStrip } from "../components/dashboard/DailyVitalsStrip";
 import { PhotoStrip } from "../components/dashboard/PhotoStrip";
 import RecurringMeals from "../components/RecurringMeals";
 import MealTemplates from "../components/MealTemplates";
-import { motionTokens, pageVariants, useSectionMotion } from "../lib/motionVariants";
+import {
+  motionTokens,
+  pageVariants,
+  useHeroSection,
+  useSectionMotion,
+} from "../lib/motionVariants";
 import { cn, groupLogsByMeal } from "../lib/utils";
 import { EmptyState } from "../components/EmptyState";
 import { EmptyPlate } from "../components/illustrations";
@@ -57,12 +67,15 @@ const Dashboard = () => {
     activeFastingSession,
     waterGoalMl,
     openQuickAdd,
+    copyYesterdayLogs,
   } = useAppState();
 
   const [activeView, setActiveView] = useState<DashboardView>("today");
   const [showTrackers, setShowTrackers] = useState(false);
   const [logFilter, setLogFilter] = useState<MealType | "All">("All");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [harvestOpen, setHarvestOpen] = useState(false);
+  const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
   const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
   const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
   const closeOnboarding = useCallback(() => setOnboardingOpen(false), []);
@@ -158,7 +171,27 @@ const Dashboard = () => {
     [userId, addFoodLog],
   );
 
+  const { currentStreak } = useStreaks();
+  const { daysOnTarget } = useWeeklySummary();
+
+  const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
+  const allInsights = useDashboardInsights({
+    currentStreak,
+    totalCaloriesToday: totalCalories,
+    calorieGoal,
+    totalProteinToday: totalProtein,
+    dailyLogCount: dailyLogs.length,
+    daysOnTargetThisWeek: daysOnTarget,
+  });
+  const visibleInsights = allInsights.filter((ins) => !dismissedInsights.includes(ins.id));
+
+  const dismissInsight = useCallback(
+    (id: string) => setDismissedInsights((prev) => [...prev, id]),
+    [],
+  );
+
   const sv = useSectionMotion();
+  const hero = useHeroSection();
   const hasFavorites = favoriteFoods.length > 0;
   const hasRecentFoods = recentFoods.length > 0;
 
@@ -211,6 +244,7 @@ const Dashboard = () => {
       </Dialog>
 
       <OnboardingModal open={onboardingOpen} onClose={closeOnboarding} />
+      <WeeklyHarvestModal open={harvestOpen} onClose={() => setHarvestOpen(false)} />
 
       <motion.main
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
@@ -229,7 +263,7 @@ const Dashboard = () => {
         <motion.section
           data-tour-id="dashboard-hero"
           className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash"
-          {...sv}
+          {...hero}
         >
           <DashboardHero
             totalCalories={totalCalories}
@@ -258,6 +292,17 @@ const Dashboard = () => {
 
         {activeView === "today" && (
           <>
+            {/* Insight cards */}
+            {visibleInsights.length > 0 && (
+              <motion.div className="col-span-12 flex flex-col gap-2 sm:flex-row" {...sv}>
+                {visibleInsights.map((ins) => (
+                  <div key={ins.id} className="flex-1">
+                    <InsightCard insight={ins} onDismiss={dismissInsight} />
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
             {/* Section: Today's Diary (primary content) */}
             <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>
               <div className="flex items-end gap-4 flex-wrap mb-4">
@@ -284,10 +329,19 @@ const Dashboard = () => {
                   ))}
                   <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void copyYesterdayLogs()}
+                    className="ml-2 h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] border-rule text-ink-soft hover:text-ink"
+                  >
+                    Copy Yesterday
+                  </Button>
+                  <Button
+                    type="button"
                     variant="persimmon"
                     size="sm"
                     onClick={openQuickAdd}
-                    className="ml-2 h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5"
+                    className="h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5"
                   >
                     <Plus className="size-3" aria-hidden="true" />
                     Log Food
@@ -515,11 +569,16 @@ const Dashboard = () => {
               className="col-span-12 grid grid-cols-12 gap-6"
               {...sv}
             >
-              <SectionHeader
-                className="col-span-12"
-                kicker="Weekly overview"
-                title="The Week in Review"
-              />
+              <div className="col-span-12 flex items-end gap-4">
+                <SectionHeader kicker="Weekly overview" title="The Week in Review" />
+                <button
+                  type="button"
+                  onClick={() => setHarvestOpen(true)}
+                  className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  Review Week
+                </button>
+              </div>
               <div className="col-span-12 border border-rule p-6 lg:col-span-7">
                 <WeeklySummary />
               </div>

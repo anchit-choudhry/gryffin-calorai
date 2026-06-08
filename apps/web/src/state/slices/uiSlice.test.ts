@@ -55,4 +55,24 @@ describe("uiSlice", () => {
       expect(storeB.getState().quickAddOpen).toBe(false);
     });
   });
+
+  describe("commandPaletteOpen", () => {
+    it("initializes commandPaletteOpen as false", () => {
+      const store = makeStore();
+      expect(store.getState().commandPaletteOpen).toBe(false);
+    });
+
+    it("openCommandPalette sets commandPaletteOpen to true", () => {
+      const store = makeStore();
+      store.getState().openCommandPalette();
+      expect(store.getState().commandPaletteOpen).toBe(true);
+    });
+
+    it("closeCommandPalette sets commandPaletteOpen to false", () => {
+      const store = makeStore();
+      store.getState().openCommandPalette();
+      store.getState().closeCommandPalette();
+      expect(store.getState().commandPaletteOpen).toBe(false);
+    });
+  });
 });

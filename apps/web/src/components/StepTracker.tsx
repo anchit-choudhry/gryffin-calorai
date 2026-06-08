@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS } from "../lib/utils";
 
-const QUICK_STEPS = [2000, 5000, 8000, 10000] as const;
+const QUICK_STEPS = [1000, 2000, 5000, 10000] as const;
 
 const StepTracker = () => {
   const { dailyStepLogs, addStepLog, deleteStepLog, stepGoal, setStepGoal } = useAppState();
   const { form, isLoading, submitStepLog } = useStepForm();
+  const [quickAddLoading, setQuickAddLoading] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(stepGoal);
@@ -88,10 +89,19 @@ const StepTracker = () => {
             key={steps}
             variant="outline"
             onClick={async () => {
-              const ok = await submitStepLog(steps);
-              if (ok) toast.success(`+${steps.toLocaleString()} steps logged`);
+              setQuickAddLoading(true);
+              try {
+                const logId = await addStepLog(steps);
+                if (logId !== undefined) {
+                  toast.success(`+${steps.toLocaleString()} steps logged`, {
+                    action: { label: "Undo", onClick: () => deleteStepLog(logId) },
+                  });
+                }
+              } finally {
+                setQuickAddLoading(false);
+              }
             }}
-            disabled={isLoading}
+            disabled={isLoading || quickAddLoading}
             className="font-mono text-[9px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-2 py-1 flex-shrink-0"
           >
             +{steps.toLocaleString()}

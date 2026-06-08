@@ -104,9 +104,18 @@ function CollapsibleToggle({
   );
 }
 
+const PORTION_MULTIPLIERS = [0.5, 1, 1.5, 2] as const;
+
 const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, prefillName }) => {
-  const { form, isLoading, isEditMode, submitFoodLog, resetForm, prefillFromFood } =
-    useFoodForm(initialFood);
+  const {
+    form,
+    isLoading,
+    isEditMode,
+    submitFoodLog,
+    resetForm,
+    prefillFromFood,
+    applyPortionMultiplier,
+  } = useFoodForm(initialFood);
   const recentFoods = useRecentFoods();
   const [showMacros, setShowMacros] = useState(
     () => !!initialFood && (initialFood.protein !== undefined || initialFood.carbs !== undefined),
@@ -243,6 +252,31 @@ const FoodLogger: FC<FoodLoggerProps> = ({ initialFood, onCancel, onSuccess, pre
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Portion multiplier shortcuts */}
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft/60 shrink-0">
+            Servings
+          </span>
+          <div className="flex gap-1">
+            {PORTION_MULTIPLIERS.map((factor) => (
+              <Button
+                key={factor}
+                type="button"
+                variant="outline"
+                onClick={() => applyPortionMultiplier(factor)}
+                className={cn(
+                  "h-auto rounded-none border-rule px-2 py-0.5 font-mono text-[9px] tracking-wider",
+                  form.watch("servingSize") === factor
+                    ? "border-persimmon text-persimmon"
+                    : "text-ink-soft",
+                )}
+              >
+                ×{factor}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Macros - collapsed by default (progressive disclosure) */}

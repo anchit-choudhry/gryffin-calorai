@@ -109,7 +109,7 @@ describe("useFoodForm", () => {
     const success = await result.current.submitFoodLog();
 
     expect(success).toBe(false);
-    expect(toast.error).toHaveBeenCalledWith("User not initialized. Please refresh the page.");
+    expect(toast.error).toHaveBeenCalledWith("Not ready - please refresh");
   });
 
   it("should reset form to initial state", () => {
@@ -200,7 +200,7 @@ describe("useFoodForm", () => {
           mealType: "Breakfast",
         }),
       );
-      expect(toast.success).toHaveBeenCalledWith("Successfully logged Apple! Macros updated.");
+      expect(toast.success).toHaveBeenCalledWith("Apple logged");
     });
 
     it("should successfully update an existing food log", async () => {
@@ -242,7 +242,7 @@ describe("useFoodForm", () => {
           calories: 100,
         }),
       );
-      expect(toast.success).toHaveBeenCalledWith("Updated Green Apple!");
+      expect(toast.success).toHaveBeenCalledWith("Green Apple updated");
     });
 
     it("should handle submission failure gracefully", async () => {
@@ -263,9 +263,7 @@ describe("useFoodForm", () => {
       const success = await result.current.submitFoodLog();
 
       expect(success).toBe(false);
-      expect(toast.error).toHaveBeenCalledWith(
-        "Failed to save food log. Check console for details.",
-      );
+      expect(toast.error).toHaveBeenCalledWith("Failed to save entry");
     });
 
     it("should calculate total calories correctly on submit", async () => {
@@ -328,6 +326,87 @@ describe("useFoodForm", () => {
       const success = await result.current.submitFoodLog();
 
       expect(success).toBe(false);
+    });
+  });
+
+  describe("prefillFromFood", () => {
+    it("populates form fields from a food item", () => {
+      const { result } = renderHook(() => useFoodForm());
+      const food = {
+        id: FoodItemId(5),
+        userId,
+        name: "Banana",
+        calories: 89,
+        servingSize: 2,
+        protein: 1,
+        carbs: 23,
+        fat: 0,
+        dateLogged: ISODate("2026-06-01"),
+        isFavorite: false,
+        mealType: "Snacks" as const,
+      };
+
+      act(() => {
+        result.current.prefillFromFood(food);
+      });
+
+      expect(result.current.form.getValues("name")).toBe("Banana");
+      expect(result.current.form.getValues("calories")).toBe(89);
+      expect(result.current.form.getValues("servingSize")).toBe(2);
+      expect(result.current.form.getValues("mealType")).toBe("Snacks");
+    });
+
+    it("falls back to DEFAULT_MEAL_TYPE when food has no mealType", () => {
+      const { result } = renderHook(() => useFoodForm());
+      const food = {
+        id: FoodItemId(6),
+        userId,
+        name: "Water",
+        calories: 0,
+        servingSize: 1,
+        dateLogged: ISODate("2026-06-01"),
+        isFavorite: false,
+      } as Parameters<typeof result.current.prefillFromFood>[0];
+
+      act(() => {
+        result.current.prefillFromFood(food);
+      });
+
+      expect(result.current.form.getValues("mealType")).toBe(DEFAULT_MEAL_TYPE);
+    });
+  });
+
+  describe("applyPortionMultiplier", () => {
+    it("sets servingSize to the given factor", () => {
+      const { result } = renderHook(() => useFoodForm());
+
+      act(() => {
+        result.current.applyPortionMultiplier(2);
+      });
+
+      expect(result.current.form.getValues("servingSize")).toBe(2);
+    });
+
+    it("is idempotent - calling twice with same factor leaves servingSize unchanged", () => {
+      const { result } = renderHook(() => useFoodForm());
+
+      act(() => {
+        result.current.applyPortionMultiplier(1.5);
+        result.current.applyPortionMultiplier(1.5);
+      });
+
+      expect(result.current.form.getValues("servingSize")).toBe(1.5);
+    });
+
+    it("overwrites a previous factor rather than multiplying", () => {
+      const { result } = renderHook(() => useFoodForm());
+
+      act(() => {
+        result.current.applyPortionMultiplier(2);
+        result.current.applyPortionMultiplier(0.5);
+      });
+
+      expect(result.current.form.getValues("servingSize")).toBe(0.5);
     });
   });
 });

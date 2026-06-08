@@ -10,6 +10,7 @@ interface Handlers {
   onToggleDark: () => void;
   onNavigate: (page: "dashboard" | "recipes" | "progress") => void;
   onOpenQuickAdd: () => void;
+  onOpenCommandPalette: () => void;
 }
 
 export function useKeyboardShortcuts(handlers: Handlers) {
@@ -53,7 +54,7 @@ export function useKeyboardShortcuts(handlers: Handlers) {
 
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        handlers.onOpenQuickAdd();
+        handlers.onOpenCommandPalette();
         return;
       }
 

@@ -39,7 +39,7 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
 
   fetchDailyActivityLogs: async (userId: UserId) => {
     try {
-      const logs = await getDailyActivityLogs(userId, todayISO());
+      const logs = await getDailyActivityLogs(userId, get().selectedDate);
       set({ dailyActivityLogs: logs, error: null });
     } catch (error) {
       const message = mapDbError(error, "Failed to fetch activity logs");
@@ -55,7 +55,7 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
     try {
       await addActivityLogToDB({ ...log, userId: state.userId, syncId });
       const [daily, all] = await Promise.all([
-        getDailyActivityLogs(state.userId, todayISO()),
+        getDailyActivityLogs(state.userId, get().selectedDate),
         getAllActivityLogs(state.userId),
       ]);
       set({ dailyActivityLogs: daily, allActivityLogs: all });
@@ -83,7 +83,7 @@ export const createActivitySlice: StateCreator<AppState, [], [], ActivitySlice> 
     try {
       await deleteActivityLogFromDB(id, state.userId);
       const [daily, all] = await Promise.all([
-        getDailyActivityLogs(state.userId, todayISO()),
+        getDailyActivityLogs(state.userId, get().selectedDate),
         getAllActivityLogs(state.userId),
       ]);
       set({ dailyActivityLogs: daily, allActivityLogs: all });

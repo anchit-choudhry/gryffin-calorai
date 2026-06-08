@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FoodItem } from "@/db/dbService";
 import { fuzzyMatchFoodName } from "@/types";
 import { cn } from "@/lib/utils";

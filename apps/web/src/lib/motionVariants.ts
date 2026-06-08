@@ -9,11 +9,33 @@ export const motionTokens = {
   easeOutExpo: [0.16, 1, 0.3, 1] as [number, number, number, number],
   easeOutQuart: [0.25, 1, 0.5, 1] as [number, number, number, number],
   easeInOut: [0.65, 0, 0.35, 1] as [number, number, number, number],
+  easeSpring: [0.34, 1.56, 0.64, 1] as [number, number, number, number],
 };
 
 export const pageVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } },
+};
+
+/** Hero section: scale-in from 98% + fade, giving the masthead a grounding entrance. */
+export const heroVariants = {
+  hidden: { opacity: 0, scale: 0.98, y: 6 },
+  show: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { duration: motionTokens.durEntrance, ease: motionTokens.easeOutExpo },
+  },
+};
+
+/** Counter pop: number change triggers a spring scale punch. Use with `key={value}`. */
+export const counterPopVariants = {
+  initial: { scale: 0.7, opacity: 0 },
+  animate: {
+    scale: 1,
+    opacity: 1,
+    transition: { duration: motionTokens.durState, ease: motionTokens.easeSpring },
+  },
 };
 
 export const sectionVariants = {
@@ -106,4 +128,15 @@ export function usePageMotion() {
   const reduced = useReducedMotion();
   if (reduced) return {};
   return { variants: pageVariants, initial: "hidden" as const, animate: "show" as const };
+}
+
+/**
+ * Returns hero section variants. The masthead gets a scale-in entrance to anchor
+ * the page visually before staggered children follow.
+ */
+export function useHeroSection() {
+  const reduced = useReducedMotion();
+  return {
+    variants: reduced ? crossfadeSectionVariants : heroVariants,
+  };
 }

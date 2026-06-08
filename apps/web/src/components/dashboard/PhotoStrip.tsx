@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import type { FC } from "react";
+import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 import type { FoodPhoto } from "@/db/dbService";
 import { getFoodPhotosByUser } from "@/db/dbService";

@@ -152,6 +152,17 @@
      Verify: grain + paper passes AAA (7:1) for all text colours. */
   --grain-opacity: 0.03;
   --grain-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+
+  /* ---- Density spacing tokens ---- */
+  /* comfortable: standard editorial breathing room (default) */
+  /* compact: tighter layout for experienced users who prefer density */
+  --density-gap: 3.5rem; /* gap-14 */
+  --density-section-py: 2.5rem; /* py-10 */
+}
+
+html.compact {
+  --density-gap: 1.5rem; /* gap-6 */
+  --density-section-py: 1.5rem; /* py-6 */
 }
 
 .dark {

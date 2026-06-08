@@ -10,6 +10,46 @@ vi.mock("../db/dbService");
 vi.mock("../hooks/useFastingTimer", () => ({
   useFastingTimer: () => ({ formattedRemaining: "8h 00m", isComplete: false }),
 }));
+vi.mock("../hooks/useStreaks", () => ({
+  useStreaks: () => ({
+    currentStreak: 0,
+    longestStreak: 0,
+    loggedDates: new Set(),
+    isLoading: false,
+  }),
+}));
+vi.mock("../hooks/useWeeklySummary", () => ({
+  useWeeklySummary: () => ({
+    averageCalories: 1800,
+    daysOnTarget: 4,
+    consistency: 57,
+    calorieGoal: 2000,
+  }),
+}));
+const mockInsights = vi.hoisted(() => vi.fn(() => [] as { id: string; text: string }[]));
+vi.mock("../hooks/useDashboardInsights", () => ({
+  useDashboardInsights: mockInsights,
+}));
+vi.mock("../components/WeeklyHarvestModal", () => ({
+  WeeklyHarvestModal: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog">WeeklyHarvestModal</div> : null,
+}));
+vi.mock("../components/dashboard/InsightCard", () => ({
+  InsightCard: ({
+    insight,
+    onDismiss,
+  }: {
+    insight: { id: string; text: string };
+    onDismiss: (id: string) => void;
+  }) => (
+    <div>
+      <span>{insight.text}</span>
+      <button type="button" onClick={() => onDismiss(insight.id)}>
+        Dismiss {insight.id}
+      </button>
+    </div>
+  ),
+}));
 
 // Mock all heavy child components to isolate Dashboard.tsx behavior
 vi.mock("../components/FoodLogger", () => ({ default: () => <div>FoodLogger</div> }));
@@ -160,6 +200,7 @@ function makeMock(
     activeFastingSession: null,
     waterGoalMl: 2000,
     openQuickAdd: vi.fn(),
+    copyYesterdayLogs: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as ReturnType<typeof appState.useAppState>;
 }
@@ -425,5 +466,42 @@ describe("Dashboard Today/Week tabs", () => {
     const toggleBtn = screen.getByRole("button", { name: /show trackers/i });
     fireEvent.click(toggleBtn);
     expect(screen.getByRole("button", { name: /hide trackers/i })).toBeInTheDocument();
+  });
+});
+
+describe("Dashboard WS G: harvest modal and insight cards", () => {
+  beforeEach(() => {
+    mockInsights.mockReturnValue([]);
+  });
+
+  it("shows Review Week button in the week view", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /this week/i }));
+    expect(screen.getByRole("button", { name: /review week/i })).toBeInTheDocument();
+  });
+
+  it("opens the harvest modal when Review Week is clicked", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /this week/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review week/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("renders insight cards when insights are returned", async () => {
+    mockInsights.mockReturnValue([{ id: "streak", text: "5-day streak!" }]);
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByText("5-day streak!")).toBeInTheDocument();
+  });
+
+  it("dismisses an insight when its dismiss button is clicked", async () => {
+    mockInsights.mockReturnValue([{ id: "streak", text: "5-day streak!" }]);
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByText("5-day streak!")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /dismiss streak/i }));
+    expect(screen.queryByText("5-day streak!")).not.toBeInTheDocument();
   });
 });

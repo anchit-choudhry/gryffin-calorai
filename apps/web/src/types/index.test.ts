@@ -5,13 +5,19 @@ import {
   computeStreaks,
   fuzzyMatchFoodName,
   getTodayDayIndex,
+  isActivityLogId,
   isBodyMeasurementId,
   isDietProfileId,
+  isFastingSessionId,
   isFoodItemId,
+  isFoodPhotoId,
   isISODate,
   isLengthUnit,
+  isMealPlanId,
+  isMealTemplateId,
   isRecipeId,
   isRecurringMealId,
+  isReminderId,
   isStepLogId,
   isUserAchievementId,
   isUserId,
@@ -522,5 +528,93 @@ describe("getTodayDayIndex", () => {
     vi.setSystemTime(new Date(2024, 0, 5)); // January 5, 2024 = Friday (local)
     expect(getTodayDayIndex()).toBe(4);
     vi.useRealTimers();
+  });
+});
+
+describe("isActivityLogId", () => {
+  it("accepts positive integer", () => {
+    expect(isActivityLogId(3)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isActivityLogId(0)).toBe(false);
+  });
+
+  it("rejects float", () => {
+    expect(isActivityLogId(1.1)).toBe(false);
+  });
+
+  it("rejects string", () => {
+    expect(isActivityLogId("3")).toBe(false);
+  });
+});
+
+describe("isFastingSessionId", () => {
+  it("accepts positive integer", () => {
+    expect(isFastingSessionId(7)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isFastingSessionId(0)).toBe(false);
+  });
+
+  it("rejects negative", () => {
+    expect(isFastingSessionId(-2)).toBe(false);
+  });
+});
+
+describe("isReminderId", () => {
+  it("accepts positive integer", () => {
+    expect(isReminderId(1)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isReminderId(0)).toBe(false);
+  });
+
+  it("rejects float", () => {
+    expect(isReminderId(0.5)).toBe(false);
+  });
+});
+
+describe("isMealTemplateId", () => {
+  it("accepts positive integer", () => {
+    expect(isMealTemplateId(10)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isMealTemplateId(0)).toBe(false);
+  });
+
+  it("rejects null", () => {
+    expect(isMealTemplateId(null)).toBe(false);
+  });
+});
+
+describe("isMealPlanId", () => {
+  it("accepts positive integer", () => {
+    expect(isMealPlanId(2)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isMealPlanId(0)).toBe(false);
+  });
+
+  it("rejects undefined", () => {
+    expect(isMealPlanId(undefined)).toBe(false);
+  });
+});
+
+describe("isFoodPhotoId", () => {
+  it("accepts positive integer", () => {
+    expect(isFoodPhotoId(99)).toBe(true);
+  });
+
+  it("rejects zero", () => {
+    expect(isFoodPhotoId(0)).toBe(false);
+  });
+
+  it("rejects negative", () => {
+    expect(isFoodPhotoId(-10)).toBe(false);
   });
 });

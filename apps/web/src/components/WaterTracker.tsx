@@ -13,6 +13,7 @@ const WaterTracker = () => {
   const { dailyWaterLogs, addWaterLog, deleteWaterLog, waterGoalMl, setWaterGoalMl } =
     useAppState();
   const { form, isLoading, submitWaterLog } = useWaterForm();
+  const [quickAddLoading, setQuickAddLoading] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(waterGoalMl);
@@ -89,10 +90,19 @@ const WaterTracker = () => {
             key={ml}
             variant="outline"
             onClick={async () => {
-              const ok = await submitWaterLog(ml);
-              if (ok) toast.success(`+${ml} ml logged`);
+              setQuickAddLoading(true);
+              try {
+                const logId = await addWaterLog(ml);
+                if (logId !== undefined) {
+                  toast.success(`+${ml} ml logged`, {
+                    action: { label: "Undo", onClick: () => deleteWaterLog(logId) },
+                  });
+                }
+              } finally {
+                setQuickAddLoading(false);
+              }
             }}
-            disabled={isLoading}
+            disabled={isLoading || quickAddLoading}
             className="font-mono text-[9px] uppercase tracking-wider text-ink-soft border-rule rounded-none h-auto px-2 py-1 flex-shrink-0"
           >
             +{ml}

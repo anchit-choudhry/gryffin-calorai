@@ -45,6 +45,7 @@ describe("useSyncService", () => {
     vi.mocked(dbService.syncQueue.orderBy).mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
     } as unknown as ReturnType<typeof dbService.syncQueue.orderBy>);
+    vi.mocked(dbService.syncQueue.count).mockResolvedValue(0);
     vi.mocked(dbService.syncQueue.add).mockResolvedValue(1);
     vi.mocked(dbService.syncQueue.delete).mockResolvedValue(undefined);
     vi.mocked(dbService.syncQueue.update).mockResolvedValue(1);
@@ -102,6 +103,7 @@ describe("useSyncService", () => {
         setSyncStatus: vi.fn(),
         setLastSyncedAt: vi.fn(),
         setSyncError: vi.fn(),
+        setPendingSyncCount: vi.fn(),
         lastSyncedAt: null,
         userId,
         fetchInitialData: vi.fn().mockResolvedValue(undefined),
@@ -185,6 +187,7 @@ describe("useSyncService", () => {
           setSyncStatus,
           setLastSyncedAt,
           setSyncError,
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: null,
           userId,
           fetchInitialData,
@@ -235,6 +238,7 @@ describe("useSyncService", () => {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
           setSyncError: vi.fn(),
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: "2026-05-01T00:00:00.000Z",
           userId,
           fetchInitialData: vi.fn().mockResolvedValue(undefined),
@@ -263,6 +267,7 @@ describe("useSyncService", () => {
           setSyncStatus,
           setLastSyncedAt: vi.fn(),
           setSyncError,
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: null,
           userId,
           fetchInitialData: vi.fn().mockResolvedValue(undefined),
@@ -290,6 +295,7 @@ describe("useSyncService", () => {
           setSyncStatus,
           setLastSyncedAt: vi.fn(),
           setSyncError: vi.fn(),
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: null,
           userId,
           fetchInitialData: vi.fn().mockResolvedValue(undefined),
@@ -316,6 +322,7 @@ describe("useSyncService", () => {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
           setSyncError,
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: null,
           userId,
           fetchInitialData: vi.fn().mockResolvedValue(undefined),
@@ -342,6 +349,7 @@ describe("useSyncService", () => {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
           setSyncError,
+          setPendingSyncCount: vi.fn(),
           lastSyncedAt: null,
           userId,
           fetchInitialData: vi.fn().mockResolvedValue(undefined),
