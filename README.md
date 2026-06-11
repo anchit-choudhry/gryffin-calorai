@@ -10,8 +10,8 @@ lucide-react • sonner • date-fns • @zxing/library (barcode) • fflate (ZI
 **Backend:** Spring Boot 4.0 • Java 25 • PostgreSQL 18 • Flyway • Spring Security • JJWT •
 Bucket4j + Valkey (rate limiting)
 
-**Status:** v0.8.0 released (June 7, 2026) • v0.9.0 in progress (WS A-J complete; 107 test files,
-2025 tests)
+**Status:** v0.8.0 released (June 7, 2026) • v0.9.0 in progress (UX uplift complete; 113 test files,
+2117 tests)
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)

@@ -121,6 +121,10 @@ vi.mock("../components/dashboard/LogEntry", () => ({
   ),
 }));
 
+vi.mock("../hooks/useWeeklyHarvestTrigger", () => ({
+  useWeeklyHarvestTrigger: () => ({ shouldOpenThisSession: false, markSeen: vi.fn() }),
+}));
+
 vi.mock("motion/react", () => ({
   motion: {
     main: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
@@ -252,7 +256,7 @@ describe("Dashboard init states", () => {
     vi.mocked(appState.useAppState).mockReturnValue(makeMock({ dailyLogs: [] }));
     const Dashboard = (await import("./Dashboard")).default;
     render(<Dashboard />);
-    expect(screen.getByText(/nothing logged yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no entries recorded/i)).toBeInTheDocument();
   });
 
   it("shows error message when init.status is error", async () => {
@@ -370,6 +374,123 @@ describe("Dashboard delete with undo", () => {
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("button", { name: /delete oatmeal/i }));
     await vi.waitFor(() => expect(deleteFoodLog).toHaveBeenCalled());
+  });
+});
+
+describe("Dashboard multi-select re-log", () => {
+  const recentItems = [
+    makeLog(10, "Banana", "Snacks"),
+    makeLog(11, "Oat Bar", "Breakfast"),
+    makeLog(12, "Coffee", "Breakfast"),
+  ];
+
+  it("shows a Select toggle button in the Recently Logged section", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByRole("button", { name: /select/i })).toBeInTheDocument();
+  });
+
+  it("entering multi-select shows a Log button and meal type selector", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    expect(screen.getByRole("button", { name: /log \d+ items/i })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /meal type/i })).toBeInTheDocument();
+  });
+
+  it("Log button is disabled when no items are selected", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    expect(screen.getByRole("button", { name: /log 0 items/i })).toBeDisabled();
+  });
+
+  it("clicking a chip in multi-select mode marks it aria-checked true", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    const bananaChip = screen.getByRole("checkbox", { name: /banana/i });
+    fireEvent.click(bananaChip);
+    expect(bananaChip).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("clicking a selected chip deselects it", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    const bananaChip = screen.getByRole("checkbox", { name: /banana/i });
+    fireEvent.click(bananaChip);
+    fireEvent.click(bananaChip);
+    expect(bananaChip).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("Log button count reflects the number of selected chips", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /banana/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /coffee/i }));
+    expect(screen.getByRole("button", { name: /log 2 items/i })).toBeInTheDocument();
+  });
+
+  it("clicking Log calls addFoodLog for each selected item", async () => {
+    const addFoodLog = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems, addFoodLog }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /banana/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /oat bar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /log 2 items/i }));
+    await vi.waitFor(() => expect(addFoodLog).toHaveBeenCalledTimes(2));
+  });
+
+  it("multi-select mode exits after logging", async () => {
+    const addFoodLog = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems, addFoodLog }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /banana/i }));
+    fireEvent.click(screen.getByRole("button", { name: /log 1 items/i }));
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("button", { name: /log \d+ items/i })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("Cancel button exits multi-select mode without logging", async () => {
+    const addFoodLog = vi.fn();
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ dailyLogs: [], allFoodItems: recentItems, addFoodLog }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /^select$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.queryByRole("button", { name: /log \d+ items/i })).not.toBeInTheDocument();
+    expect(addFoodLog).not.toHaveBeenCalled();
   });
 });
 

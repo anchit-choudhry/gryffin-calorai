@@ -83,4 +83,15 @@ describe("syncSlice", () => {
     expect(state.syncError).toBeNull();
     expect(state.syncStatus).toBe("idle");
   });
+
+  it("setPendingSyncCount updates pendingSyncCount", () => {
+    let state = { pendingSyncCount: 0 } as AppState;
+    const set: SetFn = (p) => {
+      state = { ...state, ...p };
+    };
+    const get = () => state as AppState;
+    const slice = createSyncSlice(set as Parameters<typeof createSyncSlice>[0], get, {} as never);
+    slice.setPendingSyncCount(5);
+    expect(state.pendingSyncCount).toBe(5);
+  });
 });

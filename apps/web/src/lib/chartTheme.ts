@@ -8,6 +8,7 @@ export const chartTheme = {
   chart7: "var(--chart-7)",
   grid: "var(--chart-grid)",
   goal: "var(--chart-goal)",
+  trend: "var(--ink-soft)",
   tooltipBg: "var(--chart-tooltip-bg)",
   tooltipBorder: "var(--chart-tooltip-border)",
   axisFontSize: 11,

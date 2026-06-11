@@ -50,7 +50,7 @@ describe("KeyboardShortcutsOverlay", () => {
   it("shows all shortcut entries", () => {
     render(<KeyboardShortcutsOverlay {...defaultProps} />);
     expect(screen.getByText("Focus food logger")).toBeTruthy();
-    expect(screen.getByText("Add 250ml water")).toBeTruthy();
+    expect(screen.getByText("Add 250 ml water")).toBeTruthy();
     expect(screen.getByText("Log steps")).toBeTruthy();
     expect(screen.getByText("Open barcode scanner")).toBeTruthy();
     expect(screen.getByText("Toggle dark mode")).toBeTruthy();

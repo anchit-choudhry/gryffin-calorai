@@ -95,4 +95,42 @@ describe("EditorialChartCard", () => {
     const inner = container.querySelector("[style]");
     expect(inner?.getAttribute("style")).toContain("200");
   });
+
+  it("renders eyebrow text when provided", () => {
+    render(
+      <EditorialChartCard eyebrow="Last 30 days">
+        <span>chart</span>
+      </EditorialChartCard>,
+    );
+    expect(screen.getByText("Last 30 days")).toBeTruthy();
+  });
+
+  it("does not render eyebrow section when eyebrow is omitted", () => {
+    render(
+      <EditorialChartCard>
+        <span>chart</span>
+      </EditorialChartCard>,
+    );
+    expect(screen.queryByText("Last 30 days")).toBeNull();
+  });
+
+  it("renders both eyebrow and label together", () => {
+    render(
+      <EditorialChartCard eyebrow="12 entries" label="Weight Trajectory">
+        <span>chart</span>
+      </EditorialChartCard>,
+    );
+    expect(screen.getByText("12 entries")).toBeTruthy();
+    expect(screen.getByText("Weight Trajectory")).toBeTruthy();
+  });
+
+  it("renders header when only eyebrow is provided (no label)", () => {
+    const { container } = render(
+      <EditorialChartCard eyebrow="Meta only">
+        <span>chart</span>
+      </EditorialChartCard>,
+    );
+    expect(container.querySelector(".border-b")).toBeTruthy();
+    expect(screen.getByText("Meta only")).toBeTruthy();
+  });
 });

@@ -20,6 +20,7 @@ import {
   YAxis,
 } from "recharts";
 import { cmToIn, MEAL_TYPES } from "@/types";
+import { BodyScale } from "@/components/illustrations";
 import { useProgressData } from "../hooks/useProgressData";
 import { useWaterHistoryData } from "../hooks/useWaterHistoryData";
 import { useAppState } from "../state/AppState";
@@ -50,7 +51,7 @@ const AXIS_TICK_STYLE = {
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
   const [displayUnit, setDisplayUnit] = useState<"cm" | "in">("cm");
-  const { labels, data, mealTypeData, macroData, isLoading } = useProgressData(days);
+  const { labels, data, rollingAvg, mealTypeData, macroData, isLoading } = useProgressData(days);
   const {
     labels: waterLabels,
     data: waterData,
@@ -73,6 +74,7 @@ const Progress = () => {
       labels.map((label, i) => ({
         label,
         calories: data[i] ?? 0,
+        rollingAvg: rollingAvg[i] ?? 0,
         ...(mealTypeData
           ? {
               Breakfast: mealTypeData.Breakfast[i] ?? 0,
@@ -82,7 +84,7 @@ const Progress = () => {
             }
           : {}),
       })),
-    [labels, data, mealTypeData],
+    [labels, data, rollingAvg, mealTypeData],
   );
 
   const macroChartData = useMemo(() => {
@@ -113,6 +115,20 @@ const Progress = () => {
       hips: m.hips !== undefined ? (displayUnit === "cm" ? m.hips : cmToIn(m.hips)) : undefined,
     }));
   }, [bodyMeasurements, displayUnit]);
+
+  const weightEntries = useMemo(
+    () => bodyMeasurements.filter((m) => m.weight !== undefined),
+    [bodyMeasurements],
+  );
+
+  const weightChartData = useMemo(
+    () =>
+      weightEntries.map((m) => ({
+        label: m.measuredAt.substring(5),
+        weight: Math.round(m.weight! * 10) / 10,
+      })),
+    [weightEntries],
+  );
 
   const pieData = useMemo(() => {
     if (!mealTypeData) return [];
@@ -284,7 +300,10 @@ const Progress = () => {
                     ))}
                   </ComposedChart>
                 ) : (
-                  <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <ComposedChart
+                    data={chartData}
+                    margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                  >
                     <CartesianGrid
                       strokeDasharray="4 4"
                       strokeWidth={0.5}
@@ -314,7 +333,16 @@ const Progress = () => {
                       fillOpacity={0.12}
                       strokeWidth={2}
                     />
-                  </AreaChart>
+                    <Line
+                      type="monotone"
+                      dataKey="rollingAvg"
+                      name="7-day avg"
+                      stroke={chartTheme.trend}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 2"
+                      dot={false}
+                    />
+                  </ComposedChart>
                 )}
               </ResponsiveContainer>
             </EditorialChartCard>
@@ -545,11 +573,18 @@ const Progress = () => {
         {bodyMeasurements.length < 2 ? (
           <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
             <SectionHeader title="Body Composition" className="col-span-12" accent />
-            <div className="col-span-12 border border-rule p-8 flex items-center gap-6">
-              <p className="font-sans text-base text-ink-soft">
-                Add at least 2 body measurements above to unlock your composition trend.
-              </p>
-              <span className="text-xs text-ink-soft/50 ml-auto">Log above</span>
+            <div className="col-span-12 border border-rule p-8 flex items-center gap-8">
+              <div className="w-20 shrink-0 opacity-30 text-ink" aria-hidden="true">
+                <BodyScale className="w-full h-auto" />
+              </div>
+              <div>
+                <p className="font-sans text-base text-ink-soft">
+                  Add at least 2 body measurements above to unlock your composition trend.
+                </p>
+                <p className="font-mono text-xs text-ink-soft/50 mt-2 uppercase tracking-wider">
+                  Log above - Body Measurements
+                </p>
+              </div>
             </div>
           </motion.section>
         ) : (
@@ -568,6 +603,126 @@ const Progress = () => {
                 </TabsList>
               </Tabs>
             </div>
+
+            {/* Before/Now delta strip */}
+            {(() => {
+              const first = bodyMeasurements[0]!;
+              const latest = bodyMeasurements[bodyMeasurements.length - 1]!;
+              const daysBetween = Math.round(
+                (new Date(latest.measuredAt).getTime() - new Date(first.measuredAt).getTime()) /
+                  86400000,
+              );
+              const weightDelta =
+                first.weight !== undefined && latest.weight !== undefined
+                  ? Math.round((latest.weight - first.weight) * 10) / 10
+                  : null;
+              const weightDeltaClass =
+                weightDelta === null || weightDelta === 0
+                  ? "text-ink"
+                  : tdeeProfile?.goal === "lose"
+                    ? weightDelta < 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-500"
+                    : tdeeProfile?.goal === "gain"
+                      ? weightDelta > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-500"
+                      : "text-ink";
+              const bodyFatDelta =
+                first.bodyFat !== undefined && latest.bodyFat !== undefined
+                  ? Math.round((latest.bodyFat - first.bodyFat) * 10) / 10
+                  : null;
+              return (
+                <div className="col-span-12 grid grid-cols-2 sm:grid-cols-4 border border-rule divide-y sm:divide-y-0 sm:divide-x divide-rule">
+                  {weightDelta !== null && (
+                    <div className="p-4">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft">
+                        Weight now
+                      </span>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="font-display text-2xl tabular-nums text-ink">
+                          {Math.round(latest.weight! * 10) / 10}
+                        </span>
+                        <span className="font-mono text-xs text-ink-soft">kg</span>
+                      </div>
+                      <p className={`font-mono text-xs mt-0.5 ${weightDeltaClass}`}>
+                        {weightDelta > 0 ? "+" : ""}
+                        {weightDelta} kg from start
+                      </p>
+                    </div>
+                  )}
+                  {bodyFatDelta !== null && (
+                    <div className="p-4">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft">
+                        Body fat now
+                      </span>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="font-display text-2xl tabular-nums text-ink">
+                          {latest.bodyFat}
+                        </span>
+                        <span className="font-mono text-xs text-ink-soft">%</span>
+                      </div>
+                      <p className="font-mono text-xs text-ink-soft/60 mt-0.5">
+                        from {first.bodyFat}%
+                      </p>
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft">
+                      Period tracked
+                    </span>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <span className="font-display text-2xl tabular-nums text-ink">
+                        {daysBetween}
+                      </span>
+                      <span className="font-mono text-xs text-ink-soft">days</span>
+                    </div>
+                    <p className="font-mono text-xs text-ink-soft/60 mt-0.5">
+                      {bodyMeasurements.length} measurements
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Weight trajectory chart */}
+            {weightEntries.length >= 2 && (
+              <div className="col-span-12" role="figure" aria-label="Weight trajectory chart">
+                <EditorialChartCard
+                  eyebrow={`${weightEntries.length} entries`}
+                  label="Weight Trajectory"
+                  height={220}
+                  raised
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={weightChartData}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="4 4"
+                        strokeWidth={0.5}
+                        stroke={chartTheme.grid}
+                      />
+                      <XAxis dataKey="label" tick={AXIS_TICK_STYLE} />
+                      <YAxis tick={AXIS_TICK_STYLE} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="weight"
+                        name="Weight (kg)"
+                        stroke={BODY_CHART_COLOR.weight}
+                        fill={BODY_CHART_COLOR.weight}
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: BODY_CHART_COLOR.weight }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </EditorialChartCard>
+              </div>
+            )}
+
             <div className="col-span-12" role="figure" aria-label="Body composition trend chart">
               <EditorialChartCard label="Body Composition" height={400} raised>
                 <ResponsiveContainer width="100%" height="100%">

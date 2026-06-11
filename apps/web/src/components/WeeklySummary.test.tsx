@@ -24,6 +24,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: true,
@@ -43,6 +44,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,
@@ -62,6 +64,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,
@@ -81,6 +84,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,
@@ -100,6 +104,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,
@@ -119,6 +124,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,
@@ -138,6 +144,7 @@ describe("WeeklySummary", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
       labels: [],
       data: [],
+      rollingAvg: [],
       mealTypeData: null,
       macroData: null,
       isLoading: false,

@@ -11,32 +11,35 @@ const Skeleton: FC<SkeletonProps> = ({ className }) => (
 
 export const DashboardSkeleton: FC = () => (
   <div className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14">
-    {/* Hero */}
-    <div className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash pb-8">
-      <div className="col-span-12 md:col-span-8 md:col-start-2 space-y-4">
-        <Skeleton className="h-[clamp(72px,11vw,120px)] w-1/2" />
-        <Skeleton className="h-[3px] w-full" />
+    {/* Hero - minimal placeholder; diary is primary */}
+    <div className="col-span-12 hero-wash pb-6">
+      <div className="space-y-3">
+        <Skeleton className="h-[clamp(48px,8vw,80px)] w-2/5" />
+        <Skeleton className="h-[2px] w-full" />
         <div className="flex gap-4">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-2 w-20" />
+          <Skeleton className="h-2 w-20" />
         </div>
       </div>
-      <div className="col-span-12 flex border-y border-rule/30">
+      <div className="mt-4 flex border-y border-rule/30">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="flex-1 px-4 py-3 space-y-2 border-l border-rule/30 first:border-l-0"
+            className="flex-1 px-4 py-2.5 space-y-1.5 border-l border-rule/30 first:border-l-0"
           >
-            <Skeleton className="h-2 w-14" />
-            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-2 w-12" />
+            <Skeleton className="h-5 w-16" />
           </div>
         ))}
       </div>
     </div>
-    {/* Log section */}
+    {/* Diary - primary content, shown prominently */}
     <div className="col-span-12 space-y-4">
-      <Skeleton className="h-5 w-32" />
-      {[1, 2, 3].map((i) => (
+      <div className="flex items-baseline gap-4 mb-2">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-2 w-16 ml-auto" />
+      </div>
+      {[1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="flex items-center gap-4 py-3 border-b border-rule/30">
           <Skeleton className="h-2 w-14" />
           <div className="flex-1 space-y-2">

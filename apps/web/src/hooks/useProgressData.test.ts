@@ -39,9 +39,45 @@ describe("useProgressData", () => {
     });
     expect(result.current).toHaveProperty("labels");
     expect(result.current).toHaveProperty("data");
+    expect(result.current).toHaveProperty("rollingAvg");
     expect(result.current).toHaveProperty("mealTypeData");
     expect(result.current).toHaveProperty("macroData");
     expect(result.current).toHaveProperty("isLoading");
+  });
+
+  it("should return rollingAvg as an array of the same length as data", async () => {
+    const { result } = renderHook(() => useProgressData(7));
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(Array.isArray(result.current.rollingAvg)).toBe(true);
+    expect(result.current.rollingAvg).toHaveLength(result.current.data.length);
+  });
+
+  it("should compute 7-day trailing average for today's calories", async () => {
+    const today = new Date().toISOString().split("T")[0]!;
+    vi.mocked(dbService).getAllFoodLogs.mockResolvedValue([
+      {
+        id: FoodItemId(1),
+        userId,
+        name: "Meal",
+        calories: 700,
+        servingSize: 1,
+        dateLogged: ISODate(today),
+        mealType: "Dinner",
+        isFavorite: false,
+      } as unknown as FoodItem,
+    ]);
+
+    const { result } = renderHook(() => useProgressData(7));
+    await waitFor(() => {
+      expect(result.current.rollingAvg.length).toBeGreaterThan(0);
+    });
+
+    // Last element of rollingAvg is today; only today has calories so the
+    // trailing average of [0,0,0,0,0,0,700] = round(700/7) = 100
+    const lastAvg = result.current.rollingAvg[result.current.rollingAvg.length - 1];
+    expect(lastAvg).toBe(100);
   });
 
   it("should return initial empty arrays", async () => {

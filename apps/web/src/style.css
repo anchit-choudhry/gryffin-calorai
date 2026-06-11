@@ -165,6 +165,59 @@ html.compact {
   --density-section-py: 1.5rem; /* py-6 */
 }
 
+html.spacious {
+  --density-gap: 5rem; /* gap-20 */
+  --density-section-py: 4rem; /* py-16 */
+}
+
+/* ---- Accent theme overrides — replace persimmon with seasonal palette variants ---- */
+/* Each class overrides --persimmon + --persimmon-soft in both light and dark modes.   */
+/* chart-goal is tied to var(--persimmon) via the shadcn --primary chain.              */
+
+html.accent-sage {
+  --persimmon: oklch(0.52 0.120 145);
+  --persimmon-soft: oklch(0.92 0.040 145);
+}
+
+html.accent-sage.dark,
+.dark html.accent-sage {
+  --persimmon: oklch(0.72 0.110 145);
+  --persimmon-soft: oklch(0.30 0.060 145);
+}
+
+html.accent-indigo {
+  --persimmon: oklch(0.52 0.140 270);
+  --persimmon-soft: oklch(0.91 0.045 270);
+}
+
+html.accent-indigo.dark,
+.dark html.accent-indigo {
+  --persimmon: oklch(0.70 0.120 270);
+  --persimmon-soft: oklch(0.30 0.070 270);
+}
+
+html.accent-amber {
+  --persimmon: oklch(0.55 0.150 75);
+  --persimmon-soft: oklch(0.93 0.045 75);
+}
+
+html.accent-amber.dark,
+.dark html.accent-amber {
+  --persimmon: oklch(0.76 0.130 75);
+  --persimmon-soft: oklch(0.30 0.070 75);
+}
+
+html.accent-rose {
+  --persimmon: oklch(0.56 0.165 5);
+  --persimmon-soft: oklch(0.92 0.050 5);
+}
+
+html.accent-rose.dark,
+.dark html.accent-rose {
+  --persimmon: oklch(0.74 0.150 5);
+  --persimmon-soft: oklch(0.30 0.070 5);
+}
+
 .dark {
   /* ---- Paper-grain (dark) — slightly higher opacity to read on warm-dark paper ---- */
   --grain-opacity: 0.045;

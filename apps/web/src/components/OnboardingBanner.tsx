@@ -22,16 +22,19 @@ const OnboardingBanner = ({ onOpenModal }: Props) => {
       transition={{ duration: 0.25 }}
     >
       <div className="flex-1 min-w-0">
-        <p className="font-sans text-sm font-semibold text-ink">Personalise your calorie goal</p>
+        <p className="font-sans text-sm font-semibold text-ink">
+          Private food tracking, no account needed
+        </p>
         <p className="font-sans text-xs text-ink-soft mt-0.5">
-          Set up your profile so your daily target reflects your body and goals.
+          Everything you log stays on this device - calibrate your daily calorie target in two
+          minutes.
         </p>
       </div>
       <Button
         onClick={onOpenModal}
         className="shrink-0 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-4 py-2 hover:bg-persimmon/90"
       >
-        Set up goals
+        Calibrate goals
       </Button>
       <button
         onClick={() => setDismissed(true)}

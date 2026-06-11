@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HardDrive, Lock, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,19 +82,60 @@ const OnboardingModal = ({ open, onClose }: Props) => {
   const [touchedHeight, setTouchedHeight] = useState(false);
   const [touchedWeight, setTouchedWeight] = useState(false);
 
-  const handleNextStep0 = async () => {
+  const handleNextStep1 = async () => {
     const ok = await form.trigger(["age", "sex", "heightDisplay", "weightDisplay"]);
     if (ok) nextStep();
   };
 
-  const handleNextStep1 = async () => {
+  const handleNextStep2 = async () => {
     const ok = await form.trigger(["activityLevel"]);
     if (ok) nextStep();
   };
 
-  const handleNextStep2 = async () => {
+  const handleNextStep3 = async () => {
     const ok = await form.trigger(["goal"]);
     if (ok) nextStep();
+  };
+
+  const getNextHandler = () => {
+    if (step === 1) return handleNextStep1;
+    if (step === 2) return handleNextStep2;
+    return handleNextStep3;
+  };
+
+  const renderForwardButton = () => {
+    if (step === 0) {
+      return (
+        <Button
+          type="button"
+          onClick={nextStep}
+          className="bg-ink text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-6 py-2 hover:bg-ink/90"
+        >
+          Get started
+        </Button>
+      );
+    }
+    if (step < totalSteps - 1) {
+      return (
+        <Button
+          type="button"
+          onClick={getNextHandler()}
+          className="bg-ink text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-6 py-2 hover:bg-ink/90"
+        >
+          Continue
+        </Button>
+      );
+    }
+    return (
+      <Button
+        type="button"
+        onClick={submit}
+        disabled={isLoading}
+        className="bg-persimmon text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-6 py-2 hover:bg-persimmon/90"
+      >
+        {isLoading ? "Saving..." : "Save goals"}
+      </Button>
+    );
   };
 
   return (
@@ -109,11 +151,40 @@ const OnboardingModal = ({ open, onClose }: Props) => {
 
         <Form {...form}>
           <form className="space-y-5">
-            {/* Step 0: Body basics */}
+            {/* Step 0: Welcome - privacy-forward */}
             {step === 0 && (
+              <div className="space-y-5">
+                <ul className="space-y-3">
+                  {(
+                    [
+                      {
+                        Icon: HardDrive,
+                        text: "Offline-first - data lives on your device, never uploaded without consent.",
+                      },
+                      { Icon: User, text: "No account required - start logging right away." },
+                      {
+                        Icon: Lock,
+                        text: "Private by design - export or wipe at any time.",
+                      },
+                    ] as const
+                  ).map(({ Icon, text }) => (
+                    <li key={text} className="flex items-start gap-3">
+                      <Icon className="mt-0.5 size-4 shrink-0 text-persimmon" aria-hidden="true" />
+                      <span className="font-sans text-sm text-ink">{text}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-ink-soft/60 pt-1">
+                  Two minutes to calibrate
+                </p>
+              </div>
+            )}
+
+            {/* Step 1: Body basics */}
+            {step === 1 && (
               <div className="space-y-4">
                 <p className="font-sans text-sm text-ink-soft">
-                  Enter your body measurements to calculate your metabolism.
+                  Enter your measurements to calibrate your metabolic baseline.
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -298,8 +369,8 @@ const OnboardingModal = ({ open, onClose }: Props) => {
               </div>
             )}
 
-            {/* Step 1: Activity level */}
-            {step === 1 && (
+            {/* Step 2: Activity level */}
+            {step === 2 && (
               <div className="space-y-3">
                 <p className="font-sans text-sm text-ink-soft">
                   How active are you on a typical week?
@@ -343,8 +414,8 @@ const OnboardingModal = ({ open, onClose }: Props) => {
               </div>
             )}
 
-            {/* Step 2: Goal */}
-            {step === 2 && (
+            {/* Step 3: Goal */}
+            {step === 3 && (
               <div className="space-y-3">
                 <p className="font-sans text-sm text-ink-soft">What is your primary goal?</p>
                 <FormField
@@ -384,11 +455,11 @@ const OnboardingModal = ({ open, onClose }: Props) => {
               </div>
             )}
 
-            {/* Step 3: Review */}
-            {step === 3 && (
+            {/* Step 4: Review */}
+            {step === 4 && (
               <div className="space-y-4">
                 <p className="font-sans text-sm text-ink-soft">
-                  Here is your personalised plan based on your inputs.
+                  Your calibrated daily target, derived from the Mifflin-St Jeor formula.
                 </p>
                 <div className="border border-rule divide-y divide-rule">
                   {[
@@ -433,26 +504,7 @@ const OnboardingModal = ({ open, onClose }: Props) => {
               ) : (
                 <div />
               )}
-              {step < totalSteps - 1 ? (
-                <Button
-                  type="button"
-                  onClick={
-                    step === 0 ? handleNextStep0 : step === 1 ? handleNextStep1 : handleNextStep2
-                  }
-                  className="bg-ink text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-6 py-2 hover:bg-ink/90"
-                >
-                  Continue
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={submit}
-                  disabled={isLoading}
-                  className="bg-persimmon text-paper font-mono text-[10px] uppercase tracking-wider rounded-none h-auto px-6 py-2 hover:bg-persimmon/90"
-                >
-                  {isLoading ? "Saving..." : "Save goals"}
-                </Button>
-              )}
+              {renderForwardButton()}
             </div>
           </form>
         </Form>

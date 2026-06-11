@@ -45,6 +45,7 @@ import { EmptyState } from "../components/EmptyState";
 import { EmptyPlate } from "../components/illustrations";
 import { Button } from "@/components/ui/button";
 import { useFastingTimer } from "../hooks/useFastingTimer";
+import { useWeeklyHarvestTrigger } from "../hooks/useWeeklyHarvestTrigger";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 
@@ -74,7 +75,11 @@ const Dashboard = () => {
   const [showTrackers, setShowTrackers] = useState(false);
   const [logFilter, setLogFilter] = useState<MealType | "All">("All");
   const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [harvestOpen, setHarvestOpen] = useState(false);
+  const [harvestForceOpen, setHarvestForceOpen] = useState(false);
+  const [isMultiSelect, setIsMultiSelect] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [multiSelectMealType, setMultiSelectMealType] = useState<MealType>("Breakfast");
+  const { shouldOpenThisSession, markSeen } = useWeeklyHarvestTrigger();
   const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
   const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
   const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
@@ -138,6 +143,46 @@ const Dashboard = () => {
   const groupedLogs = useMemo(() => groupLogsByMeal(filteredLogs), [filteredLogs]);
   const recentFoods = useMemo(() => allFoodItems.slice(0, 8), [allFoodItems]);
 
+  const toggleChipSelection = useCallback((key: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleMultiLog = useCallback(async () => {
+    if (!userId || selectedIds.size === 0) return;
+    const toLog = recentFoods.filter((item) => selectedIds.has(String(item.id ?? item.name)));
+    await Promise.all(
+      toLog.map((item) =>
+        addFoodLog({
+          userId,
+          name: item.name,
+          calories: item.calories,
+          servingSize: item.servingSize,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          dateLogged: todayISO(),
+          isFavorite: false,
+          mealType: multiSelectMealType,
+        }),
+      ),
+    );
+    setSelectedIds(new Set());
+    setIsMultiSelect(false);
+  }, [userId, selectedIds, recentFoods, addFoodLog, multiSelectMealType]);
+
+  const cancelMultiSelect = useCallback(() => {
+    setSelectedIds(new Set());
+    setIsMultiSelect(false);
+  }, []);
+
   const totalWaterMl = useMemo(
     () => dailyWaterLogs.reduce((s, l) => s + l.amount, 0),
     [dailyWaterLogs],
@@ -173,6 +218,9 @@ const Dashboard = () => {
 
   const { currentStreak } = useStreaks();
   const { daysOnTarget } = useWeeklySummary();
+
+  const harvestOpen =
+    harvestForceOpen || (init.status === "ready" && shouldOpenThisSession && daysOnTarget > 0);
 
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
   const allInsights = useDashboardInsights({
@@ -244,7 +292,13 @@ const Dashboard = () => {
       </Dialog>
 
       <OnboardingModal open={onboardingOpen} onClose={closeOnboarding} />
-      <WeeklyHarvestModal open={harvestOpen} onClose={() => setHarvestOpen(false)} />
+      <WeeklyHarvestModal
+        open={harvestOpen}
+        onClose={() => {
+          markSeen();
+          setHarvestForceOpen(false);
+        }}
+      />
 
       <motion.main
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
@@ -416,11 +470,11 @@ const Dashboard = () => {
                 <div className="border border-rule/40">
                   <EmptyState
                     illustration={<EmptyPlate className="w-full h-full" />}
-                    eyebrow="Today's Log"
-                    heading="Nothing logged yet"
-                    body="Start tracking your meals to see your calorie and macro breakdown."
+                    eyebrow="Today's Ledger"
+                    heading="No entries recorded"
+                    body="Open today's record with your first meal. Your daily harvest begins here."
                     variant="illustrated"
-                    action={{ label: "+ Log First Meal", onClick: openQuickAdd }}
+                    action={{ label: "Begin Today's Record", onClick: openQuickAdd }}
                   />
                 </div>
               )}
@@ -514,19 +568,83 @@ const Dashboard = () => {
             {/* Section: Recently Logged */}
             {hasRecentFoods && (
               <motion.section className="col-span-12" {...sv}>
-                <SectionHeader kicker="Quick add" title="Recently Logged" />
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
-                  {recentFoods.map((item) => (
+                <div className="flex items-center gap-3">
+                  <SectionHeader kicker="Quick add" title="Recently Logged" />
+                  {!isMultiSelect ? (
                     <button
-                      key={item.id ?? item.name}
                       type="button"
-                      onClick={() => void handleQuickAdd(item)}
-                      className="shrink-0 snap-start border border-rule px-4 py-2 text-sm text-ink-soft transition-colors hover:border-ink hover:bg-paper-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                      onClick={() => setIsMultiSelect(true)}
+                      className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                     >
-                      {item.name} · {item.calories} kcal
+                      Select
                     </button>
-                  ))}
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={cancelMultiSelect}
+                      className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
+                  {recentFoods.map((item) => {
+                    const key = String(item.id ?? item.name);
+                    const isSelected = selectedIds.has(key);
+                    return isMultiSelect ? (
+                      <button
+                        key={key}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={isSelected}
+                        aria-label={item.name}
+                        onClick={() => toggleChipSelection(key)}
+                        className={cn(
+                          "shrink-0 snap-start border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1",
+                          isSelected
+                            ? "border-persimmon bg-persimmon-soft text-ink"
+                            : "border-rule text-ink-soft hover:border-ink hover:bg-paper-muted hover:text-ink",
+                        )}
+                      >
+                        {item.name} · {item.calories} kcal
+                      </button>
+                    ) : (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => void handleQuickAdd(item)}
+                        className="shrink-0 snap-start border border-rule px-4 py-2 text-sm text-ink-soft transition-colors hover:border-ink hover:bg-paper-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                      >
+                        {item.name} · {item.calories} kcal
+                      </button>
+                    );
+                  })}
+                </div>
+                {isMultiSelect && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <select
+                      aria-label="Meal type"
+                      value={multiSelectMealType}
+                      onChange={(e) => setMultiSelectMealType(e.target.value as MealType)}
+                      className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule bg-paper px-2 py-1.5 text-ink focus:outline-none focus:ring-2 focus:ring-persimmon focus:ring-offset-1"
+                    >
+                      {MEAL_TYPES.map((mt) => (
+                        <option key={mt} value={mt}>
+                          {mt}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={selectedIds.size === 0}
+                      onClick={() => void handleMultiLog()}
+                      className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule px-3 py-1.5 text-ink transition-colors hover:border-persimmon hover:text-persimmon disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                    >
+                      Log {selectedIds.size} items
+                    </button>
+                  </div>
+                )}
               </motion.section>
             )}
 
@@ -573,7 +691,10 @@ const Dashboard = () => {
                 <SectionHeader kicker="Weekly overview" title="The Week in Review" />
                 <button
                   type="button"
-                  onClick={() => setHarvestOpen(true)}
+                  onClick={() => {
+                    markSeen();
+                    setHarvestForceOpen(true);
+                  }}
                   className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   Review Week

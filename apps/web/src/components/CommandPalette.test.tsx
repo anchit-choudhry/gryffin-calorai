@@ -221,10 +221,29 @@ describe("CommandPalette", () => {
       expect(onAction).toHaveBeenCalledWith("speak");
     });
 
-    it("clicking Pick a Date closes the palette", () => {
+    it("clicking Pick a Date opens the inline date picker", () => {
       setup();
       fireEvent.click(screen.getByText("Pick a Date"));
-      expect(useAppState.getState().commandPaletteOpen).toBe(false);
+      expect(screen.getByLabelText("Pick a date")).toBeTruthy();
+      expect(useAppState.getState().commandPaletteOpen).toBe(true);
+    });
+
+    it("Back to commands button closes the inline date picker", () => {
+      setup();
+      fireEvent.click(screen.getByText("Pick a Date"));
+      expect(screen.getByLabelText("Pick a date")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Back to commands" }));
+      expect(screen.getByRole("searchbox")).toBeTruthy();
+    });
+
+    it("changing date input sets selected date and closes palette", async () => {
+      setup();
+      fireEvent.click(screen.getByText("Pick a Date"));
+      const dateInput = screen.getByLabelText("Pick a date");
+      fireEvent.change(dateInput, { target: { value: "2026-01-15" } });
+      await waitFor(() => {
+        expect(useAppState.getState().selectedDate).toBe("2026-01-15");
+      });
     });
 
     it("hovering an option updates the active index", () => {

@@ -27,10 +27,10 @@ describe("SyncStatusChip", () => {
     );
   });
 
-  it("returns null when not authenticated", () => {
+  it("shows saved locally badge when not authenticated", () => {
     mockIsAuthenticated.mockReturnValue(false);
-    const { container } = render(<SyncStatusChip />);
-    expect(container.firstChild).toBeNull();
+    render(<SyncStatusChip />);
+    expect(screen.getByText("Saved locally")).toBeTruthy();
   });
 
   it("shows 'Not signed in' label for idle status", () => {

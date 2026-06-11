@@ -15,7 +15,12 @@ const ChartTooltip = ({ label, payload }: ChartTooltipProps) => (
     }}
   >
     {label && (
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mb-1">{label}</p>
+      <>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft mb-1.5">
+          {label}
+        </p>
+        {payload && payload.length > 0 && <div className="h-px bg-rule/40 mb-1.5" />}
+      </>
     )}
     {payload?.map((p) => (
       <p key={String(p.name)} className="tabular-nums flex items-baseline gap-2">

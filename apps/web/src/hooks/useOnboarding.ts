@@ -5,7 +5,7 @@ import { type TdeeProfileFormValues, TdeeProfileSchema } from "../forms/schemas"
 import { useAppState } from "../state/AppState";
 import { inToCm, lbToKg, type LengthUnit, type WeightUnit } from "@/types";
 
-export const ONBOARDING_TOTAL_STEPS = 4;
+export const ONBOARDING_TOTAL_STEPS = 5;
 
 export interface UseOnboardingReturn {
   step: number;

@@ -1,4 +1,4 @@
-import { Cloud, CloudOff, Loader, WifiOff } from "lucide-react";
+import { Cloud, CloudOff, HardDrive, Loader, WifiOff } from "lucide-react";
 import { useAppState } from "../state/AppState";
 import { isAuthenticated } from "../lib/apiClient";
 import type { SyncStatus } from "../state/slices/syncSlice";
@@ -11,12 +11,22 @@ const BASE_LABELS: Record<SyncStatus, string> = {
   error: "Sync error",
 };
 
+const CHIP_CLS =
+  "hidden md:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft select-none";
+
 export function SyncStatusChip() {
   const syncStatus = useAppState((s) => s.syncStatus);
   const lastSyncedAt = useAppState((s) => s.lastSyncedAt);
   const pendingSyncCount = useAppState((s) => s.pendingSyncCount);
 
-  if (!isAuthenticated()) return null;
+  if (!isAuthenticated()) {
+    return (
+      <span className={CHIP_CLS} aria-label="Data saved locally">
+        <HardDrive className="size-3 text-ink-soft/60" aria-hidden={true} />
+        Saved locally
+      </span>
+    );
+  }
 
   const baseLabel = BASE_LABELS[syncStatus];
   const label =
@@ -29,11 +39,7 @@ export function SyncStatusChip() {
       : label;
 
   return (
-    <span
-      title={title}
-      aria-label={title}
-      className="hidden md:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft select-none"
-    >
+    <span title={title} aria-label={title} className={CHIP_CLS}>
       {syncStatus === "syncing" && (
         <Loader className="size-3 animate-spin text-persimmon" aria-hidden={true} />
       )}

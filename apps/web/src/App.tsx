@@ -89,6 +89,7 @@ function App() {
   const closeQuickAdd = useAppState((s) => s.closeQuickAdd);
   const openCommandPalette = useAppState((s) => s.openCommandPalette);
   const density = useAppState((s) => s.density);
+  const accentTheme = useAppState((s) => s.accentTheme);
 
   useLayoutEffect(() => {
     if (darkMode) {
@@ -99,12 +100,25 @@ function App() {
   }, [darkMode]);
 
   useLayoutEffect(() => {
+    document.documentElement.classList.remove("compact", "spacious");
     if (density === "compact") {
       document.documentElement.classList.add("compact");
-    } else {
-      document.documentElement.classList.remove("compact");
+    } else if (density === "spacious") {
+      document.documentElement.classList.add("spacious");
     }
   }, [density]);
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.remove(
+      "accent-sage",
+      "accent-indigo",
+      "accent-amber",
+      "accent-rose",
+    );
+    if (accentTheme !== "persimmon") {
+      document.documentElement.classList.add(`accent-${accentTheme}`);
+    }
+  }, [accentTheme]);
 
   useEffect(() => {
     const setupApp = async () => {

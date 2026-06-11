@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOUR_STEPS, TOUR_TOTAL_STEPS } from "./tourSteps";
+import { CONTEXTUAL_COACHMARKS, TOUR_STEPS, TOUR_TOTAL_STEPS } from "./tourSteps";
 
 const pageContentsMap = import.meta.glob("../../pages/*.tsx", {
   query: "?raw",
@@ -33,6 +33,26 @@ describe("TOUR_STEPS", () => {
 
   it("step ids are unique", () => {
     const ids = TOUR_STEPS.map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("CONTEXTUAL_COACHMARKS", () => {
+  it("is a non-empty array", () => {
+    expect(CONTEXTUAL_COACHMARKS).toBeInstanceOf(Array);
+    expect(CONTEXTUAL_COACHMARKS.length).toBeGreaterThan(0);
+  });
+
+  it("all coachmarks have required fields", () => {
+    for (const coachmark of CONTEXTUAL_COACHMARKS) {
+      expect(coachmark.id).toBeTruthy();
+      expect(coachmark.title).toBeTruthy();
+      expect(coachmark.body).toBeTruthy();
+    }
+  });
+
+  it("coachmark ids are unique", () => {
+    const ids = CONTEXTUAL_COACHMARKS.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 });

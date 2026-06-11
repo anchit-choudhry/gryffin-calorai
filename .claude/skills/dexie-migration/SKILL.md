@@ -24,7 +24,7 @@ Ask the user:
 Read `apps/web/src/db/dbService.ts` and find the highest `db.version(N)` call. The new version is
 N+1.
 
-Current schema is v19 (B4 Cloud Sync baseline). Update the `DB_SCHEMA_VERSION` constant if one
+Current schema is v19 (cloud sync baseline). Update the `DB_SCHEMA_VERSION` constant if one
 exists; otherwise track manually.
 
 ## Step 3 - Copy the full stores schema

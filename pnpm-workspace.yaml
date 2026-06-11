@@ -32,8 +32,8 @@ blockExoticSubdeps: true
 # Dependency resolution overrides
 # Forces packages depending on reselect@5.1.1 to use 5.1.0 instead
 overrides:
-  "@trickfilm400/rollup-plugin-off-main-thread": "2.4.0"
-  reselect: "5.1.0"
+  "@trickfilm400/rollup-plugin-off-main-thread": "2.5.0"
+  reselect: "5.2.0"
 
 # Verify the integrity of every package in the content-addressable store before
 # linking it into node_modules. Guards against store corruption or tampering

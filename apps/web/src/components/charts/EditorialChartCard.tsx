@@ -3,7 +3,10 @@ import type { FC, ReactNode } from "react";
 type ChartType = "line" | "bar" | "pie";
 
 interface Props {
+  /** Spectral serif title rendered below the eyebrow. */
   label?: string;
+  /** Mono micro-label shown above the serif title (e.g. "Last 30 days"). */
+  eyebrow?: string;
   height?: number;
   raised?: boolean;
   isLoading?: boolean;
@@ -55,6 +58,7 @@ function ChartSkeleton({ chartType }: { chartType: ChartType }) {
 
 const EditorialChartCard: FC<Props> = ({
   label,
+  eyebrow,
   height = 400,
   raised = false,
   isLoading,
@@ -64,11 +68,14 @@ const EditorialChartCard: FC<Props> = ({
   children,
 }) => (
   <div className={`@container border border-rule ${raised ? "bg-paper-raised" : ""}`}>
-    {label && (
-      <div className="px-5 pt-3 pb-2 border-b border-rule">
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
-          {label}
-        </span>
+    {(label || eyebrow) && (
+      <div className="px-5 pt-4 pb-3 border-b border-rule">
+        {eyebrow && (
+          <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft/70 mb-1">
+            {eyebrow}
+          </span>
+        )}
+        {label && <h3 className="editorial-serif text-sm font-semibold text-ink">{label}</h3>}
       </div>
     )}
     <div className="p-4 @[400px]:p-6 text-ink-soft relative" style={{ height }}>

@@ -80,3 +80,27 @@ export const TOUR_STEPS: TourStep[] = [
 ];
 
 export const TOUR_TOTAL_STEPS = TOUR_STEPS.length;
+
+export interface ContextualCoachmarkDef {
+  id: string;
+  title: string;
+  body: string;
+}
+
+export const CONTEXTUAL_COACHMARKS: ContextualCoachmarkDef[] = [
+  {
+    id: "food-logger",
+    title: "Log a meal three ways",
+    body: "Type it, scan a barcode, or speak it - the input bar above the log accepts all three.",
+  },
+  {
+    id: "water-tracker",
+    title: "One-tap hydration logging",
+    body: "Tap +250, +500, or +750 to log water instantly. Tap the ml counter to edit your daily goal.",
+  },
+  {
+    id: "command-palette",
+    title: "Keyboard shortcut",
+    body: "Press Cmd+K (Mac) or Ctrl+K (Windows) to open the command palette from anywhere.",
+  },
+];

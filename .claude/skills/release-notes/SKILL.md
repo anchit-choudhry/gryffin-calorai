@@ -59,12 +59,11 @@ Use this exact structure:
 
 ## Overview
 
-<2-4 sentences describing the main themes of this release. Name the milestone codes (e.g. B5, M1) if
-applicable.>
+<2-4 sentences describing the main themes of this release.>
 
 ---
 
-## <Feature Group Name> (<Milestone Code if applicable>)
+## <Feature Group Name>
 
 ### Backend - <Complete | In Progress | Planned> (<Month DD, YYYY>)
 
@@ -123,9 +122,10 @@ changes, etc. Omit section if none.>
 
 - No en-dashes or em-dashes - use regular dash `-`
 - No PII (email, phone, address)
+- No internal planning codes (workstream codes like "WS A", milestone codes like "B4", sprint codes
+  like "TC1") - use descriptive feature names instead (e.g. "Cloud Sync", "AI Photo Logging")
 - Dates: `Month DD, YYYY` (e.g. `May 26, 2026`) or `Q? YYYY` for planned
 - DB schema line always has both frontend (IndexedDB v) and backend (Flyway migration v)
-- Milestone codes (B1-B5, M0-M2, W1-W3, F14, etc.) appear in headers when applicable
 - File paths in backticks: `` `apps/web/src/lib/apiClient.ts` ``
 - Backend Flyway migration names in backticks: `` `V5__feature_name.sql` ``
 - Status fields are exactly one of: `In Progress`, `Major Release`, `Minor Release`, `Patch Release`

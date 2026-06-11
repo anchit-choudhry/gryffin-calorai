@@ -19,6 +19,7 @@ interface MacroData {
 export function useProgressData(days: 7 | 30 = 7): {
   labels: string[];
   data: number[];
+  rollingAvg: number[];
   mealTypeData: MealTypeData | null;
   macroData: MacroData | null;
   isLoading: boolean;
@@ -26,6 +27,7 @@ export function useProgressData(days: 7 | 30 = 7): {
   const { userId } = useAppState();
   const [labels, setLabels] = useState<string[]>([]);
   const [data, setData] = useState<number[]>([]);
+  const [rollingAvg, setRollingAvg] = useState<number[]>([]);
   const [mealTypeData, setMealTypeData] = useState<MealTypeData | null>(null);
   const [macroData, setMacroData] = useState<MacroData | null>(null);
   const [isLoading, setIsLoading] = useState(!userId);
@@ -81,8 +83,16 @@ export function useProgressData(days: 7 | 30 = 7): {
           calorieTotals.push(totalsMap.get(iso) ?? 0);
         }
 
+        // 7-day trailing average for each date point (smooths calorie trend)
+        const rollingAvgValues = calorieTotals.map((_, idx) => {
+          const windowStart = Math.max(0, idx - 6);
+          const slice = calorieTotals.slice(windowStart, idx + 1);
+          return Math.round(slice.reduce((a, b) => a + b, 0) / slice.length);
+        });
+
         setLabels(dateLabels);
         setData(calorieTotals);
+        setRollingAvg(rollingAvgValues);
 
         // Only build mealTypeData and macroData for 7-day view
         if (days === 7) {
@@ -128,5 +138,5 @@ export function useProgressData(days: 7 | 30 = 7): {
     };
   }, [userId, days]);
 
-  return { labels, data, mealTypeData, macroData, isLoading };
+  return { labels, data, rollingAvg, mealTypeData, macroData, isLoading };
 }

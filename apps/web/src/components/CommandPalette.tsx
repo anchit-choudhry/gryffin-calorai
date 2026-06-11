@@ -77,11 +77,13 @@ export function CommandPalette({
   const listId = useId();
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const close = useCallback(() => {
     closeCommandPalette();
     setQuery("");
     setActiveIndex(0);
+    setShowDatePicker(false);
   }, [closeCommandPalette]);
 
   useEffect(() => {
@@ -267,7 +269,7 @@ export function CommandPalette({
         keywords: "calendar go to date past",
         category: "Date",
         Icon: Calendar,
-        onSelect: () => close(),
+        onSelect: () => setShowDatePicker(true),
       },
     ],
     [close, onNavigate, onAction, onToggleDark, onToggleHelp, prevDay, nextDay, goToToday],
@@ -395,116 +397,148 @@ export function CommandPalette({
                 }
               >
                 {/* Search input */}
-                <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
-                  <Search className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    role="searchbox"
-                    aria-label="Search commands"
-                    placeholder="Search commands, foods, navigate..."
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      setActiveIndex(0);
-                    }}
-                    onKeyDown={onKeyDown}
-                    className="flex-1 bg-transparent font-sans text-sm text-ink placeholder:text-ink-soft/60 focus:outline-none"
-                  />
-                  {query && (
+                {showDatePicker ? (
+                  <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
+                    <Calendar className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
+                    <input
+                      type="date"
+                      aria-label="Pick a date"
+                      max={todayISO()}
+                      defaultValue={selectedDate}
+                      autoFocus={true}
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        void setSelectedDate(ISODate(e.target.value));
+                        close();
+                      }}
+                      className="flex-1 bg-transparent font-sans text-sm text-ink focus:outline-none"
+                    />
                     <button
                       type="button"
-                      onClick={() => {
-                        setQuery("");
-                        setActiveIndex(0);
-                        inputRef.current?.focus();
-                      }}
-                      aria-label="Clear search"
+                      onClick={() => setShowDatePicker(false)}
+                      aria-label="Back to commands"
                       className="text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                     >
                       <X className="size-3.5" aria-hidden="true" />
                     </button>
-                  )}
-                  <kbd className="shrink-0 rounded border border-rule px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
-                    ESC
-                  </kbd>
-                </div>
+                    <kbd className="shrink-0 rounded border border-rule px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
+                      ESC
+                    </kbd>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 border-b border-rule px-4 py-3">
+                    <Search className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      role="searchbox"
+                      aria-label="Search commands"
+                      placeholder="Search commands, foods, navigate..."
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        setActiveIndex(0);
+                      }}
+                      onKeyDown={onKeyDown}
+                      className="flex-1 bg-transparent font-sans text-sm text-ink placeholder:text-ink-soft/60 focus:outline-none"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery("");
+                          setActiveIndex(0);
+                          inputRef.current?.focus();
+                        }}
+                        aria-label="Clear search"
+                        className="text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </button>
+                    )}
+                    <kbd className="shrink-0 rounded border border-rule px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
+                      ESC
+                    </kbd>
+                  </div>
+                )}
 
                 {/* Results */}
-                <div
-                  id={listId}
-                  role="listbox"
-                  aria-label="Commands"
-                  className="max-h-[60vh] overflow-y-auto py-1"
-                >
-                  {entries.length === 0 ? (
-                    <p className="px-4 py-6 text-center font-mono text-[10px] uppercase tracking-widest text-ink-soft">
-                      No results
-                    </p>
-                  ) : (
-                    Object.entries(grouped).map(([category, items]) => (
-                      <div key={category}>
-                        <div className="px-4 pb-1 pt-3">
-                          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft/60">
-                            {category}
-                          </span>
-                        </div>
-                        {items.map((entry) => {
-                          const globalIdx = entries.indexOf(entry);
-                          const isActive = globalIdx === safeActiveIndex;
-                          return (
-                            <div
-                              key={entry.id}
-                              id={`cp-item-${entry.id}`}
-                              role="option"
-                              aria-selected={isActive}
-                              onClick={entry.onSelect}
-                              onMouseEnter={() => setActiveIndex(globalIdx)}
-                              className={cn(
-                                "flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors",
-                                isActive ? "bg-persimmon/10" : "hover:bg-paper-muted",
-                              )}
-                            >
-                              {isFood(entry) ? (
-                                <>
-                                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-persimmon/10">
-                                    <Pencil
-                                      className="size-3.5 text-persimmon"
+                {!showDatePicker && (
+                  <div
+                    id={listId}
+                    role="listbox"
+                    aria-label="Commands"
+                    className="max-h-[60vh] overflow-y-auto py-1"
+                  >
+                    {entries.length === 0 ? (
+                      <p className="px-4 py-6 text-center font-mono text-[10px] uppercase tracking-widest text-ink-soft">
+                        No results
+                      </p>
+                    ) : (
+                      Object.entries(grouped).map(([category, items]) => (
+                        <div key={category}>
+                          <div className="px-4 pb-1 pt-3">
+                            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft/60">
+                              {category}
+                            </span>
+                          </div>
+                          {items.map((entry) => {
+                            const globalIdx = entries.indexOf(entry);
+                            const isActive = globalIdx === safeActiveIndex;
+                            return (
+                              <div
+                                key={entry.id}
+                                id={`cp-item-${entry.id}`}
+                                role="option"
+                                aria-selected={isActive}
+                                onClick={entry.onSelect}
+                                onMouseEnter={() => setActiveIndex(globalIdx)}
+                                className={cn(
+                                  "flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors",
+                                  isActive ? "bg-persimmon/10" : "hover:bg-paper-muted",
+                                )}
+                              >
+                                {isFood(entry) ? (
+                                  <>
+                                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-persimmon/10">
+                                      <Pencil
+                                        className="size-3.5 text-persimmon"
+                                        aria-hidden="true"
+                                      />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate font-sans text-sm font-medium text-ink">
+                                        {entry.label}
+                                      </p>
+                                      <p className="font-mono text-[10px] text-ink-soft">
+                                        {entry.sub}
+                                      </p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <entry.Icon
+                                      className="size-4 shrink-0 text-ink-soft"
                                       aria-hidden="true"
                                     />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate font-sans text-sm font-medium text-ink">
+                                    <span className="flex-1 font-sans text-sm text-ink">
                                       {entry.label}
-                                    </p>
-                                    <p className="font-mono text-[10px] text-ink-soft">
-                                      {entry.sub}
-                                    </p>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <entry.Icon
-                                    className="size-4 shrink-0 text-ink-soft"
-                                    aria-hidden="true"
-                                  />
-                                  <span className="flex-1 font-sans text-sm text-ink">
-                                    {entry.label}
-                                  </span>
-                                  {entry.shortcut && (
-                                    <kbd className="shrink-0 rounded border border-rule px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
-                                      {entry.shortcut}
-                                    </kbd>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))
-                  )}
-                </div>
+                                    </span>
+                                    {entry.shortcut && (
+                                      <kbd className="shrink-0 rounded border border-rule px-1.5 py-0.5 font-mono text-[10px] text-ink-soft">
+                                        {entry.shortcut}
+                                      </kbd>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
 
                 {/* Footer */}
                 <div className="flex items-center gap-4 border-t border-rule px-4 py-2">

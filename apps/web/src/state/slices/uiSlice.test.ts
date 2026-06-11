@@ -75,4 +75,124 @@ describe("uiSlice", () => {
       expect(store.getState().commandPaletteOpen).toBe(false);
     });
   });
+
+  describe("density", () => {
+    it("setDensity updates density and persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().setDensity("compact");
+      expect(store.getState().density).toBe("compact");
+      expect(localStorage.getItem("gc_density")).toBe("compact");
+    });
+
+    it("setDensity can switch back to comfortable", () => {
+      const store = makeStore();
+      store.getState().setDensity("compact");
+      store.getState().setDensity("comfortable");
+      expect(store.getState().density).toBe("comfortable");
+    });
+  });
+
+  describe("hapticsEnabled", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_haptics");
+    });
+
+    it("initializes hapticsEnabled as false", () => {
+      const store = makeStore();
+      expect(store.getState().hapticsEnabled).toBe(false);
+    });
+
+    it("setHapticsEnabled persists true to localStorage", () => {
+      const store = makeStore();
+      store.getState().setHapticsEnabled(true);
+      expect(store.getState().hapticsEnabled).toBe(true);
+      expect(localStorage.getItem("gc_haptics")).toBe("true");
+    });
+
+    it("setHapticsEnabled persists false to localStorage", () => {
+      const store = makeStore();
+      store.getState().setHapticsEnabled(true);
+      store.getState().setHapticsEnabled(false);
+      expect(store.getState().hapticsEnabled).toBe(false);
+      expect(localStorage.getItem("gc_haptics")).toBe("false");
+    });
+
+    it("loads hapticsEnabled true from localStorage on init", () => {
+      localStorage.setItem("gc_haptics", "true");
+      const store = makeStore();
+      expect(store.getState().hapticsEnabled).toBe(true);
+    });
+  });
+
+  describe("accentTheme", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_accent");
+    });
+
+    it("initializes accentTheme as 'persimmon'", () => {
+      const store = makeStore();
+      expect(store.getState().accentTheme).toBe("persimmon");
+    });
+
+    it("setAccentTheme updates accentTheme", () => {
+      const store = makeStore();
+      store.getState().setAccentTheme("sage");
+      expect(store.getState().accentTheme).toBe("sage");
+    });
+
+    it("setAccentTheme persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().setAccentTheme("indigo");
+      expect(localStorage.getItem("gc_accent")).toBe("indigo");
+    });
+
+    it("loads accentTheme from localStorage on init", () => {
+      localStorage.setItem("gc_accent", "amber");
+      const store = makeStore();
+      expect(store.getState().accentTheme).toBe("amber");
+    });
+
+    it("falls back to persimmon for unknown stored value", () => {
+      localStorage.setItem("gc_accent", "invalid-theme");
+      const store = makeStore();
+      expect(store.getState().accentTheme).toBe("persimmon");
+    });
+  });
+
+  describe("seenCoachmarks", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_seen_coachmarks");
+    });
+
+    it("initializes seenCoachmarks as empty array", () => {
+      const store = makeStore();
+      expect(store.getState().seenCoachmarks).toStrictEqual([]);
+    });
+
+    it("markCoachmarkSeen adds id to seenCoachmarks", () => {
+      const store = makeStore();
+      store.getState().markCoachmarkSeen("food-logger");
+      expect(store.getState().seenCoachmarks).toStrictEqual(["food-logger"]);
+    });
+
+    it("markCoachmarkSeen is idempotent for duplicate ids", () => {
+      const store = makeStore();
+      store.getState().markCoachmarkSeen("food-logger");
+      store.getState().markCoachmarkSeen("food-logger");
+      expect(store.getState().seenCoachmarks).toStrictEqual(["food-logger"]);
+    });
+
+    it("markCoachmarkSeen persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().markCoachmarkSeen("water-tracker");
+      expect(localStorage.getItem("gc_seen_coachmarks")).toBe(JSON.stringify(["water-tracker"]));
+    });
+
+    it("markCoachmarkSeen accumulates multiple distinct ids", () => {
+      const store = makeStore();
+      store.getState().markCoachmarkSeen("food-logger");
+      store.getState().markCoachmarkSeen("command-palette");
+      expect(store.getState().seenCoachmarks).toStrictEqual(["food-logger", "command-palette"]);
+    });
+  });
 });

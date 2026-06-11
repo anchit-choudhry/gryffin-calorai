@@ -85,12 +85,18 @@ export default defineConfig({
       injectRegister: "script",
       includeAssets: ["favicon.svg", "scarlet-gryffin.jpg"],
       manifest: {
+        id: "/gryffin-calorai/",
         name: "Gryffin Calorai",
         short_name: "Calorai",
         description: "Offline-first nutrition and calorie tracker. No accounts, no cloud.",
         theme_color: "#0A0A0A",
         background_color: "#E8E0D5",
         display: "standalone",
+        orientation: "portrait-primary",
+        start_url: "/gryffin-calorai/",
+        scope: "/gryffin-calorai/",
+        lang: "en",
+        categories: ["health", "fitness", "food"],
         icons: [
           {
             src: "scarlet-gryffin.jpg",
@@ -104,6 +110,15 @@ export default defineConfig({
             purpose: "any maskable",
           },
         ],
+        screenshots: [
+          {
+            src: "scarlet-gryffin.jpg",
+            sizes: "160x160",
+            type: "image/jpeg",
+            form_factor: "narrow",
+            label: "Dashboard - daily calorie tracking",
+          },
+        ],
       },
       workbox: {
         // Pre-cache all build outputs (JS chunks, CSS, HTML, static assets)
@@ -112,6 +127,18 @@ export default defineConfig({
         // Cache-first for all navigation since app is fully offline
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api\//],
+        // Serve app-shell immediately from cache; network updates in background
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-cache",
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
     {

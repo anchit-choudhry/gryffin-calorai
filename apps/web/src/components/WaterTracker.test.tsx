@@ -232,4 +232,31 @@ describe("WaterTracker", () => {
       expect(baseState.setWaterGoalMl).toHaveBeenCalledWith(250);
     });
   });
+
+  it("quick-add undo action calls deleteWaterLog with the new log id", async () => {
+    const mockDelete = vi.fn();
+    vi.mocked(appState).useAppState.mockReturnValue({
+      ...baseState,
+      deleteWaterLog: mockDelete,
+    } as unknown as ReturnType<typeof appState.useAppState>);
+    render(<WaterTracker />);
+    await act(async () => {
+      fireEvent.click(screen.getByText("+500"));
+    });
+    const toastArgs = vi.mocked(toast.success).mock.calls[0]!;
+    const options = toastArgs[1] as unknown as { action: { onClick: () => void } };
+    options.action.onClick();
+    expect(mockDelete).toHaveBeenCalledWith(WaterLogId(42));
+  });
+
+  it("custom submit calls submitWaterLog and hides the input on success", async () => {
+    render(<WaterTracker />);
+    fireEvent.click(screen.getByText("Custom"));
+    expect(screen.getByLabelText("Custom water amount in ml")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Add"));
+    });
+    expect(mockSubmitWaterLog).toHaveBeenCalled();
+    expect(screen.queryByLabelText("Custom water amount in ml")).toBeNull();
+  });
 });
