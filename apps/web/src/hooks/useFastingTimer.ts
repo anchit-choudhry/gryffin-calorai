@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { differenceInSeconds } from "date-fns";
 import { useAppState } from "../state/AppState";
 
 export interface FastingTimerState {
@@ -35,7 +34,9 @@ export function useFastingTimer(): FastingTimerState & {
     }
 
     const tick = () => {
-      const elapsed = differenceInSeconds(new Date(), new Date(activeFastingSession.startTime));
+      const elapsed = Math.floor(
+        (Date.now() - new Date(activeFastingSession.startTime).getTime()) / 1000,
+      );
       setElapsedSec(Math.max(0, elapsed));
     };
     tick();

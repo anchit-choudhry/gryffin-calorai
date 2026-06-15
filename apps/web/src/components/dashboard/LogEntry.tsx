@@ -73,11 +73,21 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
           {log.mealType ?? DEFAULT_MEAL_TYPE}
         </span>
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="font-sans text-base font-semibold text-ink truncate">{log.name}</p>
+          <div className="flex items-baseline gap-1 min-w-0">
+            <p className="font-sans text-base font-semibold text-ink truncate shrink-0 max-w-[60%]">
+              {log.name}
+            </p>
             {log.captureMethod && log.captureMethod !== "manual" && (
               <ProvenanceBadge method={log.captureMethod} />
             )}
+            <span
+              className="flex-1 self-end border-b border-dotted border-rule/40 mb-[3px] min-w-[8px]"
+              aria-hidden="true"
+            />
+            <span className="font-sans text-base font-semibold tabular-nums text-ink shrink-0">
+              {log.calories.toLocaleString()}
+              <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
+            </span>
           </div>
           <p className="font-mono text-[11px] text-ink-soft mt-0.5 tabular-nums">
             P {log.protein ?? 0}g · C {log.carbs ?? 0}g · F {log.fat ?? 0}g
@@ -86,10 +96,6 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
             )}
           </p>
         </div>
-        <span className="font-sans text-lg font-semibold tabular-nums text-ink shrink-0">
-          {log.calories.toLocaleString()}
-          <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
-        </span>
         {/* Mobile menu button — 44px touch target, hidden once container is wide enough */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}

@@ -3,6 +3,7 @@ import { useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FASTING_PRESETS } from "@/types";
+import { MoonPhase } from "@/components/icons/almanac/MoonPhase";
 import { useFastingTimer } from "../hooks/useFastingTimer";
 import { useAppState } from "../state/AppState";
 
@@ -55,7 +56,6 @@ const FastingTimer = () => {
     progress,
     isComplete,
     formattedElapsed,
-    formattedRemaining,
     startFasting,
     endFasting,
   } = useFastingTimer();
@@ -90,18 +90,19 @@ const FastingTimer = () => {
                 animate={!shouldReduceMotion}
               />
             </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+              <MoonPhase
+                progress={progress}
+                className={cn("size-10", isComplete ? "text-persimmon" : "text-ink")}
+              />
               <span
                 className={cn(
-                  "font-mono text-xs tabular-nums",
-                  isComplete ? "text-persimmon" : "text-ink",
+                  "font-mono text-[9px] tabular-nums leading-none",
+                  isComplete ? "text-persimmon" : "text-ink-soft",
                 )}
               >
                 {isComplete ? "Done!" : formattedElapsed}
               </span>
-              {!isComplete && (
-                <span className="font-mono text-[10px] text-ink-soft">{formattedRemaining}</span>
-              )}
             </div>
           </div>
 

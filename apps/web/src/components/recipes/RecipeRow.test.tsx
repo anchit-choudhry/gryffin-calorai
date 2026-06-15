@@ -63,4 +63,21 @@ describe("RecipeRow", () => {
     screen.getByRole("button", { name: /delete recipe chicken bowl/i }).click();
     expect(onDelete).toHaveBeenCalledWith(RecipeId(1));
   });
+
+  it("renders dot-leader span between name and calorie value", () => {
+    const { container } = render(
+      <RecipeRow recipe={baseRecipe} onEdit={vi.fn()} onDelete={vi.fn()} />,
+    );
+    const leader = container.querySelector('[aria-hidden="true"][class*="border-dotted"]');
+    expect(leader).toBeTruthy();
+  });
+
+  it("calorie value and name are in the same dot-leader row", () => {
+    render(<RecipeRow recipe={baseRecipe} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    const nameEl = screen.getByText("Chicken Bowl");
+    const caloriesEl = screen.getByText("350");
+    const nameParent = nameEl.closest("div");
+    const caloriesParent = caloriesEl.closest("div");
+    expect(nameParent).toBe(caloriesParent);
+  });
 });

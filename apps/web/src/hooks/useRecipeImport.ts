@@ -31,25 +31,53 @@ type UseRecipeImportReturn = {
 const CORS_PROXY = "https://corsproxy.io/?url=";
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+function isPrivateFirstOctet(a: number, b: number): boolean {
+  if (a === 127) return true;
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 0) return true;
+  return false;
+}
+
+/** Parses a single IP octet that may be decimal, hex (0x7f), or octal (0177). */
+function parseOctet(s: string): number {
+  if (/^0x[0-9a-f]+$/i.test(s)) return parseInt(s, 16);
+  if (s.startsWith("0") && s.length > 1) return parseInt(s, 8);
+  return Number(s);
+}
+
 function isBlockedHost(hostname: string): boolean {
   const h = hostname.toLowerCase();
   if (h === "localhost") return true;
   if (h === "[::1]" || h === "::1") return true;
   // IPv6-mapped IPv4 e.g. ::ffff:127.0.0.1 or [::ffff:7f00:1]
   if (h.startsWith("[::ffff:") || h.startsWith("::ffff:")) return true;
+
+  // Decimal single-segment IP: 2130706433 => 127.0.0.1
+  if (/^\d+$/.test(h)) {
+    const n = Number(h);
+    if (n >= 0 && n <= 0xffffffff) {
+      return isPrivateFirstOctet((n >>> 24) & 0xff, (n >>> 16) & 0xff);
+    }
+  }
+
+  // Hex single-segment IP: 0x7f000001 => 127.0.0.1
+  if (/^0x[0-9a-f]+$/i.test(h)) {
+    const n = parseInt(h, 16);
+    if (n >= 0 && n <= 0xffffffff) {
+      return isPrivateFirstOctet((n >>> 24) & 0xff, (n >>> 16) & 0xff);
+    }
+  }
+
   const parts = h.split(".");
   // Use >= 2 to catch short-notation IPs like 127.1 (resolves to 127.0.0.1 on most systems)
   const [first, second] = parts;
   if (first !== undefined && second !== undefined) {
-    // parseInt with radix 8 handles octal notation like 0177 → 127
-    const a = first.startsWith("0") ? parseInt(first, 8) : Number(first);
-    const b = second.startsWith("0") ? parseInt(second, 8) : Number(second);
-    if (a === 127) return true;
-    if (a === 10) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 0) return true;
+    const a = parseOctet(first);
+    const b = parseOctet(second);
+    return isPrivateFirstOctet(a, b);
   }
   return false;
 }

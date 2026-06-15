@@ -33,7 +33,7 @@ import KeyboardShortcutsOverlay from "./components/KeyboardShortcutsOverlay";
 import ProductTourOverlay from "./components/tour/ProductTourOverlay";
 import { HarvestStamp } from "./components/HarvestStamp";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "sonner";
+import { toast, Toaster } from "sonner";
 import { normalizeHash, type ValidHash } from "./lib/utils";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReminders } from "./hooks/useReminders";
@@ -127,6 +127,37 @@ function App() {
       const state = useAppState.getState();
       if (state.init.status === "ready" && !state.init.user.hasCompletedOnboarding) {
         state.startTour();
+      }
+
+      const rawHash = window.location.hash;
+      const qMark = rawHash.indexOf("?");
+      if (qMark !== -1) {
+        const basePart = rawHash.slice(0, qMark);
+        const queryStr = rawHash.slice(qMark + 1);
+        const params = new URLSearchParams(queryStr);
+        if (basePart === "#log" || basePart === "#/log") {
+          const water = params.get("water");
+          const steps = params.get("steps");
+          const sharedTitle = params.get("title") ?? params.get("text");
+          if (water !== null) {
+            const ml = parseInt(water, 10);
+            if (!isNaN(ml) && ml > 0) {
+              await useAppState.getState().addWaterLog(ml);
+              toast.success(`Logged ${ml} ml water`);
+            }
+          } else if (steps !== null) {
+            const count = parseInt(steps, 10);
+            if (!isNaN(count) && count > 0) {
+              await useAppState.getState().addStepLog(count);
+              toast.success(`Logged ${count.toLocaleString()} steps`);
+            }
+          } else if (sharedTitle) {
+            toast(`Shared: "${sharedTitle}" - add it via the food log`, {
+              duration: 6000,
+            });
+          }
+          window.location.hash = "#dashboard";
+        }
       }
     };
     setupApp();
@@ -316,6 +347,14 @@ function App() {
 
         <main id="main" className="pb-[calc(4rem+var(--safe-bottom))] md:pb-0">
           <ErrorBoundary>{page}</ErrorBoundary>
+          <footer
+            aria-hidden="true"
+            className="hidden md:flex items-center justify-center py-5 border-t border-rule/20"
+          >
+            <p className="font-mono text-[9px] uppercase tracking-[0.4em] text-ink-soft/30">
+              Gryffin Calorai · Field Journal · 2026
+            </p>
+          </footer>
         </main>
 
         {/* Mobile bottom navigation */}
@@ -371,7 +410,7 @@ function App() {
       <KeyboardShortcutsOverlay open={showShortcuts} onClose={closeShortcuts} />
       <ProductTourOverlay />
       <HarvestStamp />
-      <Toaster richColors />
+      <Toaster />
       <QuickAddModal onAction={handleAction} />
       <CommandPalette
         onNavigate={(hash) => navigate(normalizeHash(hash))}

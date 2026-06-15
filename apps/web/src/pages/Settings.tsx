@@ -5,7 +5,11 @@ import { Search } from "lucide-react";
 import { pageVariants, useSectionMotion } from "../lib/motionVariants";
 import SectionHeader from "../components/dashboard/SectionHeader";
 import GoalSettings from "../components/settings/GoalSettings";
+import { CustomMacroGoalsPanel } from "../components/settings/CustomMacroGoalsPanel";
 import DataExportPanel from "../components/DataExportPanel";
+import { CsvImportPanel } from "../components/settings/CsvImportPanel";
+import { AppleHealthImportPanel } from "../components/settings/AppleHealthImportPanel";
+import { PrivacyPanel } from "../components/settings/PrivacyPanel";
 import DietProfileEditor from "../components/DietProfileEditor";
 import RemindersSettings from "../components/RemindersSettings";
 import { CloudSyncPanel } from "../components/CloudSyncPanel";
@@ -15,7 +19,7 @@ import { cn } from "../lib/utils";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
-const APP_VERSION = "0.9.0";
+const APP_VERSION = "0.11.0";
 
 const DENSITY_OPTIONS: { value: Density; label: string; description: string }[] = [
   { value: "comfortable", label: "Comfortable", description: "Standard spacing" },
@@ -84,6 +88,14 @@ function useSettingsSections(): SettingsSection[] {
       keywords: ["diet", "preset", "vegan", "vegetarian", "keto", "restriction"],
       colSpan: "col-span-12 lg:col-span-8",
       content: <DietProfileEditor />,
+    },
+    {
+      id: "macro-goals",
+      group: "Logging",
+      title: "Macro Goals",
+      keywords: ["macros", "protein", "carbs", "fat", "custom", "goal", "target", "override"],
+      colSpan: "col-span-12 lg:col-span-4",
+      content: <CustomMacroGoalsPanel />,
     },
     {
       id: "reminders",
@@ -218,19 +230,59 @@ function useSettingsSections(): SettingsSection[] {
       content: <DataExportPanel />,
     },
     {
+      id: "csv-import",
+      group: "Data & Sync",
+      title: "CSV Import",
+      keywords: ["import", "csv", "myfitnesspal", "mfp", "cronometer", "loseit", "migrate"],
+      colSpan: "col-span-12 lg:col-span-6",
+      content: <CsvImportPanel />,
+    },
+    {
+      id: "apple-health-import",
+      group: "Data & Sync",
+      title: "Apple Health Import",
+      keywords: ["import", "apple", "health", "healthkit", "weight", "steps", "zip"],
+      colSpan: "col-span-12 lg:col-span-6",
+      content: <AppleHealthImportPanel />,
+    },
+    {
+      id: "privacy",
+      group: "Data & Sync",
+      title: "Privacy",
+      keywords: ["privacy", "data", "delete", "clear", "local", "storage", "gdpr", "wipe"],
+      colSpan: "col-span-12 lg:col-span-8",
+      content: <PrivacyPanel />,
+    },
+    {
       id: "about",
       group: "About",
       title: "About",
       keywords: ["about", "version", "github", "app"],
       colSpan: "col-span-12 lg:col-span-4",
       content: (
-        <div className="space-y-2">
-          <p className="font-mono text-[10px] text-ink-soft">
-            Version <span className="text-ink">{APP_VERSION}</span>
-          </p>
-          <p className="font-mono text-[10px] text-ink-soft">
-            Offline-first nutrition tracker. No accounts, no cloud, your data stays local.
-          </p>
+        <div className="space-y-4">
+          <p className="font-serif text-2xl font-light text-ink tracking-tight">Gryffin Calorai</p>
+          <div className="border border-rule/40 p-4 space-y-2">
+            <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-ink-soft/60 mb-3">
+              Field Journal - Colophon
+            </p>
+            {(
+              [
+                ["Edition", `v${APP_VERSION}`],
+                ["Storage", "Local - IndexedDB"],
+                ["Year", "2026"],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="flex items-end gap-1">
+                <span className="font-mono text-[10px] text-ink-soft shrink-0">{label}</span>
+                <span
+                  className="flex-1 self-end border-b border-dotted border-rule/40 mb-[2px] min-w-[8px]"
+                  aria-hidden="true"
+                />
+                <span className="font-mono text-[10px] text-ink shrink-0">{value}</span>
+              </div>
+            ))}
+          </div>
           <a
             href="https://github.com/anchit-choudhry/gryffin-calorai"
             target="_blank"

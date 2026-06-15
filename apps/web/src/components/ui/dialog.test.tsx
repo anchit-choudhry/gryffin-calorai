@@ -140,4 +140,44 @@ describe("Dialog UI components", () => {
     );
     expect(screen.getByText("Descriptive text content")).toBeTruthy();
   });
+
+  it("DialogContent has editorial squared styling (rounded-none, no shadow)", () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Title</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    const content = document.querySelector("[data-slot='dialog-content']");
+    expect(content?.className).toContain("rounded-none");
+    expect(content?.className).toContain("shadow-none");
+    expect(content?.className).toContain("bg-paper");
+  });
+
+  it("DialogContent renders 4 RuleCorner ornaments", () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Title</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    const content = document.querySelector("[data-slot='dialog-content']");
+    const svgs = content?.querySelectorAll("svg");
+    expect(svgs?.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("DialogTitle renders with serif font class", () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Serif Title</DialogTitle>
+        </DialogContent>
+      </Dialog>,
+    );
+    const title = document.querySelector("[data-slot='dialog-title']");
+    expect(title?.className).toContain("font-serif");
+    expect(title?.className).toContain("font-light");
+  });
 });

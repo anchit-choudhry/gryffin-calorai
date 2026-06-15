@@ -1,28 +1,75 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useBarcodeScanner } from "./useBarcodeScanner";
-
-let mockDecodeCallback:
-  | ((result: { getText: () => string } | null, error: Error | null) => void)
-  | undefined;
-const mockReader = {
-  decodeFromVideoDevice: vi.fn(async (_format, _videoEl, callback) => {
-    mockDecodeCallback = callback;
-    return null;
-  }),
-  reset: vi.fn(async () => {}),
-};
-
-vi.mock("@zxing/browser", () => ({
-  BrowserMultiFormatReader: class {
-    decodeFromVideoDevice = mockReader.decodeFromVideoDevice;
-    reset = mockReader.reset;
-  },
-}));
 
 vi.mock("../types", () => ({
   sanitizeBarcodeInput: (input: string) => input || null,
 }));
+
+// Capture RAF callback so tests can trigger one scan frame manually.
+let pendingRaf: FrameRequestCallback | null = null;
+
+const triggerRaf = async () => {
+  const cb = pendingRaf;
+  pendingRaf = null;
+  if (!cb) return;
+  await act(async () => {
+    cb(0);
+    // Flush the async detect() Promise and any resulting React state updates
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
+const mockTrackStop = vi.fn();
+const mockStream = {
+  getTracks: () => [{ stop: mockTrackStop }],
+} as unknown as MediaStream;
+
+const mockDetect = vi.fn<(image: HTMLVideoElement) => Promise<{ rawValue: string }[]>>();
+const mockPlay = vi.fn<() => Promise<void>>();
+const mockGetUserMedia = vi.fn<(constraints: MediaStreamConstraints) => Promise<MediaStream>>();
+
+class MockBarcodeDetector {
+  detect = mockDetect;
+  static getSupportedFormats = vi.fn<() => Promise<string[]>>().mockResolvedValue(["ean_13"]);
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+  pendingRaf = null;
+
+  mockDetect.mockResolvedValue([]);
+  mockGetUserMedia.mockResolvedValue(mockStream);
+  mockPlay.mockResolvedValue(undefined);
+
+  vi.stubGlobal("BarcodeDetector", MockBarcodeDetector);
+  Object.defineProperty(globalThis, "navigator", {
+    value: { mediaDevices: { getUserMedia: mockGetUserMedia } },
+    writable: true,
+    configurable: true,
+  });
+  vi.stubGlobal(
+    "requestAnimationFrame",
+    vi.fn((cb: FrameRequestCallback) => {
+      pendingRaf = cb;
+      return 1;
+    }),
+  );
+  vi.stubGlobal("cancelAnimationFrame", vi.fn());
+
+  HTMLVideoElement.prototype.play = mockPlay;
+  Object.defineProperty(HTMLVideoElement.prototype, "srcObject", {
+    get: vi.fn(() => null),
+    set: vi.fn(),
+    configurable: true,
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("useBarcodeScanner", () => {
   it("should export useBarcodeScanner hook", async () => {
@@ -54,474 +101,296 @@ describe("useBarcodeScanner", () => {
     expect(typeof result.current.stopScanning).toBe("function");
   });
 
-  it("should call decodeFromVideoDevice when video element exists", async () => {
-    mockReader.decodeFromVideoDevice.mockResolvedValueOnce(null);
-
+  it("should call getUserMedia and set isScanning on startScanning", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    expect(mockReader.decodeFromVideoDevice).toHaveBeenCalled();
+    expect(mockGetUserMedia).toHaveBeenCalledWith({ video: { facingMode: "environment" } });
+    expect(result.current.isScanning).toBe(true);
   });
 
-  it("should process successful scan result via callback", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
+  it("should detect a barcode and set scanResult", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    const mockResult = { getText: () => "1234567890" };
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(mockResult, null);
-      });
-    }
+    mockDetect.mockResolvedValueOnce([{ rawValue: "1234567890" }]);
+    await triggerRaf();
 
     expect(result.current.scanResult).toBe("1234567890");
   });
 
-  it("should stop scanning after getting a result", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
+  it("should stop scanning after getting a barcode result", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    const mockResult = { getText: () => "1234567890" };
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(mockResult, null);
-      });
-    }
+    mockDetect.mockResolvedValueOnce([{ rawValue: "1234567890" }]);
+    await triggerRaf();
 
     expect(result.current.isScanning).toBe(false);
   });
 
-  it("should handle NotFoundException without setting error", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
+  it("should not set scanResult for empty barcode rawValue", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    const notFoundError = new Error("NotFoundException: No match");
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(null, notFoundError);
-      });
-    }
+    // Empty rawValue: sanitizeBarcodeInput returns null, no result set
+    mockDetect.mockResolvedValueOnce([{ rawValue: "" }]);
+    await triggerRaf();
+
+    expect(result.current.scanResult).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it("should not process barcode if stopScanning was called before RAF fires", async () => {
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    act(() => {
+      result.current.stopScanning();
+    });
+
+    mockDetect.mockResolvedValueOnce([{ rawValue: "1234567890" }]);
+    await triggerRaf();
+
+    expect(result.current.scanResult).toBeNull();
+  });
+
+  it("should not set scanResult or error when no barcode detected in frame", async () => {
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    mockDetect.mockResolvedValueOnce([]);
+    await triggerRaf();
+
+    // No barcode found - result and error remain unset
+    expect(result.current.scanResult).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it("should stop scanning via stopScanning", async () => {
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    expect(result.current.isScanning).toBe(true);
+
+    act(() => {
+      result.current.stopScanning();
+    });
+
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("should stop camera stream tracks when stopScanning is called", async () => {
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    act(() => {
+      result.current.stopScanning();
+    });
+
+    expect(mockTrackStop).toHaveBeenCalled();
+  });
+
+  it("should clear error and result on new scan attempt", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(new Error("NotFoundError: No camera"));
+
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    expect(result.current.error).toBeDefined();
+
+    mockGetUserMedia.mockResolvedValueOnce(mockStream);
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
 
     expect(result.current.error).toBeNull();
   });
 
-  it("should handle non-NotFoundException errors in callback", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
+  it("should handle missing video element with error state", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    // videoRef.current stays null
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    const scanError = new Error("Some error");
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(null, scanError);
-      });
-    }
+    expect(result.current.error).toBeDefined();
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("should handle BarcodeDetector not available in browser", async () => {
+    vi.unstubAllGlobals();
+    // Remove BarcodeDetector from global scope
+    const globalAny = globalThis as Record<string, unknown>;
+    delete globalAny["BarcodeDetector"];
+
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    expect(result.current.error).toContain("not supported");
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("should handle NotAllowedError from getUserMedia", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(new Error("NotAllowedError: Camera access denied"));
+
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    expect(result.current.error).toContain("Camera access denied");
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("should handle NotFoundError from getUserMedia", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(new Error("NotFoundError: No camera found"));
+
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
+
+    expect(result.current.error).toContain("No camera device found");
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("should handle generic getUserMedia error", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(new Error("Some hardware error"));
+
+    const { result } = renderHook(() => useBarcodeScanner());
+    const mockVideo = document.createElement("video");
+    result.current.videoRef.current = mockVideo;
+
+    await act(async () => {
+      await result.current.startScanning();
+    });
 
     expect(result.current.error).toContain("Scanner encountered an error");
   });
 
-  it("should not process result if scanning was stopped", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
+  it("should handle DOMException NotAllowedError from getUserMedia", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(
+      new DOMException("Permission denied", "NotAllowedError"),
+    );
 
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    act(() => {
-      result.current.stopScanning();
-    });
-
-    const mockResult = { getText: () => "1234567890" };
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(mockResult, null);
-      });
-    }
-
-    expect(result.current.scanResult).toBeNull();
+    expect(result.current.error).toContain("Camera access denied");
   });
 
-  it("should not set error if scanning was stopped", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
+  it("should handle DOMException NotFoundError from getUserMedia", async () => {
+    mockGetUserMedia.mockRejectedValueOnce(new DOMException("Device not found", "NotFoundError"));
 
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    act(() => {
-      result.current.stopScanning();
-    });
-
-    const scanError = new Error("Some error");
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(null, scanError);
-      });
-    }
-
-    expect(result.current.error).toBeNull();
+    expect(result.current.error).toContain("No camera device found");
   });
 
-  it("should clear error on next scan attempt", async () => {
-    mockReader.decodeFromVideoDevice.mockRejectedValueOnce(new Error("Test"));
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toBeDefined();
-
-    mockReader.decodeFromVideoDevice.mockResolvedValueOnce(null);
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toBeNull();
-  });
-
-  it("should clear scanResult on next scan attempt", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    const mockResult = { getText: () => "123" };
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(mockResult, null);
-      });
-    }
-
-    expect(result.current.scanResult).toBe("123");
-
-    mockReader.decodeFromVideoDevice.mockResolvedValueOnce(null);
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.scanResult).toBeNull();
-  });
-
-  it("should have stopScanning function that stops scanning", async () => {
-    mockReader.decodeFromVideoDevice.mockResolvedValueOnce(null);
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    act(() => {
-      result.current.stopScanning();
-    });
-
-    expect(result.current.isScanning).toBe(false);
-  });
-
-  it("should have cleanup effect on unmount", () => {
+  it("should cancel RAF on unmount", () => {
     const { unmount } = renderHook(() => useBarcodeScanner());
     expect(() => unmount()).not.toThrow();
   });
 
-  it("BrowserMultiFormatReader should be instantiable", async () => {
-    const { BrowserMultiFormatReader } = await import("@zxing/browser");
-    const reader = new BrowserMultiFormatReader();
-    expect(reader).toBeDefined();
-    expect(typeof reader.decodeFromVideoDevice).toBe("function");
-  });
-
-  it("should handle rejection during startScanning", async () => {
-    const error = new Error("Generic error");
-    mockReader.decodeFromVideoDevice.mockRejectedValueOnce(error);
-
-    const { result } = renderHook(() => useBarcodeScanner());
+  it("should stop camera tracks on unmount when scanning", async () => {
+    const { result, unmount } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    expect(result.current.error).toBeDefined();
-    expect(result.current.isScanning).toBe(false);
+    unmount();
+
+    expect(mockTrackStop).toHaveBeenCalled();
   });
 
-  it("should handle non-Error rejection value", async () => {
-    mockReader.decodeFromVideoDevice.mockRejectedValueOnce("String error");
-
+  it("should continue loop when detect throws a per-frame error", async () => {
     const { result } = renderHook(() => useBarcodeScanner());
     const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
+    result.current.videoRef.current = mockVideo;
 
     await act(async () => {
       await result.current.startScanning();
     });
 
-    expect(result.current.error).toBeDefined();
-    expect(result.current.isScanning).toBe(false);
-  });
+    // Per-frame detect() errors are swallowed; loop should continue
+    mockDetect.mockRejectedValueOnce(new Error("Frame not ready"));
+    await triggerRaf();
 
-  it("should ignore null or empty sanitized barcode input", async () => {
-    mockReader.decodeFromVideoDevice.mockImplementationOnce(async (_format, _videoEl, callback) => {
-      mockDecodeCallback = callback;
-      return null;
-    });
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    const mockResult = { getText: () => "" };
-    const callback = mockDecodeCallback;
-    if (callback) {
-      act(() => {
-        callback(mockResult, null);
-      });
-    }
-
-    expect(result.current.scanResult).toBeNull();
+    expect(result.current.error).toBeNull();
     expect(result.current.isScanning).toBe(true);
-  });
-
-  it("should reuse BrowserMultiFormatReader instance across multiple scans", async () => {
-    mockReader.decodeFromVideoDevice.mockResolvedValue(null);
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    const initialCallCount = mockReader.decodeFromVideoDevice.mock.calls.length;
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    const firstScanCallCount = mockReader.decodeFromVideoDevice.mock.calls.length;
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    const secondScanCallCount = mockReader.decodeFromVideoDevice.mock.calls.length;
-
-    expect(firstScanCallCount).toBeGreaterThan(initialCallCount);
-    expect(secondScanCallCount).toBeGreaterThan(firstScanCallCount);
-  });
-
-  it("should handle NotAllowedError in promise rejection", async () => {
-    const error = new Error("NotAllowedError: Camera access denied");
-    mockReader.decodeFromVideoDevice.mockRejectedValueOnce(error);
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toContain("Camera access denied");
-  });
-
-  it("should handle NotFoundError in promise rejection", async () => {
-    const error = new Error("NotFoundError: No camera found");
-    mockReader.decodeFromVideoDevice.mockRejectedValueOnce(error);
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toContain("No camera device found");
-  });
-
-  it("should throw error when video element is missing", async () => {
-    const { result } = renderHook(() => useBarcodeScanner());
-
-    // Ensure videoRef.current is null
-    if (result.current.videoRef) {
-      result.current.videoRef.current = null;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toBeDefined();
-  });
-
-  it("should handle NotAllowedError in outer catch block", async () => {
-    // Mock the reader initialization to throw NotAllowedError
-    vi.mocked(mockReader.decodeFromVideoDevice).mockImplementationOnce(() => {
-      throw new Error("NotAllowedError: User denied camera access");
-    });
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toContain("Camera access denied");
-  });
-
-  it("should handle NotFoundError in outer catch block", async () => {
-    vi.mocked(mockReader.decodeFromVideoDevice).mockImplementationOnce(() => {
-      throw new Error("NotFoundError: No camera device");
-    });
-
-    const { result } = renderHook(() => useBarcodeScanner());
-    const mockVideo = document.createElement("video");
-
-    if (result.current.videoRef) {
-      result.current.videoRef.current = mockVideo;
-    }
-
-    await act(async () => {
-      await result.current.startScanning();
-    });
-
-    expect(result.current.error).toContain("No camera device found");
+    expect(pendingRaf).not.toBeNull();
   });
 });

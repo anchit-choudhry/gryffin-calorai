@@ -15,12 +15,21 @@ function RecipeRow({ recipe, onEdit, onDelete }: Props) {
   return (
     <li className="group flex justify-between items-start p-4 hover:bg-paper-muted transition">
       <div className="flex-1 min-w-0">
-        <p className="font-sans text-base font-semibold text-ink">{recipe.name}</p>
+        <div className="flex items-end gap-1 min-w-0">
+          <p className="font-sans text-base font-semibold text-ink shrink-0 max-w-[60%]">
+            {recipe.name}
+          </p>
+          <span
+            className="flex-1 self-end border-b border-dotted border-rule/40 mb-[3px] min-w-[8px]"
+            aria-hidden="true"
+          />
+          <span className="font-sans text-sm font-semibold tabular-nums text-persimmon shrink-0">
+            {recipe.totalCalories.toLocaleString()}
+            <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
+          </span>
+        </div>
         <p className="text-sm text-ink-soft truncate max-w-md mt-1">{recipe.description}</p>
-        <p className="text-xs text-persimmon mt-2">
-          {recipe.totalCalories.toLocaleString()} kcal &middot; {recipe.ingredients.length}{" "}
-          ingredient(s)
-        </p>
+        <p className="text-xs text-ink-soft/70 mt-1">{recipe.ingredients.length} ingredient(s)</p>
         {recipe.totalProtein !== undefined && (
           <p className="text-xs text-ink-soft/70 mt-1">
             {Math.round(recipe.totalProtein)}g P &middot; {Math.round(recipe.totalCarbs ?? 0)}g C

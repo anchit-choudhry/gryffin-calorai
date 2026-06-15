@@ -41,6 +41,9 @@ import EditorialChartCard from "../components/charts/EditorialChartCard";
 import ProgressHero from "../components/progress/ProgressHero";
 import ProjectedWeightCard from "../components/progress/ProjectedWeightCard";
 import MicronutrientPanel from "../components/progress/MicronutrientPanel";
+import { AdaptiveTdeePanel } from "../components/progress/AdaptiveTdeePanel";
+import { CorrelationInsightsPanel } from "../components/progress/CorrelationInsightsPanel";
+import { EnergyForecastCard } from "../components/progress/EnergyForecastCard";
 
 const AXIS_TICK_STYLE = {
   fill: "var(--ink-soft)",
@@ -51,7 +54,8 @@ const AXIS_TICK_STYLE = {
 const Progress = () => {
   const [days, setDays] = useState<7 | 30>(7);
   const [displayUnit, setDisplayUnit] = useState<"cm" | "in">("cm");
-  const { labels, data, rollingAvg, mealTypeData, macroData, isLoading } = useProgressData(days);
+  const { labels, data, rollingAvg, mealTypeData, macroData, isLoading, allLogs } =
+    useProgressData(days);
   const {
     labels: waterLabels,
     data: waterData,
@@ -248,6 +252,30 @@ const Progress = () => {
             </div>
           </motion.section>
         )}
+
+        {/* Section A3 - Adaptive TDEE Engine */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" title="Adaptive TDEE" subtitle="observed" />
+          <div className="col-span-12">
+            <AdaptiveTdeePanel foodLogs={allLogs} />
+          </div>
+        </motion.section>
+
+        {/* Section A4 - Week-end Energy Forecast */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" title="Energy Forecast" subtitle="this week" />
+          <div className="col-span-12">
+            <EnergyForecastCard foodLogs={allLogs} calorieGoal={calorieGoal} />
+          </div>
+        </motion.section>
+
+        {/* Section A5 - Correlation Insights */}
+        <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
+          <SectionHeader className="col-span-12" title="Correlation Insights" accent />
+          <div className="col-span-12">
+            <CorrelationInsightsPanel foodLogs={allLogs} />
+          </div>
+        </motion.section>
 
         {/* Section B - Daily Calorie Trend */}
         <motion.section

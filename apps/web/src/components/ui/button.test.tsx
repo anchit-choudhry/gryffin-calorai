@@ -3,8 +3,8 @@ import { buttonVariants } from "./button-variants";
 import { cn } from "@/lib/utils";
 
 describe("buttonVariants base", () => {
-  it("includes active:scale-[0.97] for press feedback", () => {
-    expect(buttonVariants()).toContain("active:scale-[0.97]");
+  it("includes active:translate-y-px for press feedback", () => {
+    expect(buttonVariants()).toContain("active:translate-y-px");
   });
 });
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CommandPalette } from "./CommandPalette";
 import { useAppState } from "@/state/AppState";
-import { FoodItemId, ISODate, todayISO, UserId } from "@/types";
+import { FoodItemId, ISODate, RecipeId, todayISO, UserId } from "@/types";
 
 // jsdom does not implement showModal/close on HTMLDialogElement; simulate open attribute
 beforeEach(() => {
@@ -327,6 +327,86 @@ describe("CommandPalette", () => {
       fireEvent.change(input, { target: { value: "chicken" } });
       expect(screen.getByText("Quick Log")).toBeTruthy();
       expect(screen.getByText("Chicken Breast")).toBeTruthy();
+    });
+  });
+
+  describe("recipe search (Item 8)", () => {
+    it("shows Recipes category when query matches a recipe name", () => {
+      useAppState.setState({
+        commandPaletteOpen: true,
+        selectedDate: todayISO(),
+        allFoodItems: [],
+        userId: TEST_USER,
+        recipes: [
+          {
+            id: RecipeId(1),
+            name: "Pasta Bolognese",
+            description: "Classic Italian pasta",
+            ingredients: [],
+            totalCalories: 650,
+            createdBy: TEST_USER,
+            dateCreated: todayISO(),
+            userId: TEST_USER,
+          },
+        ],
+      });
+      render(<CommandPalette {...defaultProps} />);
+      const input = screen.getByRole("searchbox");
+      fireEvent.change(input, { target: { value: "pasta" } });
+      expect(screen.getByText("Recipes")).toBeTruthy();
+      expect(screen.getByText("Pasta Bolognese")).toBeTruthy();
+    });
+
+    it("clicking a recipe result navigates to #recipes", () => {
+      const onNavigate = vi.fn();
+      useAppState.setState({
+        commandPaletteOpen: true,
+        selectedDate: todayISO(),
+        allFoodItems: [],
+        userId: TEST_USER,
+        recipes: [
+          {
+            id: RecipeId(2),
+            name: "Avocado Toast",
+            description: "Quick breakfast",
+            ingredients: [],
+            totalCalories: 300,
+            createdBy: TEST_USER,
+            dateCreated: todayISO(),
+            userId: TEST_USER,
+          },
+        ],
+      });
+      render(<CommandPalette {...defaultProps} onNavigate={onNavigate} />);
+      const input = screen.getByRole("searchbox");
+      fireEvent.change(input, { target: { value: "avocado" } });
+      fireEvent.click(screen.getByText("Avocado Toast"));
+      expect(onNavigate).toHaveBeenCalledWith("#recipes");
+    });
+
+    it("does not show Recipes category when no recipe matches the query", () => {
+      useAppState.setState({
+        commandPaletteOpen: true,
+        selectedDate: todayISO(),
+        allFoodItems: [],
+        userId: TEST_USER,
+        recipes: [
+          {
+            id: RecipeId(3),
+            name: "Pasta Bolognese",
+            description: "",
+            ingredients: [],
+            totalCalories: 650,
+            createdBy: TEST_USER,
+            dateCreated: todayISO(),
+            userId: TEST_USER,
+          },
+        ],
+      });
+      render(<CommandPalette {...defaultProps} />);
+      const input = screen.getByRole("searchbox");
+      fireEvent.change(input, { target: { value: "sushi" } });
+      expect(screen.queryByText("Pasta Bolognese")).toBeNull();
     });
   });
 });

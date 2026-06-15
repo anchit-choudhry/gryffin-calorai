@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
 import { useBodyForm } from "../hooks/useBodyForm";
 import type { BodyMeasurement } from "../db/dbService";
@@ -224,9 +225,8 @@ const MeasurementForm = ({
 };
 
 const BodyMeasurements = () => {
-  const { bodyMeasurements, deleteBodyMeasurement } = useAppState();
+  const { bodyMeasurements, deleteBodyMeasurement, addBodyMeasurement } = useAppState();
   const [showForm, setShowForm] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<BodyMeasurementId | null>(null);
   const [editingMeasurement, setEditingMeasurement] = useState<BodyMeasurement | null>(null);
 
   const [displayWeightUnit, setDisplayWeightUnit] = useState<"kg" | "lb">("kg");
@@ -433,34 +433,27 @@ const BodyMeasurements = () => {
                     </button>
                   </td>
                   <td className="py-2">
-                    {pendingDeleteId === m.id ? (
-                      <span className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            if (m.id) void deleteBodyMeasurement(m.id);
-                            setPendingDeleteId(null);
-                          }}
-                          className="px-1.5 py-0.5 bg-persimmon text-paper font-mono text-[9px] uppercase tracking-wider hover:opacity-90 transition-opacity"
-                        >
-                          Delete
-                        </button>
-                        <button
-                          onClick={() => setPendingDeleteId(null)}
-                          aria-label="Cancel delete"
-                          className="font-mono text-[9px] text-ink-soft hover:text-ink transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => m.id && setPendingDeleteId(m.id)}
-                        aria-label={`Delete measurement from ${m.measuredAt}`}
-                        className="text-ink-soft hover:text-persimmon transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        ✕
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!m.id) return;
+                        const snapshot = { ...m };
+                        void deleteBodyMeasurement(m.id);
+                        toast("Measurement removed", {
+                          action: {
+                            label: "Undo",
+                            onClick: () => {
+                              const { id: _id, ...rest } = snapshot;
+                              void addBodyMeasurement(rest);
+                            },
+                          },
+                        });
+                      }}
+                      aria-label={`Delete measurement from ${m.measuredAt}`}
+                      className="text-ink-soft hover:text-persimmon transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
                   </td>
                 </tr>
               ))}

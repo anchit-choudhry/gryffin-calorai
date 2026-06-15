@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppState } from "../state/AppState";
 import { getAllFoodLogs } from "../db/dbService";
+import type { FoodItem } from "../db/dbService";
 import { DEFAULT_MEAL_TYPE, ISODate, MEAL_TYPES, type MealType } from "@/types";
 
 interface MealTypeData {
@@ -23,6 +24,7 @@ export function useProgressData(days: 7 | 30 = 7): {
   mealTypeData: MealTypeData | null;
   macroData: MacroData | null;
   isLoading: boolean;
+  allLogs: readonly FoodItem[];
 } {
   const { userId } = useAppState();
   const [labels, setLabels] = useState<string[]>([]);
@@ -31,6 +33,7 @@ export function useProgressData(days: 7 | 30 = 7): {
   const [mealTypeData, setMealTypeData] = useState<MealTypeData | null>(null);
   const [macroData, setMacroData] = useState<MacroData | null>(null);
   const [isLoading, setIsLoading] = useState(!userId);
+  const [allLogs, setAllLogs] = useState<readonly FoodItem[]>([]);
 
   useEffect(() => {
     if (!userId) return;
@@ -39,6 +42,7 @@ export function useProgressData(days: 7 | 30 = 7): {
     getAllFoodLogs(userId)
       .then((logs) => {
         if (cancelled) return;
+        setAllLogs(logs);
 
         // Build nested map: dateLogged -> mealType -> total calories
         const mealMap = new Map<string, Map<MealType, number>>();
@@ -138,5 +142,5 @@ export function useProgressData(days: 7 | 30 = 7): {
     };
   }, [userId, days]);
 
-  return { labels, data, rollingAvg, mealTypeData, macroData, isLoading };
+  return { labels, data, rollingAvg, mealTypeData, macroData, isLoading, allLogs };
 }

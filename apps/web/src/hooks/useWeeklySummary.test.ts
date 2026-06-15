@@ -81,6 +81,7 @@ describe("useWeeklySummary", () => {
       mealTypeData: null,
       macroData: null,
       isLoading: false,
+      allLogs: [],
     });
   });
 
@@ -110,6 +111,7 @@ describe("useWeeklySummary", () => {
       mealTypeData: null,
       macroData: null,
       isLoading: false,
+      allLogs: [],
     });
 
     const { result } = renderHook(() => useWeeklySummary());
@@ -136,6 +138,7 @@ describe("useWeeklySummary", () => {
       mealTypeData: null,
       macroData: null,
       isLoading: false,
+      allLogs: [],
     });
 
     const { result } = renderHook(() => useWeeklySummary());

@@ -49,7 +49,6 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/recharts", "vendor-charts"],
   ["node_modules/d3-", "vendor-charts"],
   ["node_modules/victory-", "vendor-charts"],
-  ["node_modules/@zxing", "vendor-barcode"],
   ["node_modules/dexie", "vendor-db"],
   ["node_modules/lucide-react", "vendor-icons"],
   ["node_modules/sonner", "vendor-ui"],
@@ -58,7 +57,6 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/clsx", "vendor-ui"],
   ["node_modules/tailwind-merge", "vendor-ui"],
   ["node_modules/motion", "vendor-motion"],
-  ["node_modules/date-fns", "vendor-date"],
   ["node_modules/fflate", "vendor-state"],
   ["node_modules/zustand", "vendor-state"],
   ["node_modules/react-hook-form", "vendor-form"],
@@ -119,6 +117,15 @@ export default defineConfig({
             label: "Dashboard - daily calorie tracking",
           },
         ],
+        share_target: {
+          action: "/gryffin-calorai/#log?",
+          method: "GET",
+          params: {
+            title: "title",
+            text: "text",
+            url: "url",
+          },
+        },
       },
       workbox: {
         // Pre-cache all build outputs (JS chunks, CSS, HTML, static assets)

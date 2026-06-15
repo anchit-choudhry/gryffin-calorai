@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { FC } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppState } from "@/state/AppState";
 import { shiftISODate, todayISO } from "@/types";
@@ -13,6 +14,8 @@ interface Props {
 const DateKicker: FC<Props> = ({ date, interactive = false }) => {
   const selectedDate = useAppState((s) => s.selectedDate);
   const setSelectedDate = useAppState((s) => s.setSelectedDate);
+  const shouldReduceMotion = useReducedMotion();
+  const [dir, setDir] = useState(0);
 
   const activeDate = interactive ? new Date(`${selectedDate}T00:00:00`) : date;
   const isToday = interactive && selectedDate === todayISO();
@@ -25,27 +28,30 @@ const DateKicker: FC<Props> = ({ date, interactive = false }) => {
   const fullLabel = activeDate.toLocaleDateString("en-US", { dateStyle: "full" });
 
   const prevDay = useCallback(() => {
+    setDir(-1);
     void setSelectedDate(shiftISODate(selectedDate, -1));
   }, [selectedDate, setSelectedDate]);
 
   const nextDay = useCallback(() => {
     const next = shiftISODate(selectedDate, 1);
     if (next > todayISO()) return;
+    setDir(1);
     void setSelectedDate(next);
   }, [selectedDate, setSelectedDate]);
 
   const goToday = useCallback(() => {
+    setDir(1);
     void setSelectedDate(todayISO());
   }, [setSelectedDate]);
+
+  const textCls =
+    "[writing-mode:vertical-rl] rotate-180 uppercase tracking-[0.3em] text-[10px] font-mono text-ink-soft select-none whitespace-nowrap";
 
   if (!interactive) {
     return (
       <div className="flex items-center justify-center h-full py-4" aria-label={fullLabel}>
         <span className="sr-only">{fullLabel}</span>
-        <span
-          className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-[0.3em] text-[10px] font-mono text-ink-soft select-none whitespace-nowrap"
-          aria-hidden="true"
-        >
+        <span className={textCls} aria-hidden="true">
           {display}
         </span>
       </div>
@@ -71,14 +77,21 @@ const DateKicker: FC<Props> = ({ date, interactive = false }) => {
         <ChevronLeft className="size-3.5 rotate-90" aria-hidden="true" />
       </button>
 
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 overflow-hidden">
         <span className="sr-only">{fullLabel}</span>
-        <span
-          className="[writing-mode:vertical-rl] rotate-180 uppercase tracking-[0.3em] text-[10px] font-mono text-ink-soft select-none whitespace-nowrap"
-          aria-hidden="true"
-        >
-          {display}
-        </span>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={display}
+            className={textCls}
+            aria-hidden="true"
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: dir * 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: dir * -14 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+          >
+            {display}
+          </motion.span>
+        </AnimatePresence>
         {!isToday && (
           <button
             type="button"

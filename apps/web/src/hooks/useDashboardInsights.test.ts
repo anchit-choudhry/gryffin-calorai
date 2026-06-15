@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeInsights } from "./useDashboardInsights";
+import { computeInsights, useDashboardInsights } from "./useDashboardInsights";
 
 const base = {
   currentStreak: 0,
@@ -78,7 +78,7 @@ describe("computeInsights", () => {
     expect(insights.some((i) => i.id === "consistency")).toBe(false);
   });
 
-  it("caps results at 2 insights", () => {
+  it("caps results at 3 insights", () => {
     const insights = computeInsights({
       currentStreak: 10,
       totalCaloriesToday: 1900,
@@ -87,12 +87,19 @@ describe("computeInsights", () => {
       dailyLogCount: 5,
       daysOnTargetThisWeek: 6,
     });
-    expect(insights.length).toBeLessThanOrEqual(2);
+    expect(insights.length).toBeLessThanOrEqual(3);
   });
 
   it("includes subtext for streak insight", () => {
     const insights = computeInsights({ ...base, currentStreak: 7 });
     const streakInsight = insights.find((i) => i.id === "streak");
     expect(streakInsight?.subtext).toBeDefined();
+  });
+});
+
+describe("useDashboardInsights", () => {
+  it("delegates to computeInsights and returns the same result", () => {
+    const params = { ...base, currentStreak: 5 };
+    expect(useDashboardInsights(params)).toStrictEqual(computeInsights(params));
   });
 });

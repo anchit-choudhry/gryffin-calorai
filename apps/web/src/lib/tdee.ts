@@ -31,6 +31,27 @@ export function computeMacroTargets(
   };
 }
 
+/** Adjusts carb/fat split for training vs rest days. Protein is unchanged. */
+export function applyPeriodization(
+  base: { protein: number; carbs: number; fat: number },
+  training: boolean,
+): { protein: number; carbs: number; fat: number } {
+  if (training) {
+    // Training day: carbs +30%, fat -10% (net caloric intake increases ~8-10%)
+    return {
+      protein: base.protein,
+      carbs: Math.round(base.carbs * 1.3),
+      fat: Math.max(0, Math.round(base.fat * 0.9)),
+    };
+  }
+  // Rest day: carbs -20%, fat +10%
+  return {
+    protein: base.protein,
+    carbs: Math.max(0, Math.round(base.carbs * 0.8)),
+    fat: Math.round(base.fat * 1.1),
+  };
+}
+
 // Returns null when target equals current or deficit is zero
 export function projectedDateForWeightChange(
   currentKg: number,

@@ -23,7 +23,7 @@ import { motionTokens } from "@/lib/motionVariants";
 import { useAppState } from "@/state/AppState";
 import { cn } from "@/lib/utils";
 import { fuzzyMatchFoodName, ISODate, todayISO } from "@/types";
-import type { FoodItem } from "@/db/dbService";
+import type { FoodItem, Recipe } from "@/db/dbService";
 
 interface PaletteCommand {
   id: string;
@@ -43,10 +43,22 @@ interface PaletteFood {
   onSelect: () => void;
 }
 
-type PaletteEntry = PaletteCommand | PaletteFood;
+interface PaletteRecipe {
+  id: string;
+  label: string;
+  sub: string;
+  recipe: Recipe;
+  onSelect: () => void;
+}
+
+type PaletteEntry = PaletteCommand | PaletteFood | PaletteRecipe;
 
 function isFood(entry: PaletteEntry): entry is PaletteFood {
   return "item" in entry;
+}
+
+function isRecipe(entry: PaletteEntry): entry is PaletteRecipe {
+  return "recipe" in entry;
 }
 
 interface CommandPaletteProps {
@@ -71,6 +83,7 @@ export function CommandPalette({
   const allFoodItems = useAppState((s) => s.allFoodItems);
   const addFoodLog = useAppState((s) => s.addFoodLog);
   const userId = useAppState((s) => s.userId);
+  const recipes = useAppState((s) => s.recipes);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const reducedMotion = useReducedMotion();
@@ -291,6 +304,24 @@ export function CommandPalette({
     }));
   }, [query, allFoodItems, addFoodLog, userId, close]);
 
+  const recipeResults = useMemo<PaletteRecipe[]>(() => {
+    if (!query || query.length < 2) return [];
+    const q = query.toLowerCase();
+    return recipes
+      .filter((r) => r.name.toLowerCase().includes(q) || r.description.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((r) => ({
+        id: `recipe-${r.id ?? r.name}`,
+        label: r.name,
+        sub: `${r.totalCalories} kcal`,
+        recipe: r,
+        onSelect: () => {
+          onNavigate("#recipes");
+          close();
+        },
+      }));
+  }, [query, recipes, onNavigate, close]);
+
   const filteredCommands = useMemo<PaletteCommand[]>(() => {
     if (!query) return commands;
     const q = query.toLowerCase();
@@ -303,25 +334,23 @@ export function CommandPalette({
   }, [query, commands]);
 
   const entries = useMemo<PaletteEntry[]>(() => {
-    return [...foodResults, ...filteredCommands];
-  }, [foodResults, filteredCommands]);
+    return [...foodResults, ...recipeResults, ...filteredCommands];
+  }, [foodResults, recipeResults, filteredCommands]);
 
   const grouped = useMemo(() => {
-    if (query && foodResults.length > 0) {
-      const groups: Record<string, PaletteEntry[]> = { "Quick Log": foodResults };
-      filteredCommands.forEach((c) => {
-        groups[c.category] ??= [];
-        groups[c.category]!.push(c);
-      });
-      return groups;
-    }
     const groups: Record<string, PaletteEntry[]> = {};
+    if (query && foodResults.length > 0) {
+      groups["Quick Log"] = foodResults;
+    }
+    if (query && recipeResults.length > 0) {
+      groups["Recipes"] = recipeResults;
+    }
     filteredCommands.forEach((c) => {
       groups[c.category] ??= [];
       groups[c.category]!.push(c);
     });
     return groups;
-  }, [query, foodResults, filteredCommands]);
+  }, [query, foodResults, recipeResults, filteredCommands]);
 
   const safeActiveIndex = Math.min(activeIndex, entries.length - 1);
 
@@ -505,6 +534,20 @@ export function CommandPalette({
                                         className="size-3.5 text-persimmon"
                                         aria-hidden="true"
                                       />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate font-sans text-sm font-medium text-ink">
+                                        {entry.label}
+                                      </p>
+                                      <p className="font-mono text-[10px] text-ink-soft">
+                                        {entry.sub}
+                                      </p>
+                                    </div>
+                                  </>
+                                ) : isRecipe(entry) ? (
+                                  <>
+                                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-sage/10">
+                                      <BookOpen className="size-3.5 text-sage" aria-hidden="true" />
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate font-sans text-sm font-medium text-ink">

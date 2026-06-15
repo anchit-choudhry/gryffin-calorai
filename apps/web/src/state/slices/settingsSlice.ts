@@ -57,9 +57,31 @@ import { evaluateAchievements } from "../../lib/achievements";
 import { computeCalorieGoal, computeTDEE, mifflinStJeorBMR } from "../../lib/tdee";
 import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
+export interface CustomMacroGoals {
+  proteinG?: number;
+  carbsG?: number;
+  fatG?: number;
+}
+
+const CUSTOM_MACROS_KEY = "gc_custom_macros";
+const ADAPTIVE_TDEE_KEY = "gc_adaptive_tdee";
+
+function loadCustomMacroGoals(): CustomMacroGoals | null {
+  try {
+    const stored = localStorage.getItem(CUSTOM_MACROS_KEY);
+    return stored ? (JSON.parse(stored) as CustomMacroGoals) : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface SettingsSlice {
+  adaptiveTdeeEnabled: boolean;
+  setAdaptiveTdeeEnabled: (enabled: boolean) => void;
   tdeeProfile: TdeeProfile | null;
   dietProfile: DietProfile | null;
+  customMacroGoals: CustomMacroGoals | null;
+  setCustomMacroGoals: (goals: CustomMacroGoals | null) => void;
   recurringMeals: RecurringMeal[];
   reminders: Reminder[];
   mealTemplates: MealTemplate[];
@@ -97,8 +119,22 @@ export interface SettingsSlice {
 }
 
 export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> = (set, get) => ({
+  adaptiveTdeeEnabled: localStorage.getItem(ADAPTIVE_TDEE_KEY) === "true",
+  setAdaptiveTdeeEnabled: (enabled: boolean) => {
+    localStorage.setItem(ADAPTIVE_TDEE_KEY, String(enabled));
+    set({ adaptiveTdeeEnabled: enabled });
+  },
   tdeeProfile: null,
   dietProfile: null,
+  customMacroGoals: loadCustomMacroGoals(),
+  setCustomMacroGoals: (goals: CustomMacroGoals | null) => {
+    if (goals === null) {
+      localStorage.removeItem(CUSTOM_MACROS_KEY);
+    } else {
+      localStorage.setItem(CUSTOM_MACROS_KEY, JSON.stringify(goals));
+    }
+    set({ customMacroGoals: goals });
+  },
   recurringMeals: [],
   reminders: [],
   mealTemplates: [],

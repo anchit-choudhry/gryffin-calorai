@@ -11,9 +11,11 @@ export interface InsightParams {
   totalProteinToday: number;
   dailyLogCount: number;
   daysOnTargetThisWeek: number;
+  isPlateauing?: boolean;
+  plateauDaySpan?: number;
 }
 
-/** Returns up to 2 contextual nudge cards for the dashboard diary section. */
+/** Returns up to 3 contextual nudge cards for the dashboard diary section. */
 export function computeInsights(params: InsightParams): DashboardInsight[] {
   const {
     currentStreak,
@@ -22,6 +24,8 @@ export function computeInsights(params: InsightParams): DashboardInsight[] {
     totalProteinToday,
     dailyLogCount,
     daysOnTargetThisWeek,
+    isPlateauing = false,
+    plateauDaySpan = 0,
   } = params;
   const insights: DashboardInsight[] = [];
 
@@ -66,7 +70,15 @@ export function computeInsights(params: InsightParams): DashboardInsight[] {
     });
   }
 
-  return insights.slice(0, 2);
+  if (isPlateauing) {
+    insights.push({
+      id: "plateau",
+      text: "Weight plateau detected",
+      subtext: `Less than 0.5 kg change over ${plateauDaySpan} days - consider adjusting intake`,
+    });
+  }
+
+  return insights.slice(0, 3);
 }
 
 export function useDashboardInsights(params: InsightParams): DashboardInsight[] {

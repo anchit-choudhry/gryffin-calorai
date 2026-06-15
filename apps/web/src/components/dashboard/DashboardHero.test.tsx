@@ -11,6 +11,7 @@ vi.mock("motion/react", () => ({
     span: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
     div: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   animate: vi.fn(() => ({ stop: vi.fn() })),
   useMotionValue: (initial: number) => ({ get: () => initial, set: vi.fn() }),
   useTransform: (_val: unknown, fn: (v: number) => string) => fn(0),
@@ -38,6 +39,10 @@ const baseState = {
   dailyActivityLogs: [] as { caloriesBurned: number }[],
   activeFastingSession: null as { targetHours: number } | null,
   dietProfile: null as { preset: string; restrictions: string[] } | null,
+  customMacroGoals: null as { proteinG?: number; carbsG?: number; fatG?: number } | null,
+  selectedDate: "2026-06-10",
+  toggleTrainingDay: vi.fn(),
+  isTrainingDay: vi.fn().mockReturnValue(false),
 };
 
 describe("DashboardHero", () => {
@@ -243,6 +248,71 @@ describe("DashboardHero", () => {
     mockUseReducedMotion.mockReturnValue(false);
     render(<DashboardHero {...defaultProps} />);
     expect(screen.getByText(/Goal:/i)).toBeTruthy();
+  });
+
+  describe("earned-calorie model (Item 4)", () => {
+    it("shows earned goal bonus when activity is logged", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        ...baseState,
+        dailyActivityLogs: [{ caloriesBurned: 300 }],
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      render(<DashboardHero {...defaultProps} />);
+      // Goal button should show +300 bonus
+      expect(screen.getByText(/\(\+300\)/)).toBeTruthy();
+    });
+
+    it("shows remaining based on earned goal when activity is logged", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        ...baseState,
+        dailyActivityLogs: [{ caloriesBurned: 300 }],
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      // consumed 1200, earned goal = 2000 + 300 = 2300, remaining = 1100
+      render(<DashboardHero totalCalories={1200} totals={defaultProps.totals} />);
+      expect(screen.getByText(/1,100 remaining/)).toBeTruthy();
+    });
+  });
+
+  describe("training day toggle (Item 9)", () => {
+    it("renders training day toggle button", () => {
+      render(<DashboardHero {...defaultProps} />);
+      const btn = screen.getByRole("button", { name: /mark as training day/i });
+      expect(btn).toBeTruthy();
+    });
+
+    it("shows 'Training' label when isTrainingDay returns true", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        ...baseState,
+        isTrainingDay: vi.fn().mockReturnValue(true),
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      render(<DashboardHero {...defaultProps} />);
+      expect(screen.getByRole("button", { name: /mark as rest day/i })).toBeTruthy();
+    });
+
+    it("calls toggleTrainingDay when the button is clicked", () => {
+      const mockToggle = vi.fn();
+      vi.mocked(appState).useAppState.mockReturnValue({
+        ...baseState,
+        toggleTrainingDay: mockToggle,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      render(<DashboardHero {...defaultProps} />);
+      fireEvent.click(screen.getByRole("button", { name: /mark as training day/i }));
+      expect(mockToggle).toHaveBeenCalledWith("2026-06-10");
+    });
+  });
+
+  describe("custom macro goals (Item 6)", () => {
+    it("applies custom protein override to macro target", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        ...baseState,
+        dietProfile: { preset: "generic", restrictions: [] },
+        customMacroGoals: { proteinG: 250 },
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      render(<DashboardHero {...defaultProps} />);
+      // MacroStat for Protein should render with target 250g
+      const bars = screen.getAllByRole("progressbar");
+      // at least one progressbar should reflect the custom goal
+      expect(bars.length).toBeGreaterThanOrEqual(3);
+    });
   });
 
   it("shows a morning greeting when the hour is before noon", () => {

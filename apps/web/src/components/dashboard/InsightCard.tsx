@@ -1,4 +1,4 @@
-import { Flame, TrendingDown, TrendingUp, Trophy, X } from "lucide-react";
+import { Flame, Minus, TrendingDown, TrendingUp, Trophy, X } from "lucide-react";
 import type { DashboardInsight } from "@/hooks/useDashboardInsights";
 import { cn, LABEL_MONO_CLS } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ const INSIGHT_ICONS: Record<string, typeof Flame> = {
   "over-goal": TrendingDown,
   "protein-low": TrendingDown,
   consistency: Trophy,
+  plateau: Minus,
 };
 
 interface InsightCardProps {
@@ -17,7 +18,8 @@ interface InsightCardProps {
 
 export function InsightCard({ insight, onDismiss }: InsightCardProps) {
   const Icon = INSIGHT_ICONS[insight.id] ?? Flame;
-  const isWarning = insight.id === "over-goal" || insight.id === "protein-low";
+  const isWarning =
+    insight.id === "over-goal" || insight.id === "protein-low" || insight.id === "plateau";
 
   return (
     <div

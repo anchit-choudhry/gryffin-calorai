@@ -203,6 +203,7 @@ function makeMock(
     dailyActivityLogs: [],
     activeFastingSession: null,
     waterGoalMl: 2000,
+    bodyMeasurements: [],
     openQuickAdd: vi.fn(),
     copyYesterdayLogs: vi.fn().mockResolvedValue(undefined),
     ...overrides,

@@ -163,4 +163,23 @@ describe("LogEntry", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /delete/i })[0]!);
     expect(onDelete).not.toHaveBeenCalled();
   });
+
+  it("renders dot-leader span between name and calories", () => {
+    const { container } = render(
+      <LogEntry log={makeLog()} onEdit={vi.fn()} onDelete={vi.fn()} onToggleFavorite={vi.fn()} />,
+    );
+    const leader = container.querySelector('[aria-hidden="true"][class*="border-dotted"]');
+    expect(leader).toBeTruthy();
+  });
+
+  it("calories are rendered alongside the food name in same row", () => {
+    render(
+      <LogEntry log={makeLog()} onEdit={vi.fn()} onDelete={vi.fn()} onToggleFavorite={vi.fn()} />,
+    );
+    const nameEl = screen.getByText("Chicken Breast");
+    const caloriesEl = screen.getByText("165");
+    const nameParent = nameEl.closest("div");
+    const caloriesParent = caloriesEl.closest("div");
+    expect(nameParent).toBe(caloriesParent);
+  });
 });

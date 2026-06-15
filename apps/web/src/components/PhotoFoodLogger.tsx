@@ -1,7 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils";
+import { useAppState } from "@/state/AppState";
+import type { MealType } from "@/types";
+import { MEAL_TYPES } from "@/types";
 
 const THUMBNAIL_WIDTH = 120;
 
@@ -26,43 +31,67 @@ function buildThumbnail(imageDataUrl: string, mimeType: string): Promise<string>
   });
 }
 
+interface DraftEntry {
+  imageData: string;
+  thumbnailData: string;
+  mimeType: string;
+  name: string;
+  calories: string;
+  protein: string;
+  carbs: string;
+  fat: string;
+  mealType: MealType;
+}
+
 interface Props {
   onPhotoReady?: (imageData: string, thumbnailData: string, mimeType: string) => void;
   className?: string;
 }
 
 const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
+  const addFoodLog = useAppState((s) => s.addFoodLog);
+  const userId = useAppState((s) => s.userId);
+  const selectedDate = useAppState((s) => s.selectedDate);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftEntry | null>(null);
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      setError(null);
-      if (!file.type.startsWith("image/")) {
-        setError("Please select an image file.");
-        return;
+  const handleFile = useCallback(async (file: File) => {
+    setError(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result;
+      if (typeof dataUrl !== "string") return;
+      setPreview(dataUrl);
+      setAnalyzing(true);
+      try {
+        const thumbnail = await buildThumbnail(dataUrl, file.type);
+        setDraft({
+          imageData: dataUrl,
+          thumbnailData: thumbnail,
+          mimeType: file.type,
+          name: "",
+          calories: "",
+          protein: "",
+          carbs: "",
+          fat: "",
+          mealType: "Breakfast",
+        });
+      } catch {
+        setError("Could not process the image. Please try another.");
+      } finally {
+        setAnalyzing(false);
       }
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const dataUrl = e.target?.result;
-        if (typeof dataUrl !== "string") return;
-        setPreview(dataUrl);
-        setAnalyzing(true);
-        try {
-          const thumbnail = await buildThumbnail(dataUrl, file.type);
-          onPhotoReady?.(dataUrl, thumbnail, file.type);
-        } catch {
-          setError("Could not process the image. Please try another.");
-        } finally {
-          setAnalyzing(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    },
-    [onPhotoReady],
-  );
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,7 +114,41 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
     setPreview(null);
     setAnalyzing(false);
     setError(null);
+    setDraft(null);
     if (inputRef.current) inputRef.current.value = "";
+  }, []);
+
+  const handleConfirm = useCallback(async () => {
+    if (!draft || !userId) return;
+    const calories = parseInt(draft.calories, 10);
+    if (!draft.name.trim() || isNaN(calories) || calories <= 0) {
+      setError("Food name and calories are required.");
+      return;
+    }
+    try {
+      await addFoodLog({
+        name: draft.name.trim(),
+        calories,
+        servingSize: 1,
+        protein: draft.protein !== "" ? parseFloat(draft.protein) || undefined : undefined,
+        carbs: draft.carbs !== "" ? parseFloat(draft.carbs) || undefined : undefined,
+        fat: draft.fat !== "" ? parseFloat(draft.fat) || undefined : undefined,
+        dateLogged: selectedDate,
+        userId,
+        isFavorite: false,
+        mealType: draft.mealType,
+      });
+      onPhotoReady?.(draft.imageData, draft.thumbnailData, draft.mimeType);
+      toast("Food logged from photo");
+      clearPreview();
+    } catch {
+      setError("Failed to log food. Please try again.");
+    }
+  }, [draft, userId, selectedDate, addFoodLog, onPhotoReady, clearPreview]);
+
+  const updateDraft = useCallback(<K extends keyof DraftEntry>(field: K, value: DraftEntry[K]) => {
+    setDraft((prev) => (prev ? { ...prev, [field]: value } : null));
+    setError(null);
   }, []);
 
   return (
@@ -101,7 +164,124 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
         data-testid="photo-input"
       />
 
-      {preview ? (
+      {draft ? (
+        <div className="space-y-4">
+          <div className="relative">
+            <img
+              src={draft.imageData}
+              alt="Food photo preview"
+              className="w-full aspect-square object-cover border border-rule"
+            />
+            <button
+              type="button"
+              onClick={clearPreview}
+              className="absolute top-2 right-2 size-7 flex items-center justify-center bg-paper border border-rule hover:bg-paper-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon"
+              aria-label="Discard photo"
+            >
+              <X className="size-3.5 text-ink" aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <p className={cn(LABEL_MONO_CLS, "text-persimmon")}>Confirm food entry</p>
+
+            <div className="space-y-2">
+              <label htmlFor="photo-food-name" className={LABEL_MONO_CLS}>
+                Food name <span className="text-persimmon">*</span>
+              </label>
+              <Input
+                id="photo-food-name"
+                type="text"
+                value={draft.name}
+                onChange={(e) => updateDraft("name", e.target.value)}
+                placeholder="e.g. Grilled chicken breast"
+                className={EDITORIAL_INPUT_CLS}
+                autoFocus={true}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label htmlFor="photo-calories" className={LABEL_MONO_CLS}>
+                  Calories <span className="text-persimmon">*</span>
+                </label>
+                <Input
+                  id="photo-calories"
+                  type="number"
+                  min="0"
+                  value={draft.calories}
+                  onChange={(e) => updateDraft("calories", e.target.value)}
+                  placeholder="0"
+                  className={EDITORIAL_INPUT_CLS}
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="photo-meal-type" className={LABEL_MONO_CLS}>
+                  Meal
+                </label>
+                <select
+                  id="photo-meal-type"
+                  value={draft.mealType}
+                  onChange={(e) => updateDraft("mealType", e.target.value as MealType)}
+                  className={cn(
+                    EDITORIAL_INPUT_CLS,
+                    "h-9 w-full appearance-none bg-paper px-3 cursor-pointer",
+                  )}
+                >
+                  {MEAL_TYPES.map((mt) => (
+                    <option key={mt} value={mt}>
+                      {mt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {(
+                [
+                  { field: "protein", label: "Protein (g)" },
+                  { field: "carbs", label: "Carbs (g)" },
+                  { field: "fat", label: "Fat (g)" },
+                ] as const
+              ).map(({ field, label }) => (
+                <div key={field} className="space-y-1">
+                  <label htmlFor={`photo-${field}`} className={LABEL_MONO_CLS}>
+                    {label}
+                  </label>
+                  <Input
+                    id={`photo-${field}`}
+                    type="number"
+                    min="0"
+                    value={draft[field]}
+                    onChange={(e) => updateDraft(field, e.target.value)}
+                    placeholder="---"
+                    className={EDITORIAL_INPUT_CLS}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={() => void handleConfirm()}
+              className="flex-1 rounded-none font-mono text-[10px] uppercase tracking-[0.15em]"
+            >
+              Log Food
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={clearPreview}
+              className="rounded-none border-rule font-mono text-[10px] uppercase tracking-[0.15em]"
+            >
+              Discard
+            </Button>
+          </div>
+        </div>
+      ) : preview ? (
         <div className="relative">
           <img
             src={preview}
@@ -143,7 +323,7 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
         </div>
       )}
 
-      {!preview && (
+      {!preview && !draft && (
         <Button
           type="button"
           variant="outline"

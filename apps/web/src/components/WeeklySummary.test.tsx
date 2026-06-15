@@ -6,6 +6,16 @@ import * as weeklySummaryHook from "../hooks/useWeeklySummary";
 vi.mock("../hooks/useProgressData");
 vi.mock("../hooks/useWeeklySummary");
 
+const emptyProgressData = {
+  labels: [],
+  data: [],
+  rollingAvg: [],
+  mealTypeData: null,
+  macroData: null,
+  isLoading: false,
+  allLogs: [],
+};
+
 describe("WeeklySummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -22,11 +32,7 @@ describe("WeeklySummary", () => {
 
   it("renders loading state when isLoading is true", () => {
     vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
+      ...emptyProgressData,
       isLoading: true,
     });
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
@@ -41,14 +47,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders summary data when loaded with high consistency", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 2000,
       daysOnTarget: 6,
@@ -61,14 +60,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders summary data with medium consistency", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 1800,
       daysOnTarget: 3,
@@ -81,14 +73,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders summary data with low consistency", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 2500,
       daysOnTarget: 1,
@@ -101,14 +86,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders with all days on target", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 1950,
       daysOnTarget: 7,
@@ -121,14 +99,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders with no days on target", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 3000,
       daysOnTarget: 0,
@@ -141,14 +112,7 @@ describe("WeeklySummary", () => {
   });
 
   it("renders with zero consistency boundary", () => {
-    vi.mocked(progressHook).useProgressData.mockReturnValueOnce({
-      labels: [],
-      data: [],
-      rollingAvg: [],
-      mealTypeData: null,
-      macroData: null,
-      isLoading: false,
-    });
+    vi.mocked(progressHook).useProgressData.mockReturnValueOnce(emptyProgressData);
     vi.mocked(weeklySummaryHook).useWeeklySummary.mockReturnValueOnce({
       averageCalories: 0,
       daysOnTarget: 0,

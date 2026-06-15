@@ -69,8 +69,9 @@ describe("BodyMeasurements component", () => {
 
     vi.mocked(appState).useAppState.mockReturnValue({
       bodyMeasurements: [],
-      deleteBodyMeasurement: vi.fn(),
+      deleteBodyMeasurement: vi.fn().mockResolvedValue(undefined),
       updateBodyMeasurement: vi.fn(),
+      addBodyMeasurement: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof appState.useAppState>);
 
     vi.mocked(bodyFormHook).useBodyForm.mockReturnValue(defaultFormReturn());
@@ -166,32 +167,33 @@ describe("BodyMeasurements component", () => {
     expect(editButtons).toHaveLength(2);
   });
 
-  it("shows delete confirmation when delete button clicked", () => {
-    vi.mocked(appState).useAppState.mockReturnValue({
-      bodyMeasurements: [makeMeasurement()],
-      deleteBodyMeasurement: vi.fn(),
-      updateBodyMeasurement: vi.fn(),
-    } as unknown as ReturnType<typeof appState.useAppState>);
-
-    render(<BodyMeasurements />);
-    const deleteBtn = screen.getByLabelText(/Delete measurement/i);
-    fireEvent.click(deleteBtn);
-    expect(screen.getByText("Delete")).toBeTruthy();
-    expect(screen.getByText("Cancel")).toBeTruthy();
-  });
-
-  it("calls deleteBodyMeasurement when confirmed", () => {
-    const deleteMock = vi.fn();
+  it("calls deleteBodyMeasurement immediately when delete button is clicked", () => {
+    const deleteMock = vi.fn().mockResolvedValue(undefined);
     vi.mocked(appState).useAppState.mockReturnValue({
       bodyMeasurements: [makeMeasurement()],
       deleteBodyMeasurement: deleteMock,
       updateBodyMeasurement: vi.fn(),
+      addBodyMeasurement: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof appState.useAppState>);
 
     render(<BodyMeasurements />);
     fireEvent.click(screen.getByLabelText(/Delete measurement/i));
-    fireEvent.click(screen.getByText("Delete"));
     expect(deleteMock).toHaveBeenCalledWith(BodyMeasurementId(1));
+  });
+
+  it("shows a toast after deleting a measurement", async () => {
+    const { toast } = await import("sonner");
+    const deleteMock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(appState).useAppState.mockReturnValue({
+      bodyMeasurements: [makeMeasurement()],
+      deleteBodyMeasurement: deleteMock,
+      updateBodyMeasurement: vi.fn(),
+      addBodyMeasurement: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ReturnType<typeof appState.useAppState>);
+
+    render(<BodyMeasurements />);
+    fireEvent.click(screen.getByLabelText(/Delete measurement/i));
+    expect(vi.mocked(toast)).toHaveBeenCalled();
   });
 
   it("renders weight chart when 2 or more weight measurements exist", () => {
@@ -262,19 +264,17 @@ describe("BodyMeasurements component", () => {
     expect(screen.queryByText(/Body Fat Trend/i)).toBeNull();
   });
 
-  it("cancel delete hides confirmation buttons", () => {
+  it("delete button does not show a Cancel confirmation button", () => {
     vi.mocked(appState).useAppState.mockReturnValue({
       bodyMeasurements: [makeMeasurement()],
-      deleteBodyMeasurement: vi.fn(),
+      deleteBodyMeasurement: vi.fn().mockResolvedValue(undefined),
       updateBodyMeasurement: vi.fn(),
+      addBodyMeasurement: vi.fn().mockResolvedValue(undefined),
     } as unknown as ReturnType<typeof appState.useAppState>);
 
     render(<BodyMeasurements />);
-    fireEvent.click(screen.getByLabelText(/Delete measurement/i));
-    expect(screen.getByText("Delete")).toBeTruthy();
-
-    fireEvent.click(screen.getByText("Cancel"));
-    expect(screen.queryByText("Delete")).toBeNull();
+    // New pattern: no confirmation step - no Cancel button in the UI
+    expect(screen.queryByText("Cancel")).toBeNull();
   });
 
   it("opens edit dialog when edit button is clicked", () => {

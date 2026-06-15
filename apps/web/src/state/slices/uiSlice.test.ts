@@ -195,4 +195,70 @@ describe("uiSlice", () => {
       expect(store.getState().seenCoachmarks).toStrictEqual(["food-logger", "command-palette"]);
     });
   });
+
+  describe("trainingDays", () => {
+    const DATE_A = "2026-06-10" as import("@/types").ISODate;
+    const DATE_B = "2026-06-11" as import("@/types").ISODate;
+
+    beforeEach(() => {
+      localStorage.removeItem("gc_training_days");
+    });
+
+    it("initializes trainingDays as empty array", () => {
+      const store = makeStore();
+      expect(store.getState().trainingDays).toStrictEqual([]);
+    });
+
+    it("toggleTrainingDay adds a date when not present", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      expect(store.getState().trainingDays).toContain(DATE_A);
+    });
+
+    it("toggleTrainingDay removes a date when already present", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      store.getState().toggleTrainingDay(DATE_A);
+      expect(store.getState().trainingDays).not.toContain(DATE_A);
+    });
+
+    it("toggleTrainingDay handles multiple independent dates", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      store.getState().toggleTrainingDay(DATE_B);
+      expect(store.getState().trainingDays).toContain(DATE_A);
+      expect(store.getState().trainingDays).toContain(DATE_B);
+    });
+
+    it("isTrainingDay returns false for an unregistered date", () => {
+      const store = makeStore();
+      expect(store.getState().isTrainingDay(DATE_A)).toBe(false);
+    });
+
+    it("isTrainingDay returns true after toggleTrainingDay adds the date", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      expect(store.getState().isTrainingDay(DATE_A)).toBe(true);
+    });
+
+    it("isTrainingDay returns false after date is toggled off", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      store.getState().toggleTrainingDay(DATE_A);
+      expect(store.getState().isTrainingDay(DATE_A)).toBe(false);
+    });
+
+    it("toggleTrainingDay persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().toggleTrainingDay(DATE_A);
+      const stored = JSON.parse(localStorage.getItem("gc_training_days") ?? "[]") as string[];
+      expect(stored).toContain(DATE_A);
+    });
+
+    it("loads trainingDays from localStorage on init", () => {
+      localStorage.setItem("gc_training_days", JSON.stringify([DATE_A]));
+      const store = makeStore();
+      expect(store.getState().trainingDays).toContain(DATE_A);
+    });
+  });
 });

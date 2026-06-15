@@ -360,6 +360,12 @@ describe("useRecipeImport", () => {
     "http://192.168.1.1/router",
     "http://172.16.0.1/private",
     "http://169.254.169.254/latest/meta-data",
+    // Decimal single-segment: 2130706433 == 127.0.0.1
+    "http://2130706433/admin",
+    // Hex single-segment: 0x7f000001 == 127.0.0.1
+    "http://0x7f000001/admin",
+    // Decimal for 10.0.0.1
+    "http://167772161/internal",
   ])("importFromUrl rejects blocked host %s without fetching", async (blockedUrl) => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 

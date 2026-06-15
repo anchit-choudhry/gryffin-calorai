@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import PageLoading from "./PageLoading";
 
 describe("PageLoading", () => {
@@ -7,41 +8,32 @@ describe("PageLoading", () => {
     expect(typeof PageLoading).toBe("function");
   });
 
-  it("accepts optional message prop", () => {
-    const component = PageLoading({ message: "Loading dashboard..." });
-    expect(component).toBeDefined();
+  it("renders the default loading message", () => {
+    render(<PageLoading />);
+    expect(screen.getByText("Loading...")).toBeTruthy();
   });
 
-  it("renders with default props", () => {
-    const component = PageLoading({});
-    expect(component).toBeDefined();
+  it("renders a custom message", () => {
+    render(<PageLoading message="Please wait..." />);
+    expect(screen.getByText("Please wait...")).toBeTruthy();
   });
 
-  it("renders with default loading message", () => {
-    const component = PageLoading({});
-    expect(component).toBeDefined();
+  it("renders SeasonalFlourish SVG ornament instead of spinner", () => {
+    const { container } = render(<PageLoading />);
+    const svg = container.querySelector("svg");
+    expect(svg).toBeTruthy();
+    const spinners = container.querySelectorAll('[class*="animate-spin"]');
+    expect(spinners).toHaveLength(0);
   });
 
-  it("accepts custom message", () => {
-    const message = "Please wait...";
-    const component = PageLoading({ message });
-    expect(component).toBeDefined();
-  });
-
-  it("renders with empty message", () => {
-    const component = PageLoading({ message: "" });
-    expect(component).toBeDefined();
+  it("renders without crashing when message is empty string", () => {
+    const { container } = render(<PageLoading message="" />);
+    expect(container.firstChild).toBeTruthy();
   });
 
   it("renders with long message", () => {
     const longMessage = "Loading your data from the database. This may take a moment...";
-    const component = PageLoading({ message: longMessage });
-    expect(component).toBeDefined();
-  });
-
-  it("renders with special characters in message", () => {
-    const message = "Loading... (3/5) 🔄";
-    const component = PageLoading({ message });
-    expect(component).toBeDefined();
+    render(<PageLoading message={longMessage} />);
+    expect(screen.getByText(longMessage)).toBeTruthy();
   });
 });

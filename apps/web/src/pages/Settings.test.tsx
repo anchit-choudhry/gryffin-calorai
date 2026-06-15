@@ -138,12 +138,13 @@ describe("Settings", () => {
     expect(screen.getByTestId("data-export-panel")).toBeTruthy();
   });
 
-  it("renders version string", async () => {
+  it("renders app version in colophon", async () => {
     setupMocks();
     await act(async () => {
       render(<Settings />);
     });
-    expect(screen.getByText(/Version/)).toBeTruthy();
+    expect(screen.getByText(/0\.11\.0/)).toBeTruthy();
+    expect(screen.getByText("Edition")).toBeTruthy();
   });
 
   it("renders GitHub link", async () => {

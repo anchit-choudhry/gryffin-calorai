@@ -1,16 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
+import type { ReactElement } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/state/AppState";
-import { computeMacroTargets } from "@/lib/tdee";
+import { applyPeriodization, computeMacroTargets } from "@/lib/tdee";
 import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
+import { SunRay } from "@/components/icons/almanac/SunRay";
+import { WheatSprig } from "@/components/icons/almanac/WheatSprig";
+import { SeasonalFlourish } from "@/components/icons/almanac/SeasonalFlourish";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils";
 import { motionTokens } from "@/lib/motionVariants";
 import { useFastingTimer } from "@/hooks/useFastingTimer";
+
+function getSeasonalOrnament(date: Date): ReactElement {
+  const m = date.getMonth() + 1; // 1-12
+  const d = date.getDate();
+
+  // Within ±5 days of a solstice or equinox, or fall season: use the editorial rule flourish
+  const nearTransition =
+    (m === 3 && d >= 15 && d <= 25) ||
+    (m === 6 && d >= 16 && d <= 26) ||
+    (m === 9 && d >= 17 && d <= 27) ||
+    (m === 12 && d >= 16 && d <= 26);
+  const isFall = (m === 9 && d >= 22) || m === 10 || m === 11 || (m === 12 && d <= 20);
+  const isSummer = (m === 6 && d >= 21) || m === 7 || m === 8 || (m === 9 && d <= 21);
+
+  if (nearTransition || isFall) {
+    return <SeasonalFlourish className="w-20 h-4 text-ink-soft opacity-50" />;
+  }
+  if (isSummer) {
+    return <WheatSprig className="h-10 w-auto text-ink-soft opacity-50" />;
+  }
+  return <SunRay className="size-7 text-ink-soft opacity-50" />;
+}
 
 interface Props {
   totalCalories: number;
@@ -25,6 +51,10 @@ function DashboardHero({ totalCalories, totals }: Props) {
     dailyActivityLogs,
     activeFastingSession,
     dietProfile,
+    customMacroGoals,
+    selectedDate,
+    toggleTrainingDay,
+    isTrainingDay,
   } = useAppState();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(
@@ -37,6 +67,7 @@ function DashboardHero({ totalCalories, totals }: Props) {
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
   const { formattedRemaining: fastingRemaining, isComplete: fastingComplete } = useFastingTimer();
   const totalBurned = dailyActivityLogs.reduce((sum, l) => sum + l.caloriesBurned, 0);
+  const earnedGoal = calorieGoal + totalBurned;
   const netCalories = Math.max(0, totalCalories - totalBurned);
   const displayCalories = showNet ? netCalories : totalCalories;
 
@@ -52,14 +83,21 @@ function DashboardHero({ totalCalories, totals }: Props) {
     return () => controls.stop();
   }, [displayCalories, shouldReduceMotion, count]);
 
-  const ratio = Math.min(1, displayCalories / (calorieGoal || 1));
-  const isOver = displayCalories > calorieGoal;
+  const ratio = Math.min(1, displayCalories / (earnedGoal || 1));
+  const isOver = displayCalories > earnedGoal;
   const today = useMemo(() => new Date(), []);
 
+  const trainingDay = isTrainingDay(selectedDate);
   const macroTargets = useMemo(() => {
     if (!dietProfile) return null;
-    return computeMacroTargets(calorieGoal, dietProfile.preset);
-  }, [calorieGoal, dietProfile]);
+    const base = computeMacroTargets(earnedGoal, dietProfile.preset);
+    const periodized = applyPeriodization(base, trainingDay);
+    return {
+      protein: customMacroGoals?.proteinG ?? periodized.protein,
+      carbs: customMacroGoals?.carbsG ?? periodized.carbs,
+      fat: customMacroGoals?.fatG ?? periodized.fat,
+    };
+  }, [earnedGoal, dietProfile, trainingDay, customMacroGoals]);
 
   const greeting = useMemo(() => {
     const hours = today.getHours();
@@ -134,6 +172,19 @@ function DashboardHero({ totalCalories, totals }: Props) {
                 {showNet ? "Consumed" : "Net"}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => toggleTrainingDay(selectedDate)}
+              aria-pressed={trainingDay}
+              aria-label={trainingDay ? "Mark as rest day" : "Mark as training day"}
+              className={cn(
+                LABEL_MONO_CLS,
+                "border px-2 py-1 active:scale-[0.97] transition-colors",
+                trainingDay ? "border-persimmon text-persimmon" : "border-rule hover:text-ink",
+              )}
+            >
+              {trainingDay ? "Training" : "Rest day"}
+            </button>
             {activeFastingSession && (
               <span
                 className={cn(
@@ -165,18 +216,19 @@ function DashboardHero({ totalCalories, totals }: Props) {
           <span className="text-xs text-ink-soft">{Math.round(ratio * 100)}% of goal</span>
           {isOver ? (
             <span className="text-xs text-persimmon">
-              Over by {(displayCalories - calorieGoal).toLocaleString()} kcal
+              Over by {(displayCalories - earnedGoal).toLocaleString()} kcal
             </span>
           ) : (
             <span className="text-xs text-ink-soft">
-              {Math.max(0, calorieGoal - displayCalories).toLocaleString()} remaining
+              {Math.max(0, earnedGoal - displayCalories).toLocaleString()} remaining
             </span>
           )}
         </div>
       </div>
 
-      {/* Meta column: greeting + latest weight + date label + goal editor */}
+      {/* Meta column: seasonal ornament + greeting + latest weight + date label + goal editor */}
       <div className="col-span-12 md:col-span-3 flex flex-col justify-end gap-3 pb-2">
+        {getSeasonalOrnament(today)}
         {username && (
           <p className="text-sm text-ink-soft">
             {greeting}, <span className="text-ink font-semibold">{username}</span>
@@ -240,7 +292,17 @@ function DashboardHero({ totalCalories, totals }: Props) {
               setEditingGoal(true);
             }}
           >
-            Goal: {calorieGoal.toLocaleString()} kcal
+            {totalBurned > 0 ? (
+              <>
+                Goal: <span className="text-ink tabular-nums">{earnedGoal.toLocaleString()}</span>
+                <span className="text-persimmon tabular-nums">
+                  (+{totalBurned.toLocaleString()})
+                </span>{" "}
+                kcal
+              </>
+            ) : (
+              <>Goal: {calorieGoal.toLocaleString()} kcal</>
+            )}
             <Pencil className="size-3 opacity-0 group-hover:opacity-60 transition-opacity" />
           </Button>
         )}

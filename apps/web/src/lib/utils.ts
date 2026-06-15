@@ -14,6 +14,8 @@ export const EDITORIAL_INPUT_CLS =
 
 export const LABEL_MONO_CLS = "font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft";
 
+export const SERIF_TITLE_CLS = "font-serif text-ink font-light tracking-tight lining-nums";
+
 export const ICON_BTN_CLS =
   "flex items-center justify-center size-9 rounded-none hover:bg-paper-muted transition-colors " +
   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon " +

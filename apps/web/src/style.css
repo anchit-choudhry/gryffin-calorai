@@ -351,6 +351,108 @@ html.accent-rose.dark,
   letter-spacing: -0.01em;
 }
 
+/* ---- Sonner toast — paper slip, editorial styling ----
+   Override via CSS custom properties Sonner exposes on [data-sonner-toaster].
+   --normal-bg / --normal-border / --normal-text / --border-radius are consumed
+   by [data-sonner-toast][data-styled='true'] in Sonner's own stylesheet. */
+[data-sonner-toaster] {
+  --normal-bg: var(--paper);
+  --normal-border: var(--rule);
+  --normal-text: var(--ink);
+  --border-radius: 0px;
+}
+
+[data-sonner-toast][data-styled='true'] {
+  box-shadow: none;
+  border-left-width: 3px;
+  border-left-color: var(--persimmon);
+  font-family: var(--font-sans);
+}
+
+[data-sonner-toast][data-styled='true'] [data-close-button] {
+  border-radius: 0;
+  border-color: var(--rule);
+  background: var(--paper);
+  color: var(--ink-soft);
+}
+
+/* ---- Text selection — persimmon ink wash ---- */
+::selection {
+  background-color: oklch(0.65 0.190 38 / 0.18);
+  color: var(--ink);
+}
+
+.dark ::selection {
+  background-color: oklch(0.78 0.170 38 / 0.25);
+  color: var(--ink);
+}
+
+/* ---- Paper-tone scrollbars — squared corners, rule thumb ---- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-muted);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+}
+
+/* ---- Ink accent — checkboxes, radios, range sliders ---- */
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--persimmon);
+}
+
+/* ---- Skeleton hatch — diagonal stripe animation ----
+   Replaces animate-pulse. Moves a tiled -45deg stripe pattern to
+   suggest in-progress rendering without circular pulsing. */
+@keyframes skeleton-hatch-shift {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 14px 14px;
+  }
+}
+
+.skeleton-hatch {
+  background-color: var(--paper-muted);
+  background-image: linear-gradient(
+    -45deg,
+    oklch(0 0 0 / 0.032) 25%,
+    transparent 25%,
+    transparent 50%,
+    oklch(0 0 0 / 0.032) 50%,
+    oklch(0 0 0 / 0.032) 75%,
+    transparent 75%
+  );
+  background-size: 14px 14px;
+  animation: skeleton-hatch-shift 1.4s linear infinite;
+}
+
+.dark .skeleton-hatch {
+  background-image: linear-gradient(
+    -45deg,
+    oklch(1 0 0 / 0.045) 25%,
+    transparent 25%,
+    transparent 50%,
+    oklch(1 0 0 / 0.045) 50%,
+    oklch(1 0 0 / 0.045) 75%,
+    transparent 75%
+  );
+}
+
 /* ---- Reduced motion: disable all spatial animations ---- */
 @media (prefers-reduced-motion: reduce) {
   *,

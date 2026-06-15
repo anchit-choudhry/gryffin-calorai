@@ -21,6 +21,7 @@ import { useAppState } from "../state/AppState";
 import type { MealType } from "@/types";
 import { DAILY_WATER_GOAL_ML, MEAL_TYPES, todayISO } from "@/types";
 import { useDashboardInsights } from "@/hooks/useDashboardInsights";
+import { detectPlateau } from "@/lib/adaptiveTdee";
 import { useStreaks } from "@/hooks/useStreaks";
 import { useWeeklySummary } from "@/hooks/useWeeklySummary";
 import type { FoodItem } from "../db/dbService";
@@ -42,6 +43,7 @@ import {
 } from "../lib/motionVariants";
 import { cn, groupLogsByMeal } from "../lib/utils";
 import { EmptyState } from "../components/EmptyState";
+import { MealPatternSuggestions } from "../components/dashboard/MealPatternSuggestions";
 import { EmptyPlate } from "../components/illustrations";
 import { Button } from "@/components/ui/button";
 import { useFastingTimer } from "../hooks/useFastingTimer";
@@ -67,6 +69,7 @@ const Dashboard = () => {
     dailyActivityLogs,
     activeFastingSession,
     waterGoalMl,
+    bodyMeasurements,
     openQuickAdd,
     copyYesterdayLogs,
   } = useAppState();
@@ -223,6 +226,9 @@ const Dashboard = () => {
     harvestForceOpen || (init.status === "ready" && shouldOpenThisSession && daysOnTarget > 0);
 
   const calorieGoal = init.status === "ready" ? init.user.calorieGoal : 2000;
+
+  const plateau = useMemo(() => detectPlateau(bodyMeasurements), [bodyMeasurements]);
+
   const allInsights = useDashboardInsights({
     currentStreak,
     totalCaloriesToday: totalCalories,
@@ -230,6 +236,8 @@ const Dashboard = () => {
     totalProteinToday: totalProtein,
     dailyLogCount: dailyLogs.length,
     daysOnTargetThisWeek: daysOnTarget,
+    isPlateauing: plateau.isPlateauing,
+    plateauDaySpan: plateau.daySpan,
   });
   const visibleInsights = allInsights.filter((ins) => !dismissedInsights.includes(ins.id));
 
@@ -356,6 +364,11 @@ const Dashboard = () => {
                 ))}
               </motion.div>
             )}
+
+            {/* Meal pattern suggestions */}
+            <motion.div className="col-span-12" {...sv}>
+              <MealPatternSuggestions />
+            </motion.div>
 
             {/* Section: Today's Diary (primary content) */}
             <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>

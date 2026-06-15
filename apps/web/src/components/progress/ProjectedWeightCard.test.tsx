@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ProjectedWeightCard from "./ProjectedWeightCard";
 import type { TdeeProfile } from "@/db/dbService";
 import { UserId } from "@/types";
+
+vi.mock("@/state/AppState", () => ({
+  useAppState: vi.fn(() => ({ bodyMeasurements: [] })),
+}));
+
+import { useAppState } from "@/state/AppState";
 
 const userId = UserId("test-user");
 
@@ -18,6 +24,12 @@ const baseProfile: TdeeProfile = {
 };
 
 describe("ProjectedWeightCard", () => {
+  beforeEach(() => {
+    vi.mocked(useAppState).mockReturnValue({
+      bodyMeasurements: [],
+    } as unknown as ReturnType<typeof useAppState>);
+  });
+
   it("renders current weight in kg", () => {
     render(<ProjectedWeightCard tdeeProfile={baseProfile} />);
     expect(screen.getByText("80 kg")).toBeTruthy();
@@ -82,5 +94,27 @@ describe("ProjectedWeightCard", () => {
     const profile: TdeeProfile = { ...baseProfile, weightKg: 75, targetWeightKg: 75 };
     render(<ProjectedWeightCard tdeeProfile={profile} />);
     expect(screen.getByText(/update your goal/)).toBeTruthy();
+  });
+
+  describe("chart with historical body measurements", () => {
+    it("renders actual data line when two measurements exist within the last 30 days", () => {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      const todayISO = today.toISOString().slice(0, 10);
+      const yesterdayISO = yesterday.toISOString().slice(0, 10);
+
+      vi.mocked(useAppState).mockReturnValue({
+        bodyMeasurements: [
+          { weight: 79, measuredAt: todayISO },
+          { weight: 79.5, measuredAt: yesterdayISO },
+        ],
+      } as unknown as ReturnType<typeof useAppState>);
+
+      const profile: TdeeProfile = { ...baseProfile, targetWeightKg: 75 };
+      render(<ProjectedWeightCard tdeeProfile={profile} />);
+      expect(screen.getByText("Actual")).toBeTruthy();
+      expect(screen.getByText("30-day forecast")).toBeTruthy();
+    });
   });
 });

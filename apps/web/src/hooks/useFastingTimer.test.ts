@@ -4,10 +4,6 @@ import { useFastingTimer } from "./useFastingTimer";
 import * as appState from "../state/AppState";
 
 vi.mock("../state/AppState");
-vi.mock("date-fns", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("date-fns")>();
-  return { ...mod };
-});
 
 const makeSession = (startOffsetSec = 0) => ({
   id: 1,

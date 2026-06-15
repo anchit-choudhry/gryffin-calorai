@@ -6,7 +6,7 @@ interface SkeletonProps {
 }
 
 const Skeleton: FC<SkeletonProps> = ({ className }) => (
-  <div className={cn("animate-pulse bg-paper-muted rounded-none", className)} aria-hidden="true" />
+  <div className={cn("skeleton-hatch rounded-none", className)} aria-hidden="true" />
 );
 
 export const DashboardSkeleton: FC = () => (

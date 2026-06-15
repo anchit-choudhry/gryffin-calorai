@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { AppState } from "../AppState";
+import type { ISODate } from "@/types";
 
 export type Density = "comfortable" | "compact" | "spacious";
 export type AccentTheme = "persimmon" | "sage" | "indigo" | "amber" | "rose";
@@ -8,6 +9,7 @@ const DENSITY_KEY = "gc_density";
 const SEEN_COACHMARKS_KEY = "gc_seen_coachmarks";
 const HAPTICS_KEY = "gc_haptics";
 const ACCENT_KEY = "gc_accent";
+const TRAINING_DAYS_KEY = "gc_training_days";
 
 const VALID_ACCENT_THEMES: readonly AccentTheme[] = [
   "persimmon",
@@ -37,9 +39,32 @@ function loadHapticsEnabled(): boolean {
   return localStorage.getItem(HAPTICS_KEY) === "true";
 }
 
+const ACCENT_MIGRATIONS: Record<string, AccentTheme> = {
+  slate: "indigo",
+  ocean: "indigo",
+  ember: "amber",
+};
+
 function loadAccentTheme(): AccentTheme {
-  const stored = localStorage.getItem(ACCENT_KEY) as AccentTheme | null;
-  return stored !== null && VALID_ACCENT_THEMES.includes(stored) ? stored : "persimmon";
+  const stored = localStorage.getItem(ACCENT_KEY);
+  if (stored === null) return "persimmon";
+  if (stored in ACCENT_MIGRATIONS) {
+    const migrated = ACCENT_MIGRATIONS[stored]!;
+    localStorage.setItem(ACCENT_KEY, migrated);
+    return migrated;
+  }
+  return VALID_ACCENT_THEMES.includes(stored as AccentTheme)
+    ? (stored as AccentTheme)
+    : "persimmon";
+}
+
+function loadTrainingDays(): ISODate[] {
+  try {
+    const stored = localStorage.getItem(TRAINING_DAYS_KEY);
+    return stored ? (JSON.parse(stored) as ISODate[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 export interface UiSlice {
@@ -57,6 +82,9 @@ export interface UiSlice {
   setAccentTheme: (theme: AccentTheme) => void;
   seenCoachmarks: string[];
   markCoachmarkSeen: (id: string) => void;
+  trainingDays: ISODate[];
+  toggleTrainingDay: (date: ISODate) => void;
+  isTrainingDay: (date: ISODate) => boolean;
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
@@ -89,4 +117,12 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     localStorage.setItem(SEEN_COACHMARKS_KEY, JSON.stringify(updated));
     set({ seenCoachmarks: updated });
   },
+  trainingDays: loadTrainingDays(),
+  toggleTrainingDay: (date: ISODate) => {
+    const current = get().trainingDays;
+    const updated = current.includes(date) ? current.filter((d) => d !== date) : [...current, date];
+    localStorage.setItem(TRAINING_DAYS_KEY, JSON.stringify(updated));
+    set({ trainingDays: updated });
+  },
+  isTrainingDay: (date: ISODate) => get().trainingDays.includes(date),
 });
