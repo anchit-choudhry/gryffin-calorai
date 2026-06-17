@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyPeriodization,
   computeCalorieGoal,
   computeMacroTargets,
   computeTDEE,
@@ -134,6 +135,48 @@ describe("computeMacroTargets", () => {
     expect(result.protein).toBe(0);
     expect(result.carbs).toBe(0);
     expect(result.fat).toBe(0);
+  });
+});
+
+describe("applyPeriodization", () => {
+  const base = { protein: 150, carbs: 250, fat: 56 };
+
+  it("training day increases carbs by 30%", () => {
+    expect(applyPeriodization(base, true).carbs).toBe(Math.round(250 * 1.3));
+  });
+
+  it("training day reduces fat by 10%", () => {
+    expect(applyPeriodization(base, true).fat).toBe(Math.round(56 * 0.9));
+  });
+
+  it("training day leaves protein unchanged", () => {
+    expect(applyPeriodization(base, true).protein).toBe(150);
+  });
+
+  it("rest day reduces carbs by 20%", () => {
+    expect(applyPeriodization(base, false).carbs).toBe(Math.round(250 * 0.8));
+  });
+
+  it("rest day increases fat by 10%", () => {
+    expect(applyPeriodization(base, false).fat).toBe(Math.round(56 * 1.1));
+  });
+
+  it("rest day leaves protein unchanged", () => {
+    expect(applyPeriodization(base, false).protein).toBe(150);
+  });
+
+  it("fat is floored at 0 on training day with zero fat", () => {
+    expect(applyPeriodization({ protein: 150, carbs: 250, fat: 0 }, true).fat).toBe(0);
+  });
+
+  it("carbs are floored at 0 on rest day with zero carbs", () => {
+    expect(applyPeriodization({ protein: 150, carbs: 0, fat: 56 }, false).carbs).toBe(0);
+  });
+
+  it("returns new object - does not mutate base", () => {
+    const original = { protein: 150, carbs: 250, fat: 56 };
+    applyPeriodization(original, true);
+    expect(original).toStrictEqual({ protein: 150, carbs: 250, fat: 56 });
   });
 });
 
