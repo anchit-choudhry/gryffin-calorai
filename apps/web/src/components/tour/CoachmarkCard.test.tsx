@@ -11,11 +11,6 @@ const baseStep: TourStep = {
   body: "Test body text.",
 };
 
-const firstStep: TourStep = {
-  ...baseStep,
-  isFirst: true,
-};
-
 const defaultProps = {
   step: baseStep,
   stepIndex: 1,
@@ -41,9 +36,9 @@ describe("CoachmarkCard", () => {
     expect(screen.getByText("Test Title")).toBeDefined();
   });
 
-  it("renders 'Quick tour' as title when step.isFirst is true", () => {
-    render(<CoachmarkCard {...defaultProps} step={firstStep} />);
-    expect(screen.getByText("Quick tour")).toBeDefined();
+  it("renders 'Welcome to your field journal' as title when isFirst=true", () => {
+    render(<CoachmarkCard {...defaultProps} isFirst={true} />);
+    expect(screen.getByText("Welcome to your field journal")).toBeDefined();
   });
 
   it("renders step body for a non-first step", () => {
@@ -51,8 +46,8 @@ describe("CoachmarkCard", () => {
     expect(screen.getByText("Test body text.")).toBeDefined();
   });
 
-  it("appends 'Take 90 seconds...' to body when step.isFirst is true", () => {
-    render(<CoachmarkCard {...defaultProps} step={firstStep} />);
+  it("appends 'Take 90 seconds...' to body when isFirst=true", () => {
+    render(<CoachmarkCard {...defaultProps} isFirst={true} />);
     expect(screen.getByText(/Take 90 seconds to see the highlights/)).toBeDefined();
   });
 
@@ -61,14 +56,20 @@ describe("CoachmarkCard", () => {
     expect(screen.queryByText(/Take 90 seconds/)).toBeNull();
   });
 
-  it("shows correct step N of M indicator", () => {
+  it("shows roman numeral folio in running head", () => {
     render(<CoachmarkCard {...defaultProps} stepIndex={2} totalSteps={8} />);
-    expect(screen.getByText("Step 3 of 8")).toBeDefined();
+    const running = screen.getByText(/III/);
+    expect(running.textContent).toContain("VIII");
   });
 
-  it("shows step 1 of M on first step index", () => {
+  it("shows I for first step in folio", () => {
     render(<CoachmarkCard {...defaultProps} stepIndex={0} totalSteps={5} />);
-    expect(screen.getByText("Step 1 of 5")).toBeDefined();
+    expect(screen.getByText(/I.*V/)).toBeDefined();
+  });
+
+  it("shows 'Field Journal' in the running head", () => {
+    render(<CoachmarkCard {...defaultProps} />);
+    expect(screen.getByText("Field Journal")).toBeDefined();
   });
 
   it("applies style prop to the dialog element", () => {
@@ -151,16 +152,14 @@ describe("CoachmarkCard", () => {
   it("clicking X button calls onSkip", () => {
     const onSkip = vi.fn();
     render(<CoachmarkCard {...defaultProps} onSkip={onSkip} />);
-    const skipBtns = screen.getAllByRole("button", { name: /skip tour/i });
-    fireEvent.click(skipBtns[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /skip tour/i }));
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 
-  it("clicking 'Skip tour' text button calls onSkip", () => {
+  it("clicking 'Close' footer button calls onSkip", () => {
     const onSkip = vi.fn();
     render(<CoachmarkCard {...defaultProps} onSkip={onSkip} />);
-    const skipBtns = screen.getAllByRole("button", { name: /skip tour/i });
-    fireEvent.click(skipBtns[1]!);
+    fireEvent.click(screen.getByText("Close"));
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 

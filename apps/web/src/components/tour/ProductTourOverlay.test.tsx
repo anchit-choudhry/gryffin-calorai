@@ -66,15 +66,15 @@ describe("ProductTourOverlay", () => {
     expect(typeof ProductTourOverlay).toBe("function");
   });
 
-  it("renders Quick tour heading and body on first step", () => {
+  it("renders welcome heading and body on first step", () => {
     render(<ProductTourOverlay />);
-    expect(screen.getByText("Quick tour")).toBeDefined();
+    expect(screen.getByText("Welcome to your field journal")).toBeDefined();
     expect(screen.getByText(/Take 90 seconds/i)).toBeDefined();
   });
 
-  it("shows step N of M indicator", () => {
+  it("shows roman numeral folio on first step", () => {
     render(<ProductTourOverlay />);
-    expect(screen.getByText(`Step 1 of ${TOUR_TOTAL_STEPS}`)).toBeDefined();
+    expect(screen.getByText("Field Journal")).toBeDefined();
   });
 
   it("clicking Next calls nextTourStep when not on last step", () => {
@@ -86,9 +86,9 @@ describe("ProductTourOverlay", () => {
 
   it("clicking Skip calls skipTour", async () => {
     render(<ProductTourOverlay />);
-    const skipBtns = screen.getAllByText("Skip tour");
+    const skipBtn = screen.getByRole("button", { name: /skip tour/i });
     await act(async () => {
-      fireEvent.click(skipBtns[0]!);
+      fireEvent.click(skipBtn);
     });
     expect(mockSkipTour).toHaveBeenCalledTimes(1);
   });

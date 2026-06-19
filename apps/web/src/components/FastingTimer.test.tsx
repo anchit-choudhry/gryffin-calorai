@@ -153,4 +153,74 @@ describe("FastingTimer", () => {
     render(<FastingTimer />);
     expect(screen.getByText(/Timer persists/)).toBeTruthy();
   });
+
+  describe("E3 moon disk", () => {
+    it("renders moon disk SVG circle when session is active", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        activeFastingSession: activeSession,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      vi.mocked(fastingTimerHook).useFastingTimer.mockReturnValue({
+        ...baseTimerMock,
+        progress: 0.5,
+      });
+
+      const { container } = render(<FastingTimer />);
+      expect(container.querySelector("[data-moon-disk]")).toBeTruthy();
+    });
+
+    it("time display renders below moon disk (not inside it)", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        activeFastingSession: activeSession,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      vi.mocked(fastingTimerHook).useFastingTimer.mockReturnValue({
+        ...baseTimerMock,
+        elapsedSec: 7200,
+        progress: 0.125,
+        formattedElapsed: "02:00:00",
+      });
+
+      const { container } = render(<FastingTimer />);
+      const disk = container.querySelector("[data-moon-disk]");
+      const timeEl = screen.getByText("02:00:00");
+      expect(disk).toBeTruthy();
+      // time element must not be a descendant of the disk SVG
+      expect(disk!.contains(timeEl)).toBe(false);
+    });
+
+    it("progress 0 renders clip ellipse with rx near 0", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        activeFastingSession: activeSession,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      vi.mocked(fastingTimerHook).useFastingTimer.mockReturnValue({
+        ...baseTimerMock,
+        progress: 0,
+      });
+
+      const { container } = render(<FastingTimer />);
+      const ellipse = container.querySelector("[data-moon-clip-ellipse]");
+      expect(ellipse).toBeTruthy();
+      const rx = parseFloat(ellipse!.getAttribute("rx") ?? "999");
+      expect(rx).toBeLessThan(5);
+    });
+
+    it("progress 1 renders clip ellipse with rx equal to radius (full moon)", () => {
+      vi.mocked(appState).useAppState.mockReturnValue({
+        activeFastingSession: activeSession,
+      } as unknown as ReturnType<typeof appState.useAppState>);
+      vi.mocked(fastingTimerHook).useFastingTimer.mockReturnValue({
+        ...baseTimerMock,
+        progress: 1,
+        isComplete: true,
+      });
+
+      const { container } = render(<FastingTimer />);
+      const ellipse = container.querySelector("[data-moon-clip-ellipse]");
+      const disk = container.querySelector("[data-moon-disk]");
+      expect(ellipse).toBeTruthy();
+      expect(disk).toBeTruthy();
+      // rx should equal the SVG radius (40)
+      const rx = parseFloat(ellipse!.getAttribute("rx") ?? "0");
+      expect(rx).toBeCloseTo(40, 0);
+    });
+  });
 });

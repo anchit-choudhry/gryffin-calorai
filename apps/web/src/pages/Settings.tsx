@@ -14,7 +14,7 @@ import DietProfileEditor from "../components/DietProfileEditor";
 import RemindersSettings from "../components/RemindersSettings";
 import { CloudSyncPanel } from "../components/CloudSyncPanel";
 import { useAppState } from "../state/AppState";
-import type { AccentTheme, Density } from "../state/slices/uiSlice";
+import type { AccentTheme, Density, Edition } from "../state/slices/uiSlice";
 import { cn } from "../lib/utils";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
@@ -32,6 +32,13 @@ interface AccentOption {
   label: string;
   hue: number;
 }
+
+const EDITION_OPTIONS: { value: Edition; label: string; description: string }[] = [
+  { value: "standard", label: "Standard", description: "Default field journal" },
+  { value: "sepia", label: "Sepia", description: "Aged parchment tones" },
+  { value: "lamplight", label: "Lamplight", description: "Warm dark reading mode" },
+  { value: "large-print", label: "Large Print", description: "Scaled type for readability" },
+];
 
 const ACCENT_OPTIONS: AccentOption[] = [
   { value: "persimmon", label: "Persimmon", hue: 38 },
@@ -57,6 +64,10 @@ function useSettingsSections(): SettingsSection[] {
   const setHapticsEnabled = useAppState((s) => s.setHapticsEnabled);
   const accentTheme = useAppState((s) => s.accentTheme);
   const setAccentTheme = useAppState((s) => s.setAccentTheme);
+  const edition = useAppState((s) => s.edition);
+  const setEdition = useAppState((s) => s.setEdition);
+  const broadsheet = useAppState((s) => s.broadsheet);
+  const setBroadsheet = useAppState((s) => s.setBroadsheet);
 
   return [
     {
@@ -113,6 +124,7 @@ function useSettingsSections(): SettingsSection[] {
         "display",
         "density",
         "layout",
+        "broadsheet",
         "theme",
         "accent",
         "haptics",
@@ -136,7 +148,7 @@ function useSettingsSections(): SettingsSection[] {
                   aria-checked={density === value}
                   onClick={() => setDensity(value)}
                   className={cn(
-                    "flex-1 border px-3 py-2.5 text-left transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2",
+                    "flex-1 border px-3 py-2.5 text-left transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 active:scale-[0.97]",
                     density === value
                       ? "border-persimmon bg-persimmon-soft text-ink"
                       : "border-rule bg-paper-muted text-ink-soft hover:text-ink hover:border-ink",
@@ -166,7 +178,7 @@ function useSettingsSections(): SettingsSection[] {
                   aria-label={label}
                   onClick={() => setAccentTheme(value)}
                   className={cn(
-                    "flex items-center gap-2 border px-3 py-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2",
+                    "flex items-center gap-2 border px-3 py-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 active:scale-[0.97]",
                     accentTheme === value
                       ? "border-persimmon bg-persimmon-soft text-ink"
                       : "border-rule bg-paper-muted text-ink-soft hover:text-ink hover:border-ink",
@@ -178,6 +190,70 @@ function useSettingsSections(): SettingsSection[] {
                     aria-hidden="true"
                   />
                   <span className="font-sans text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Edition */}
+          <div className="space-y-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              Edition
+            </p>
+            <div role="radiogroup" aria-label="Journal edition" className="grid grid-cols-2 gap-2">
+              {EDITION_OPTIONS.map(({ value, label, description }) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={edition === value}
+                  onClick={() => setEdition(value)}
+                  className={cn(
+                    "border px-3 py-2.5 text-left transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 active:scale-[0.97]",
+                    edition === value
+                      ? "border-persimmon bg-persimmon-soft text-ink"
+                      : "border-rule bg-paper-muted text-ink-soft hover:text-ink hover:border-ink",
+                  )}
+                >
+                  <span className="block font-sans text-sm font-medium">{label}</span>
+                  <span className="block font-mono text-[10px] text-ink-soft mt-0.5">
+                    {description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dashboard layout */}
+          <div className="space-y-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              Dashboard layout
+            </p>
+            <div role="radiogroup" aria-label="Dashboard layout" className="flex gap-2">
+              {(
+                [
+                  { value: false, label: "Standard", description: "Single-column flow" },
+                  { value: true, label: "Broadsheet", description: "Two-column newspaper grid" },
+                ] as const
+              ).map(({ value, label, description }) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  role="radio"
+                  aria-checked={broadsheet === value}
+                  aria-label={label}
+                  onClick={() => setBroadsheet(value)}
+                  className={cn(
+                    "flex-1 border px-3 py-2.5 text-left transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2 active:scale-[0.97]",
+                    broadsheet === value
+                      ? "border-persimmon bg-persimmon-soft text-ink"
+                      : "border-rule bg-paper-muted text-ink-soft hover:text-ink hover:border-ink",
+                  )}
+                >
+                  <span className="block font-sans text-sm font-medium">{label}</span>
+                  <span className="block font-mono text-[10px] text-ink-soft mt-0.5">
+                    {description}
+                  </span>
                 </button>
               ))}
             </div>

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PrivacyPanel } from "./PrivacyPanel";
 
+const mockDownloadJSON = vi.fn().mockResolvedValue(undefined);
+
 vi.mock("@/db/dbService", () => ({
   db: { delete: vi.fn().mockResolvedValue(undefined) },
 }));
@@ -13,14 +15,24 @@ vi.mock("sonner", () => ({
   }),
 }));
 
+vi.mock("../../hooks/useDataExport", () => ({
+  useDataExport: () => ({ downloadJSON: mockDownloadJSON, isExporting: false }),
+}));
+
+vi.mock("@/lib/apiClient", () => ({
+  isAuthenticated: vi.fn().mockReturnValue(false),
+}));
+
 import { db } from "@/db/dbService";
 import { toast } from "sonner";
+import { isAuthenticated } from "@/lib/apiClient";
 
 const mockDb = db as unknown as { delete: ReturnType<typeof vi.fn> };
 const mockToast = toast as unknown as {
   success: ReturnType<typeof vi.fn>;
   error: ReturnType<typeof vi.fn>;
 };
+const mockIsAuthenticated = isAuthenticated as ReturnType<typeof vi.fn>;
 
 describe("PrivacyPanel", () => {
   beforeEach(() => {
@@ -48,7 +60,7 @@ describe("PrivacyPanel", () => {
   it("renders privacy explanation with Shield icon context", () => {
     render(<PrivacyPanel />);
     expect(screen.getByText(/only on this device/)).toBeTruthy();
-    expect(screen.getByText(/IndexedDB/)).toBeTruthy();
+    expect(screen.getAllByText(/IndexedDB/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Cloud Sync/)).toBeTruthy();
   });
 
@@ -135,5 +147,35 @@ describe("PrivacyPanel", () => {
   it("renders 'Clear all local data' section header", () => {
     render(<PrivacyPanel />);
     expect(screen.getByText(/clear all local data/i)).toBeTruthy();
+  });
+
+  it("shows cloud sync as Off when not authenticated", () => {
+    mockIsAuthenticated.mockReturnValue(false);
+    render(<PrivacyPanel />);
+    expect(screen.getByText("Off")).toBeTruthy();
+  });
+
+  it("shows cloud sync as Active when authenticated", () => {
+    mockIsAuthenticated.mockReturnValue(true);
+    render(<PrivacyPanel />);
+    expect(screen.getByText("Active")).toBeTruthy();
+  });
+
+  it("renders download JSON backup button", () => {
+    render(<PrivacyPanel />);
+    expect(screen.getByRole("button", { name: /download json backup/i })).toBeTruthy();
+  });
+
+  it("calls downloadJSON when export button clicked", async () => {
+    render(<PrivacyPanel />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /download json backup/i }));
+    });
+    expect(mockDownloadJSON).toHaveBeenCalledOnce();
+  });
+
+  it("shows device storage row with 'All data' label", () => {
+    render(<PrivacyPanel />);
+    expect(screen.getByText("All data")).toBeTruthy();
   });
 });

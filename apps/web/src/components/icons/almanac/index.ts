@@ -4,3 +4,4 @@ export { SunRay } from "./SunRay";
 export { RuleCorner } from "./RuleCorner";
 export { RuleTicks } from "./RuleTicks";
 export { SeasonalFlourish } from "./SeasonalFlourish";
+export { SeasonalOrnament } from "./SeasonalOrnament";

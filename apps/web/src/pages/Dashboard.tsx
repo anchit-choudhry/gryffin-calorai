@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Plus } from "lucide-react";
+import { Info, Plus } from "lucide-react";
 import { toast } from "sonner";
 import FoodLogger from "../components/FoodLogger";
 import PageLoading from "../components/PageLoading";
@@ -45,11 +45,17 @@ import { cn, groupLogsByMeal } from "../lib/utils";
 import { EmptyState } from "../components/EmptyState";
 import { MealPatternSuggestions } from "../components/dashboard/MealPatternSuggestions";
 import { EmptyPlate } from "../components/illustrations";
+import { FoodSpecimenSheet } from "../components/FoodSpecimenSheet";
 import { Button } from "@/components/ui/button";
 import { useFastingTimer } from "../hooks/useFastingTimer";
 import { useWeeklyHarvestTrigger } from "../hooks/useWeeklyHarvestTrigger";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
+const AlmanacPanel = lazy(() =>
+  import("../components/dashboard/AlmanacPanel").then((m) => ({
+    default: m.AlmanacPanel,
+  })),
+);
 
 type DashboardView = "today" | "week";
 
@@ -83,6 +89,7 @@ const Dashboard = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [multiSelectMealType, setMultiSelectMealType] = useState<MealType>("Breakfast");
   const { shouldOpenThisSession, markSeen } = useWeeklyHarvestTrigger();
+  const [newlyAddedIds, setNewlyAddedIds] = useState<Set<string>>(new Set());
   const [dismissedInsights, setDismissedInsights] = useState<string[]>([]);
   const showBanner = init.status === "ready" && !init.user.hasCompletedOnboarding && !tdeeProfile;
   const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
@@ -103,7 +110,26 @@ const Dashboard = () => {
     [dailyLogs, deleteFoodLog, addFoodLog, userId],
   );
 
+  const handleAddFoodLog = useCallback(
+    async (item: Parameters<typeof addFoodLog>[0]) => {
+      const id = await addFoodLog(item);
+      if (id !== undefined) {
+        const key = String(id);
+        setNewlyAddedIds((prev) => new Set([...prev, key]));
+        setTimeout(() => {
+          setNewlyAddedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        }, 1000);
+      }
+    },
+    [addFoodLog],
+  );
+
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
+  const [specimenFood, setSpecimenFood] = useState<FoodItem | null>(null);
   const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
   const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
   const [photoStripKey, setPhotoStripKey] = useState(0);
@@ -163,7 +189,7 @@ const Dashboard = () => {
     const toLog = recentFoods.filter((item) => selectedIds.has(String(item.id ?? item.name)));
     await Promise.all(
       toLog.map((item) =>
-        addFoodLog({
+        handleAddFoodLog({
           userId,
           name: item.name,
           calories: item.calories,
@@ -179,7 +205,7 @@ const Dashboard = () => {
     );
     setSelectedIds(new Set());
     setIsMultiSelect(false);
-  }, [userId, selectedIds, recentFoods, addFoodLog, multiSelectMealType]);
+  }, [userId, selectedIds, recentFoods, handleAddFoodLog, multiSelectMealType]);
 
   const cancelMultiSelect = useCallback(() => {
     setSelectedIds(new Set());
@@ -203,7 +229,7 @@ const Dashboard = () => {
   const handleQuickAdd = useCallback(
     async (item: FoodItem) => {
       if (!userId) return;
-      await addFoodLog({
+      await handleAddFoodLog({
         userId,
         name: item.name,
         calories: item.calories,
@@ -216,7 +242,7 @@ const Dashboard = () => {
         mealType: item.mealType,
       });
     },
-    [userId, addFoodLog],
+    [userId, handleAddFoodLog],
   );
 
   const { currentStreak } = useStreaks();
@@ -300,6 +326,13 @@ const Dashboard = () => {
       </Dialog>
 
       <OnboardingModal open={onboardingOpen} onClose={closeOnboarding} />
+      {specimenFood !== null && (
+        <FoodSpecimenSheet
+          food={specimenFood}
+          allLogs={allFoodItems}
+          onClose={() => setSpecimenFood(null)}
+        />
+      )}
       <WeeklyHarvestModal
         open={harvestOpen}
         onClose={() => {
@@ -309,384 +342,408 @@ const Dashboard = () => {
       />
 
       <motion.main
-        className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
+        className="dashboard-grid mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
         variants={shouldReduceMotion ? undefined : pageVariants}
         initial={shouldReduceMotion ? undefined : "hidden"}
         animate={shouldReduceMotion ? undefined : "show"}
       >
-        {/* Onboarding banner */}
-        {showBanner && (
-          <AnimatePresence>
-            <OnboardingBanner onOpenModal={openOnboarding} />
-          </AnimatePresence>
-        )}
+        {/* Masthead: banner + hero + view tab strip */}
+        <div className="dashboard-masthead">
+          {/* Onboarding banner */}
+          {showBanner && (
+            <AnimatePresence>
+              <OnboardingBanner onOpenModal={openOnboarding} />
+            </AnimatePresence>
+          )}
 
-        {/* Section A: Masthead / Hero */}
-        <motion.section
-          data-tour-id="dashboard-hero"
-          className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash"
-          {...hero}
-        >
-          <DashboardHero
-            totalCalories={totalCalories}
-            totals={{ protein: totalProtein, carbs: totalCarbs, fat: totalFat }}
-          />
-        </motion.section>
+          {/* Section A: Masthead / Hero */}
+          <motion.section
+            data-tour-id="dashboard-hero"
+            className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash"
+            {...hero}
+          >
+            <DashboardHero
+              totalCalories={totalCalories}
+              totals={{ protein: totalProtein, carbs: totalCarbs, fat: totalFat }}
+            />
+          </motion.section>
 
-        {/* View tab strip */}
-        <div className="col-span-12 -mt-8 border-b border-rule flex gap-0">
-          {(["today", "week"] as const).map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => setActiveView(view)}
-              className={cn(
-                "px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors border-b-2 -mb-px",
-                activeView === view
-                  ? "border-ink text-ink"
-                  : "border-transparent text-ink-soft hover:text-ink",
-              )}
-            >
-              {view === "today" ? "Today" : "This Week"}
-            </button>
-          ))}
+          {/* View tab strip */}
+          <div className="col-span-12 -mt-8 border-b border-rule flex gap-0">
+            {(["today", "week"] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                onClick={() => setActiveView(view)}
+                className={cn(
+                  "px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.2em] transition-colors border-b-2 -mb-px",
+                  activeView === view
+                    ? "border-ink text-ink"
+                    : "border-transparent text-ink-soft hover:text-ink",
+                )}
+              >
+                {view === "today" ? "Today" : "This Week"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeView === "today" && (
           <>
-            {/* Insight cards */}
-            {visibleInsights.length > 0 && (
-              <motion.div className="col-span-12 flex flex-col gap-2 sm:flex-row" {...sv}>
-                {visibleInsights.map((ins) => (
-                  <div key={ins.id} className="flex-1">
-                    <InsightCard insight={ins} onDismiss={dismissInsight} />
-                  </div>
-                ))}
-              </motion.div>
-            )}
-
-            {/* Meal pattern suggestions */}
-            <motion.div className="col-span-12" {...sv}>
-              <MealPatternSuggestions />
-            </motion.div>
-
-            {/* Section: Today's Diary (primary content) */}
-            <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>
-              <div className="flex items-end gap-4 flex-wrap mb-4">
-                <SectionHeader
-                  kicker="Diary"
-                  title="Today's Log"
-                  subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
-                />
-                <div className="flex gap-1 ml-auto flex-wrap items-center">
-                  {(["All", ...MEAL_TYPES] as const).map((label) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => setLogFilter(label as MealType | "All")}
-                      className={cn(
-                        "px-2 py-0.5 text-xs font-mono border transition-colors",
-                        logFilter === label
-                          ? "border-ink bg-ink text-paper"
-                          : "border-rule text-ink-soft hover:border-ink hover:text-ink",
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void copyYesterdayLogs()}
-                    className="ml-2 h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] border-rule text-ink-soft hover:text-ink"
-                  >
-                    Copy Yesterday
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="persimmon"
-                    size="sm"
-                    onClick={openQuickAdd}
-                    className="h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5"
-                  >
-                    <Plus className="size-3" aria-hidden="true" />
-                    Log Food
-                  </Button>
-                </div>
-              </div>
-
-              {userId && <PhotoStrip key={photoStripKey} userId={userId} date={todayISO()} />}
-
-              {init.status === "loading" ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="animate-pulse flex items-baseline gap-4 py-4 border-b border-rule/40"
-                    >
-                      <div className="h-2 bg-paper-muted rounded w-16 shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 bg-paper-muted rounded w-3/4" />
-                        <div className="h-2 bg-paper-muted rounded w-1/2" />
-                      </div>
-                      <div className="h-4 bg-paper-muted rounded w-12 shrink-0" />
+            {/* Lead column: diary + add + recent + favorites + recurring */}
+            <div className="dashboard-lead">
+              {/* Insight cards */}
+              {visibleInsights.length > 0 && (
+                <motion.div className="col-span-12 flex flex-col gap-2 sm:flex-row" {...sv}>
+                  {visibleInsights.map((ins) => (
+                    <div key={ins.id} className="flex-1">
+                      <InsightCard insight={ins} onDismiss={dismissInsight} />
                     </div>
                   ))}
-                </div>
-              ) : init.status === "error" ? (
-                <p className="mt-6 font-mono text-sm text-destructive">{init.message}</p>
-              ) : dailyLogs.length > 0 ? (
-                <div className="space-y-6">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {groupedLogs.map((group) => {
-                      const groupTotal = group.items.reduce((sum, log) => sum + log.calories, 0);
-                      return (
-                        <motion.div
-                          key={group.meal}
-                          layout
-                          initial={{ opacity: 0, y: -8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, x: -16 }}
-                          transition={{
-                            duration: motionTokens.durInstant,
-                            ease: motionTokens.easeOutExpo,
-                          }}
-                        >
-                          <div className="flex items-baseline gap-4 mb-3 pb-2 border-b border-rule/50">
-                            <span className="text-sm font-semibold text-ink-soft">
-                              {group.meal}
-                            </span>
-                            <span className="ml-auto text-xs tabular-nums text-persimmon">
-                              {groupTotal.toLocaleString()} kcal
-                            </span>
-                          </div>
-                          <ul className="divide-y divide-rule/50 @container">
-                            <AnimatePresence initial={false}>
-                              {group.items.map((log) => (
-                                <LogEntry
-                                  key={log.id!}
-                                  log={log}
-                                  onEdit={setEditingLog}
-                                  onDelete={handleDeleteWithUndo}
-                                  onToggleFavorite={toggleFavorite}
-                                />
-                              ))}
-                            </AnimatePresence>
-                          </ul>
-                        </motion.div>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <div className="border border-rule/40">
-                  <EmptyState
-                    illustration={<EmptyPlate className="w-full h-full" />}
-                    eyebrow="Today's Ledger"
-                    heading="No entries recorded"
-                    body="Open today's record with your first meal. Your daily harvest begins here."
-                    variant="illustrated"
-                    action={{ label: "Begin Today's Record", onClick: openQuickAdd }}
-                  />
-                </div>
+                </motion.div>
               )}
-            </motion.section>
 
-            {/* Section: Daily Vitals (compact strip + expandable full trackers) */}
-            <motion.section className="col-span-12" {...sv}>
-              <div className="flex items-center gap-4 mb-3">
-                <SectionHeader kicker="Today" title="Daily Vitals" />
-                <button
-                  type="button"
-                  onClick={() => setShowTrackers((v) => !v)}
-                  aria-expanded={showTrackers}
-                  className="ml-auto font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft transition-colors hover:text-ink"
-                >
-                  {showTrackers ? "Hide Trackers" : "Show Trackers"}
-                </button>
-              </div>
-              <DailyVitalsStrip
-                totalWaterMl={totalWaterMl}
-                waterGoalMl={waterGoalMl ?? DAILY_WATER_GOAL_ML}
-                totalSteps={totalSteps}
-                totalBurned={totalBurned}
-                fastingTargetHours={activeFastingSession?.targetHours}
-                fastingRemaining={activeFastingSession ? fastingRemaining : undefined}
-                fastingComplete={activeFastingSession ? fastingComplete : undefined}
-              />
-              <AnimatePresence>
-                {showTrackers && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-4 grid grid-cols-12 gap-4">
-                      <div
-                        data-tour-id="dashboard-fasting"
-                        className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4"
-                      >
-                        <FastingTimer />
-                      </div>
-                      <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
-                        <WaterTracker />
-                      </div>
-                      <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
-                        <StepTracker />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.section>
+              {/* Meal pattern suggestions */}
+              <motion.div className="col-span-12" {...sv}>
+                <MealPatternSuggestions />
+              </motion.div>
 
-            {/* Section: Add to Today's Log */}
-            <motion.section
-              data-tour-id="dashboard-add"
-              className="col-span-12 grid grid-cols-12 gap-6"
-              {...sv}
-            >
-              <SectionHeader className="col-span-12" kicker="Log" title="Add to Today's Log" />
-              <div className="col-span-12 lg:col-span-6">
-                <EditorialFrame label="Write">
-                  <FoodLogger />
-                </EditorialFrame>
-              </div>
-              <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                <EditorialFrame label="Scan">
-                  <Suspense fallback={<PageLoading message="Loading scanner..." />}>
-                    <BarcodeScanner
-                      onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })}
-                    />
-                  </Suspense>
-                </EditorialFrame>
-              </div>
-              <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                <EditorialFrame label="Speak">
-                  <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
-                </EditorialFrame>
-              </div>
-              <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                <EditorialFrame label="Photo">
-                  <PhotoFoodLogger
-                    onPhotoReady={(img, thumb, mime) => void handlePhotoReady(img, thumb, mime)}
+              {/* Section: Today's Diary (primary content) */}
+              <motion.section data-tour-id="dashboard-log" className="col-span-12" {...sv}>
+                <div className="flex items-end gap-4 flex-wrap mb-4">
+                  <SectionHeader
+                    kicker="Diary"
+                    title="Today's Log"
+                    subtitle={`${dailyLogs.length} ${dailyLogs.length === 1 ? "entry" : "entries"}`}
                   />
-                </EditorialFrame>
-              </div>
-            </motion.section>
-
-            {/* Section: Recently Logged */}
-            {hasRecentFoods && (
-              <motion.section className="col-span-12" {...sv}>
-                <div className="flex items-center gap-3">
-                  <SectionHeader kicker="Quick add" title="Recently Logged" />
-                  {!isMultiSelect ? (
-                    <button
-                      type="button"
-                      onClick={() => setIsMultiSelect(true)}
-                      className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                    >
-                      Select
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={cancelMultiSelect}
-                      className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
-                  {recentFoods.map((item) => {
-                    const key = String(item.id ?? item.name);
-                    const isSelected = selectedIds.has(key);
-                    return isMultiSelect ? (
+                  <div className="flex gap-1 ml-auto flex-wrap items-center">
+                    {(["All", ...MEAL_TYPES] as const).map((label) => (
                       <button
-                        key={key}
+                        key={label}
                         type="button"
-                        role="checkbox"
-                        aria-checked={isSelected}
-                        aria-label={item.name}
-                        onClick={() => toggleChipSelection(key)}
+                        onClick={() => setLogFilter(label as MealType | "All")}
                         className={cn(
-                          "shrink-0 snap-start border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1",
-                          isSelected
-                            ? "border-persimmon bg-persimmon-soft text-ink"
-                            : "border-rule text-ink-soft hover:border-ink hover:bg-paper-muted hover:text-ink",
+                          "px-2 py-0.5 text-xs font-mono border transition-colors",
+                          logFilter === label
+                            ? "border-ink bg-ink text-paper"
+                            : "border-rule text-ink-soft hover:border-ink hover:text-ink",
                         )}
                       >
-                        {item.name} · {item.calories} kcal
+                        {label}
+                      </button>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void copyYesterdayLogs()}
+                      className="ml-2 h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] border-rule text-ink-soft hover:text-ink"
+                    >
+                      Copy Yesterday
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="persimmon"
+                      size="sm"
+                      onClick={openQuickAdd}
+                      className="h-auto rounded-none py-1 px-3 font-mono text-[10px] uppercase tracking-[0.2em] flex items-center gap-1.5"
+                    >
+                      <Plus className="size-3" aria-hidden="true" />
+                      Log Food
+                    </Button>
+                  </div>
+                </div>
+
+                {userId && <PhotoStrip key={photoStripKey} userId={userId} date={todayISO()} />}
+
+                {init.status === "loading" ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="animate-pulse flex items-baseline gap-4 py-4 border-b border-rule/40"
+                      >
+                        <div className="h-2 bg-paper-muted rounded w-16 shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-paper-muted rounded w-3/4" />
+                          <div className="h-2 bg-paper-muted rounded w-1/2" />
+                        </div>
+                        <div className="h-4 bg-paper-muted rounded w-12 shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                ) : init.status === "error" ? (
+                  <p className="mt-6 font-mono text-sm text-destructive">{init.message}</p>
+                ) : dailyLogs.length > 0 ? (
+                  <div className="space-y-6">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {groupedLogs.map((group) => {
+                        const groupTotal = group.items.reduce((sum, log) => sum + log.calories, 0);
+                        return (
+                          <motion.div
+                            key={group.meal}
+                            layout
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -16 }}
+                            transition={{
+                              duration: motionTokens.durInstant,
+                              ease: motionTokens.easeOutExpo,
+                            }}
+                          >
+                            <div className="flex items-baseline gap-4 mb-3 pb-2 border-b border-rule/50">
+                              <span className="text-sm font-semibold text-ink-soft">
+                                {group.meal}
+                              </span>
+                              <span className="ml-auto text-xs tabular-nums text-persimmon">
+                                {groupTotal.toLocaleString()} kcal
+                              </span>
+                            </div>
+                            <ul className="divide-y divide-rule/50 @container">
+                              <AnimatePresence initial={false}>
+                                {group.items.map((log) => (
+                                  <LogEntry
+                                    key={log.id!}
+                                    log={log}
+                                    isNew={newlyAddedIds.has(String(log.id))}
+                                    onEdit={setEditingLog}
+                                    onDelete={handleDeleteWithUndo}
+                                    onToggleFavorite={toggleFavorite}
+                                  />
+                                ))}
+                              </AnimatePresence>
+                            </ul>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="border border-rule/40">
+                    <EmptyState
+                      illustration={<EmptyPlate className="w-full h-full" />}
+                      eyebrow="Today's Ledger"
+                      heading="No entries recorded"
+                      body="Open today's record with your first meal. Your daily harvest begins here."
+                      variant="illustrated"
+                      action={{ label: "Begin Today's Record", onClick: openQuickAdd }}
+                    />
+                  </div>
+                )}
+              </motion.section>
+
+              {/* Section: Add to Today's Log */}
+              <motion.section
+                data-tour-id="dashboard-add"
+                className="col-span-12 grid grid-cols-12 gap-6"
+                {...sv}
+              >
+                <SectionHeader className="col-span-12" kicker="Log" title="Add to Today's Log" />
+                <div className="col-span-12 lg:col-span-6">
+                  <EditorialFrame label="Write">
+                    <FoodLogger />
+                  </EditorialFrame>
+                </div>
+                <div className="col-span-12 md:col-span-4 lg:col-span-2">
+                  <EditorialFrame label="Scan">
+                    <Suspense fallback={<PageLoading message="Loading scanner..." />}>
+                      <BarcodeScanner
+                        onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })}
+                      />
+                    </Suspense>
+                  </EditorialFrame>
+                </div>
+                <div className="col-span-12 md:col-span-4 lg:col-span-2">
+                  <EditorialFrame label="Speak">
+                    <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
+                  </EditorialFrame>
+                </div>
+                <div className="col-span-12 md:col-span-4 lg:col-span-2">
+                  <EditorialFrame label="Photo">
+                    <PhotoFoodLogger
+                      onPhotoReady={(img, thumb, mime) => void handlePhotoReady(img, thumb, mime)}
+                    />
+                  </EditorialFrame>
+                </div>
+              </motion.section>
+
+              {/* Section: Recently Logged */}
+              {hasRecentFoods && (
+                <motion.section className="col-span-12" {...sv}>
+                  <div className="flex items-center gap-3">
+                    <SectionHeader kicker="Quick add" title="Recently Logged" />
+                    {!isMultiSelect ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsMultiSelect(true)}
+                        className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                      >
+                        Select
                       </button>
                     ) : (
                       <button
-                        key={key}
                         type="button"
-                        onClick={() => void handleQuickAdd(item)}
-                        className="shrink-0 snap-start border border-rule px-4 py-2 text-sm text-ink-soft transition-colors hover:border-ink hover:bg-paper-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                        onClick={cancelMultiSelect}
+                        className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
                       >
-                        {item.name} · {item.calories} kcal
+                        Cancel
                       </button>
-                    );
-                  })}
-                </div>
-                {isMultiSelect && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <select
-                      aria-label="Meal type"
-                      value={multiSelectMealType}
-                      onChange={(e) => setMultiSelectMealType(e.target.value as MealType)}
-                      className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule bg-paper px-2 py-1.5 text-ink focus:outline-none focus:ring-2 focus:ring-persimmon focus:ring-offset-1"
-                    >
-                      {MEAL_TYPES.map((mt) => (
-                        <option key={mt} value={mt}>
-                          {mt}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={selectedIds.size === 0}
-                      onClick={() => void handleMultiLog()}
-                      className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule px-3 py-1.5 text-ink transition-colors hover:border-persimmon hover:text-persimmon disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                    >
-                      Log {selectedIds.size} items
-                    </button>
+                    )}
                   </div>
-                )}
-              </motion.section>
-            )}
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
+                    {recentFoods.map((item) => {
+                      const key = String(item.id ?? item.name);
+                      const isSelected = selectedIds.has(key);
+                      return isMultiSelect ? (
+                        <button
+                          key={key}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          aria-label={item.name}
+                          onClick={() => toggleChipSelection(key)}
+                          className={cn(
+                            "shrink-0 snap-start border px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1",
+                            isSelected
+                              ? "border-persimmon bg-persimmon-soft text-ink"
+                              : "border-rule text-ink-soft hover:border-ink hover:bg-paper-muted hover:text-ink",
+                          )}
+                        >
+                          {item.name} · {item.calories} kcal
+                        </button>
+                      ) : (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => void handleQuickAdd(item)}
+                          className="shrink-0 snap-start border border-rule px-4 py-2 text-sm text-ink-soft transition-colors hover:border-ink hover:bg-paper-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                        >
+                          {item.name} · {item.calories} kcal
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {isMultiSelect && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <select
+                        aria-label="Meal type"
+                        value={multiSelectMealType}
+                        onChange={(e) => setMultiSelectMealType(e.target.value as MealType)}
+                        className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule bg-paper px-2 py-1.5 text-ink focus:outline-none focus:ring-2 focus:ring-persimmon focus:ring-offset-1"
+                      >
+                        {MEAL_TYPES.map((mt) => (
+                          <option key={mt} value={mt}>
+                            {mt}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={selectedIds.size === 0}
+                        onClick={() => void handleMultiLog()}
+                        className="font-mono text-[10px] uppercase tracking-[0.2em] border border-rule px-3 py-1.5 text-ink transition-colors hover:border-persimmon hover:text-persimmon disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                      >
+                        Log {selectedIds.size} items
+                      </button>
+                    </div>
+                  )}
+                </motion.section>
+              )}
 
-            {/* Section: From the Pantry (favorites) */}
-            {hasFavorites && (
+              {/* Section: From the Pantry (favorites) */}
+              {hasFavorites && (
+                <motion.section className="col-span-12" {...sv}>
+                  <SectionHeader kicker="Favourites" title="From the Pantry" />
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
+                    {favoriteFoods.map((fav) => (
+                      <div key={fav.id} className="shrink-0 snap-start flex border-b-2 border-ink">
+                        <button
+                          type="button"
+                          onClick={() => void handleQuickAdd(fav)}
+                          className="px-4 py-2 text-sm text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                        >
+                          {fav.name} · {fav.calories} kcal
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`View specimen sheet for ${fav.name}`}
+                          onClick={() => setSpecimenFood(fav)}
+                          className="px-2 py-2 text-ink-soft border-l border-rule/40 transition-colors hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                        >
+                          <Info className="size-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </motion.section>
+              )}
+
+              {/* Section: Recurring Meals & Templates */}
+              <div className="col-span-12 flex flex-col gap-6 lg:flex-row">
+                <motion.section className="flex-1" {...sv}>
+                  <RecurringMeals />
+                </motion.section>
+                <motion.section className="flex-[2]" {...sv}>
+                  <MealTemplates />
+                </motion.section>
+              </div>
+            </div>
+
+            {/* Sidebar column: almanac panel + vitals */}
+            <div className="dashboard-sidebar">
+              {/* E5 Almanac Panel */}
+              <Suspense fallback={null}>
+                <AlmanacPanel />
+              </Suspense>
+
+              {/* Section: Daily Vitals (compact strip + expandable full trackers) */}
               <motion.section className="col-span-12" {...sv}>
-                <SectionHeader kicker="Favourites" title="From the Pantry" />
-                <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 mt-4 snap-x">
-                  {favoriteFoods.map((fav) => (
-                    <button
-                      key={fav.id}
-                      type="button"
-                      onClick={() => void handleQuickAdd(fav)}
-                      className="shrink-0 snap-start border-b-2 border-ink px-4 py-2 text-sm text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                    >
-                      {fav.name} · {fav.calories} kcal
-                    </button>
-                  ))}
+                <div className="flex items-center gap-4 mb-3">
+                  <SectionHeader kicker="Today" title="Daily Vitals" />
+                  <button
+                    type="button"
+                    onClick={() => setShowTrackers((v) => !v)}
+                    aria-expanded={showTrackers}
+                    className="ml-auto font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft transition-colors hover:text-ink"
+                  >
+                    {showTrackers ? "Hide Trackers" : "Show Trackers"}
+                  </button>
                 </div>
-              </motion.section>
-            )}
-
-            {/* Section: Recurring Meals & Templates */}
-            <div className="col-span-12 flex flex-col gap-6 lg:flex-row">
-              <motion.section className="flex-1" {...sv}>
-                <RecurringMeals />
-              </motion.section>
-              <motion.section className="flex-[2]" {...sv}>
-                <MealTemplates />
+                <DailyVitalsStrip
+                  totalWaterMl={totalWaterMl}
+                  waterGoalMl={waterGoalMl ?? DAILY_WATER_GOAL_ML}
+                  totalSteps={totalSteps}
+                  totalBurned={totalBurned}
+                  fastingTargetHours={activeFastingSession?.targetHours}
+                  fastingRemaining={activeFastingSession ? fastingRemaining : undefined}
+                  fastingComplete={activeFastingSession ? fastingComplete : undefined}
+                />
+                <AnimatePresence>
+                  {showTrackers && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 grid grid-cols-12 gap-4">
+                        <div
+                          data-tour-id="dashboard-fasting"
+                          className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4"
+                        >
+                          <FastingTimer />
+                        </div>
+                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
+                          <WaterTracker />
+                        </div>
+                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
+                          <StepTracker />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.section>
             </div>
           </>

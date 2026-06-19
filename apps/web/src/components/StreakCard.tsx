@@ -1,8 +1,11 @@
 import { motion } from "motion/react";
+import { Share2 } from "lucide-react";
 import { useReducedMotion } from "@/lib/a11y";
 import { useStreaks } from "../hooks/useStreaks";
 import { cn, LABEL_MONO_CLS } from "@/lib/utils";
 import { counterPopVariants } from "@/lib/motionVariants";
+import { renderStreakCard } from "@/lib/shareCard";
+import { useShareCard } from "@/hooks/useShareCard";
 
 const STREAK_MILESTONES = new Set([3, 7, 14, 30]);
 
@@ -30,6 +33,10 @@ function streakCaption(n: number): string {
 const StreakCard = () => {
   const { currentStreak, longestStreak, loggedDates, isLoading } = useStreaks();
   const reduced = useReducedMotion();
+  const { sharing, handleShare } = useShareCard(
+    () => renderStreakCard({ currentStreak, longestStreak, loggedDates }),
+    "gryffin-streak.png",
+  );
 
   if (isLoading) {
     return <div className="animate-pulse bg-paper-muted h-32" />;
@@ -41,7 +48,19 @@ const StreakCard = () => {
 
   return (
     <div className="@container">
-      <h3 className={`${LABEL_MONO_CLS} mb-4`}>Logging Streak</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className={LABEL_MONO_CLS}>Logging Streak</h3>
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={sharing || isLoading}
+          aria-label="Share streak card"
+          className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft hover:text-ink disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          <Share2 className="size-3" aria-hidden="true" />
+          {sharing ? "..." : "Share"}
+        </button>
+      </div>
 
       {/* 28-day dot calendar — 4 weeks x 7 days */}
       <div

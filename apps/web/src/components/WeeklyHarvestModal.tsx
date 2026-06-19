@@ -1,10 +1,12 @@
-import { X } from "lucide-react";
+import { X, Share2 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { useWeeklySummary } from "@/hooks/useWeeklySummary";
 import { useStreaks } from "@/hooks/useStreaks";
 import { LABEL_MONO_CLS } from "@/lib/utils";
 import { motionTokens } from "@/lib/motionVariants";
 import { RuleTicks } from "@/components/icons/almanac";
+import { renderHarvestCard } from "@/lib/shareCard";
+import { useShareCard } from "@/hooks/useShareCard";
 
 interface Props {
   open: boolean;
@@ -33,6 +35,11 @@ export function WeeklyHarvestModal({ open, onClose }: Props) {
   const reduced = useReducedMotion();
   const { averageCalories, daysOnTarget, consistency, calorieGoal } = useWeeklySummary();
   const { currentStreak, longestStreak } = useStreaks();
+  const { sharing, handleShare } = useShareCard(
+    () =>
+      renderHarvestCard({ averageCalories, daysOnTarget, consistency, currentStreak, calorieGoal }),
+    "gryffin-harvest.png",
+  );
 
   const backdropVariants = {
     hidden: { opacity: 0 },
@@ -165,13 +172,23 @@ export function WeeklyHarvestModal({ open, onClose }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-rule px-6 py-4">
+            <div className="flex items-center justify-between border-t border-rule px-6 py-4">
               <button
                 type="button"
                 onClick={onClose}
                 className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 Close
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={sharing}
+                aria-label="Share harvest card as image"
+                className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <Share2 className="size-3" aria-hidden="true" />
+                {sharing ? "Rendering..." : "Share Card"}
               </button>
             </div>
           </motion.div>

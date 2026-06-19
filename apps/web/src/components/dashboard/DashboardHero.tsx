@@ -1,42 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactElement } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/state/AppState";
 import { applyPeriodization, computeMacroTargets } from "@/lib/tdee";
+import { getMoonPhase } from "@/lib/solar";
 import MacroStat from "./MacroStat";
 import DateKicker from "./DateKicker";
-import { SunRay } from "@/components/icons/almanac/SunRay";
-import { WheatSprig } from "@/components/icons/almanac/WheatSprig";
-import { SeasonalFlourish } from "@/components/icons/almanac/SeasonalFlourish";
+import { SeasonalOrnament } from "@/components/icons/almanac/SeasonalOrnament";
+import { MoonPhase } from "@/components/icons/almanac/MoonPhase";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils";
 import { motionTokens } from "@/lib/motionVariants";
 import { useFastingTimer } from "@/hooks/useFastingTimer";
-
-function getSeasonalOrnament(date: Date): ReactElement {
-  const m = date.getMonth() + 1; // 1-12
-  const d = date.getDate();
-
-  // Within ±5 days of a solstice or equinox, or fall season: use the editorial rule flourish
-  const nearTransition =
-    (m === 3 && d >= 15 && d <= 25) ||
-    (m === 6 && d >= 16 && d <= 26) ||
-    (m === 9 && d >= 17 && d <= 27) ||
-    (m === 12 && d >= 16 && d <= 26);
-  const isFall = (m === 9 && d >= 22) || m === 10 || m === 11 || (m === 12 && d <= 20);
-  const isSummer = (m === 6 && d >= 21) || m === 7 || m === 8 || (m === 9 && d <= 21);
-
-  if (nearTransition || isFall) {
-    return <SeasonalFlourish className="w-20 h-4 text-ink-soft opacity-50" />;
-  }
-  if (isSummer) {
-    return <WheatSprig className="h-10 w-auto text-ink-soft opacity-50" />;
-  }
-  return <SunRay className="size-7 text-ink-soft opacity-50" />;
-}
 
 interface Props {
   totalCalories: number;
@@ -226,9 +203,12 @@ function DashboardHero({ totalCalories, totals }: Props) {
         </div>
       </div>
 
-      {/* Meta column: seasonal ornament + greeting + latest weight + date label + goal editor */}
+      {/* Meta column: seasonal ornament + moon phase + greeting + latest weight + date label + goal editor */}
       <div className="col-span-12 md:col-span-3 flex flex-col justify-end gap-3 pb-2">
-        {getSeasonalOrnament(today)}
+        <div className="flex items-center justify-between">
+          <SeasonalOrnament date={today} className="h-10 w-auto text-ink-soft opacity-50" />
+          <MoonPhase progress={getMoonPhase(today).phase} className="size-5 text-ink-soft/40" />
+        </div>
         {username && (
           <p className="text-sm text-ink-soft">
             {greeting}, <span className="text-ink font-semibold">{username}</span>

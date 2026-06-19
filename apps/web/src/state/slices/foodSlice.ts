@@ -20,7 +20,7 @@ export interface FoodSlice {
   dailyLogs: FoodItem[];
   allFoodItems: FoodItem[];
   favoriteFoods: FoodItem[];
-  addFoodLog: (food: Omit<FoodItem, "id">) => Promise<void>;
+  addFoodLog: (food: Omit<FoodItem, "id">) => Promise<FoodItemId | undefined>;
   deleteFoodLog: (id: FoodItemId) => Promise<void>;
   updateFoodLog: (
     id: FoodItemId,
@@ -55,7 +55,7 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
         }
       }
       const syncId = crypto.randomUUID();
-      await addFoodItemLog({ ...food, userId: state.userId, syncId });
+      const newId = await addFoodItemLog({ ...food, userId: state.userId, syncId });
       await state.refreshDailyLogs(state.userId);
       void enqueueSyncOperation({
         userId: state.userId,
@@ -65,6 +65,7 @@ export const createFoodSlice: StateCreator<AppState, [], [], FoodSlice> = (set, 
         payload: { ...food, userId: state.userId, syncId },
       });
       void get().checkAndUnlockAchievements();
+      return newId;
     } catch (error) {
       const message = mapDbError(error, "Failed to add food log");
       if (import.meta.env.DEV) console.error("Error adding food log:", error);

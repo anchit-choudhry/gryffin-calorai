@@ -41,9 +41,15 @@ import EditorialChartCard from "../components/charts/EditorialChartCard";
 import ProgressHero from "../components/progress/ProgressHero";
 import ProjectedWeightCard from "../components/progress/ProjectedWeightCard";
 import MicronutrientPanel from "../components/progress/MicronutrientPanel";
+import { MicronutrientHeatmap } from "../components/progress/MicronutrientHeatmap";
 import { AdaptiveTdeePanel } from "../components/progress/AdaptiveTdeePanel";
 import { CorrelationInsightsPanel } from "../components/progress/CorrelationInsightsPanel";
 import { EnergyForecastCard } from "../components/progress/EnergyForecastCard";
+import { PhenologyWheel } from "../components/progress/PhenologyWheel";
+import { SpecimenPlate } from "../components/progress/SpecimenPlate";
+import { computeWeightForecast } from "../lib/adaptiveTdee";
+import { toRoman } from "@/lib/utils";
+import { Printer } from "lucide-react";
 
 const AXIS_TICK_STYLE = {
   fill: "var(--ink-soft)",
@@ -125,14 +131,23 @@ const Progress = () => {
     [bodyMeasurements],
   );
 
-  const weightChartData = useMemo(
-    () =>
-      weightEntries.map((m) => ({
-        label: m.measuredAt.substring(5),
-        weight: Math.round(m.weight! * 10) / 10,
-      })),
-    [weightEntries],
-  );
+  const weightChartData = useMemo(() => {
+    const actual = weightEntries.map((m) => ({
+      label: m.measuredAt.substring(5),
+      weight: Math.round(m.weight! * 10) / 10,
+      projected: undefined as number | undefined,
+    }));
+    const forecast = computeWeightForecast(weightEntries);
+    if (forecast.length === 0) return actual;
+    const lastActual = actual[actual.length - 1];
+    if (lastActual) lastActual.projected = lastActual.weight;
+    const forecastPoints = forecast.map((p) => ({
+      label: p.label,
+      weight: undefined as number | undefined,
+      projected: p.projected,
+    }));
+    return [...actual, ...forecastPoints];
+  }, [weightEntries]);
 
   const pieData = useMemo(() => {
     if (!mealTypeData) return [];
@@ -229,6 +244,17 @@ const Progress = () => {
         className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14 py-10 grid grid-cols-12 gap-x-6 gap-y-14"
         {...motionProps}
       >
+        {/* Print journal shortcut */}
+        <div className="col-span-12 flex justify-end -mb-8 -mt-4">
+          <a
+            href="#print"
+            className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            aria-label="Open print preview for almanac journal pages"
+          >
+            <Printer className="size-3" aria-hidden="true" />
+            Print journal
+          </a>
+        </div>
         {/* Section A - Progress Hero */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-x-6 gap-y-6 hero-wash" {...sv}>
           <ProgressHero
@@ -503,7 +529,7 @@ const Progress = () => {
           </motion.section>
         )}
 
-        {/* Section D2 - Micronutrient Coverage (today) */}
+        {/* Section D2 - Micronutrient Coverage */}
         <motion.section className="col-span-12 grid grid-cols-12 gap-6" {...sv}>
           <SectionHeader
             className="col-span-12"
@@ -517,6 +543,13 @@ const Progress = () => {
             aria-label="Today's micronutrient coverage against daily values"
           >
             <MicronutrientPanel />
+          </div>
+          <div
+            className="col-span-12"
+            role="figure"
+            aria-label="7-day micronutrient coverage heatmap"
+          >
+            <MicronutrientHeatmap allLogs={allLogs} tdeeProfile={tdeeProfile} />
           </div>
         </motion.section>
 
@@ -723,7 +756,7 @@ const Progress = () => {
                   raised
                 >
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
+                    <ComposedChart
                       data={weightChartData}
                       margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
                     >
@@ -744,8 +777,19 @@ const Progress = () => {
                         fillOpacity={0.15}
                         strokeWidth={2}
                         dot={{ r: 3, fill: BODY_CHART_COLOR.weight }}
+                        connectNulls={false}
                       />
-                    </AreaChart>
+                      <Line
+                        type="monotone"
+                        dataKey="projected"
+                        name="Projected (kg)"
+                        stroke={chartTheme.trend}
+                        strokeWidth={1.5}
+                        strokeDasharray="5 4"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </EditorialChartCard>
               </div>
@@ -943,51 +987,48 @@ const Progress = () => {
           </div>
         </motion.section>
 
-        {/* Section J - Achievements */}
+        {/* Section I - Phenology Wheel */}
+        <motion.section className="col-span-12" {...sv}>
+          <SectionHeader kicker="Annual record" title="Phenological Year" className="mb-6" />
+          <div className="flex justify-center">
+            <PhenologyWheel
+              allLogs={allLogs}
+              bodyMeasurements={bodyMeasurements}
+              unlockedAchievements={unlockedAchievements}
+              calorieGoal={calorieGoal}
+            />
+          </div>
+        </motion.section>
+
+        {/* Section J - Achievements as Plates */}
         <motion.section
           data-tour-id="progress-achievements"
           className="col-span-12 grid grid-cols-12 gap-6"
           {...sv}
         >
-          <SectionHeader className="col-span-12" title="Achievements" accent />
-          <div className="col-span-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {ACHIEVEMENTS.map((achievement) => {
+          <SectionHeader className="col-span-12" title="Specimen Plates" accent />
+          <div className="col-span-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-px border border-rule bg-rule">
+            {ACHIEVEMENTS.map((achievement, idx) => {
               const isUnlocked = unlockedMap.has(achievement.id);
               const unlockedEntry = unlockedMap.get(achievement.id);
+              const plateNum = toRoman(idx + 1);
 
               return (
-                <motion.div
+                <SpecimenPlate
                   key={achievement.id}
-                  className={`border p-4 flex flex-col gap-2 transition-all ${
-                    isUnlocked
-                      ? "border-ink bg-paper-raised text-ink"
-                      : "border-rule/40 bg-paper text-ink-soft opacity-60"
-                  }`}
-                  whileHover={isUnlocked ? { scale: 1.02 } : undefined}
-                >
-                  <div className={`text-3xl mb-1 ${!isUnlocked ? "grayscale opacity-40" : ""}`}>
-                    {achievement.icon}
-                  </div>
-                  <h3 className="font-sans text-sm font-semibold">{achievement.title}</h3>
-                  {!isUnlocked && (
-                    <p className="text-xs text-ink-soft">{achievement.description}</p>
-                  )}
-                  {isUnlocked && unlockedEntry && (
-                    <p className="text-xs text-persimmon">
-                      {new Date(unlockedEntry.unlockedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                  )}
-                </motion.div>
+                  achievement={achievement}
+                  plateNum={plateNum}
+                  isUnlocked={isUnlocked}
+                  unlockedAt={unlockedEntry?.unlockedAt}
+                />
               );
             })}
           </div>
-          <div className="col-span-12 border-t border-rule pt-4 flex items-baseline gap-3 text-xs text-ink-soft">
-            Achievements unlocked
-            <span className="tabular-nums text-persimmon ml-auto">
+          <div className="col-span-12 border-t border-rule pt-3 flex items-baseline gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft">
+              Plates earned
+            </span>
+            <span className="tabular-nums font-mono text-[10px] text-persimmon ml-auto">
               {unlockedAchievements.length} / {ACHIEVEMENTS.length}
             </span>
           </div>

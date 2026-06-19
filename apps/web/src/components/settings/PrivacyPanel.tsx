@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Shield, Database, Trash2, AlertTriangle } from "lucide-react";
+import { Shield, Database, Trash2, AlertTriangle, Download, Cloud, HardDrive } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db/dbService";
 import { cn } from "@/lib/utils";
+import { isAuthenticated } from "@/lib/apiClient";
+import { useDataExport } from "../../hooks/useDataExport";
 
 const DATA_CATEGORIES = [
   { label: "Food log entries", description: "Meals and calories logged by date" },
@@ -18,6 +20,8 @@ const DATA_CATEGORIES = [
 export function PrivacyPanel() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const { downloadJSON, isExporting } = useDataExport();
+  const cloudActive = isAuthenticated();
 
   const handleClearAll = async () => {
     if (!confirmClear) {
@@ -43,6 +47,60 @@ export function PrivacyPanel() {
         <p className="font-sans text-sm text-ink-soft leading-relaxed">
           All data is stored <span className="text-ink font-medium">only on this device</span>, in
           your browser's IndexedDB. Nothing is sent to any server unless you enable Cloud Sync.
+        </p>
+      </div>
+
+      {/* Storage location table */}
+      <div className="border border-rule divide-y divide-rule">
+        <div className="flex items-center justify-between px-4 py-3 gap-4">
+          <div className="flex items-center gap-2">
+            <HardDrive className="w-3.5 h-3.5 text-ink-soft shrink-0" aria-hidden="true" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              This device (IndexedDB)
+            </span>
+          </div>
+          <span className="font-mono text-[10px] text-persimmon uppercase tracking-[0.15em]">
+            All data
+          </span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3 gap-4">
+          <div className="flex items-center gap-2">
+            <Cloud className="w-3.5 h-3.5 text-ink-soft shrink-0" aria-hidden="true" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
+              Cloud sync
+            </span>
+          </div>
+          <span
+            className={cn(
+              "font-mono text-[10px] uppercase tracking-[0.15em]",
+              cloudActive ? "text-persimmon" : "text-ink-soft/50",
+            )}
+          >
+            {cloudActive ? "Active" : "Off"}
+          </span>
+        </div>
+      </div>
+
+      {/* One-click export */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Download className="w-3.5 h-3.5 text-ink-soft" aria-hidden="true" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft">
+            Export your data
+          </span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={downloadJSON}
+          disabled={isExporting}
+          className="flex items-center gap-2 border-rule font-mono text-[10px] uppercase tracking-wider text-ink rounded-none h-auto px-4 py-2 hover:border-ink"
+        >
+          <Download className="size-3" aria-hidden="true" />
+          {isExporting ? "Exporting..." : "Download JSON backup"}
+        </Button>
+        <p className="font-sans text-xs text-ink-soft/60 mt-2">
+          Export before clearing data. Backup can be re-imported from Settings - Data.
         </p>
       </div>
 

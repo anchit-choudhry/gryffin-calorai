@@ -1,6 +1,13 @@
 import type { BodyMeasurement } from "@/db/dbService";
+import { shiftISODate, type ISODate } from "@/types";
 
 type FoodLogEntry = { calories: number; dateLogged: string };
+
+export interface WeightForecastPoint {
+  date: string;
+  label: string;
+  projected: number;
+}
 
 export type AdaptiveTdeeConfidence = "high" | "medium" | "low";
 
@@ -174,4 +181,41 @@ export function computeWeeklyForecast(
     projectedBalance: projectedTotal - weeklyBudget,
     daysLogged,
   };
+}
+
+/**
+ * Projects weight trajectory for the next `forecastDays` days using linear regression
+ * over the last 30 days of measurements. Returns empty array when fewer than 2 entries exist.
+ */
+export function computeWeightForecast(
+  bodyMeasurements: readonly BodyMeasurement[],
+  forecastDays = 30,
+): WeightForecastPoint[] {
+  const sorted = [...bodyMeasurements]
+    .filter((m) => m.weight !== undefined)
+    .sort((a, b) => a.measuredAt.localeCompare(b.measuredAt));
+
+  if (sorted.length < 2) return [];
+
+  const last = sorted[sorted.length - 1]!;
+  const cutoffISO = shiftISODate(last.measuredAt as ISODate, -30);
+
+  const window = sorted.filter((m) => m.measuredAt >= cutoffISO);
+  const points = window.length >= 2 ? window : sorted.slice(-2);
+
+  const first = points[0]!;
+  const daySpan = Math.max(
+    1,
+    (new Date(last.measuredAt).getTime() - new Date(first.measuredAt).getTime()) / 86400000,
+  );
+  const kgPerDay = (last.weight! - first.weight!) / daySpan;
+
+  return Array.from({ length: forecastDays }, (_, i) => {
+    const date = shiftISODate(last.measuredAt as ISODate, i + 1);
+    return {
+      date,
+      label: date.substring(5),
+      projected: Math.round((last.weight! + kgPerDay * (i + 1)) * 10) / 10,
+    };
+  });
 }

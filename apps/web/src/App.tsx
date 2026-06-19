@@ -14,11 +14,10 @@ import {
   BookOpen,
   Keyboard,
   LayoutDashboard,
-  Moon,
   Settings as SettingsIcon,
-  Sun,
   TrendingUp,
 } from "lucide-react";
+import { MoonPhase, SeasonalOrnament, SunRay } from "./components/icons/almanac";
 import { useAppState } from "./state/AppState";
 import { initializeDB } from "./db/dbService";
 import { UserId } from "./types";
@@ -29,12 +28,14 @@ import {
   RecipesSkeleton,
   SettingsSkeleton,
 } from "./components/ui/skeleton";
+import PageLoading from "./components/PageLoading";
 import KeyboardShortcutsOverlay from "./components/KeyboardShortcutsOverlay";
 import ProductTourOverlay from "./components/tour/ProductTourOverlay";
 import { HarvestStamp } from "./components/HarvestStamp";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast, Toaster } from "sonner";
 import { normalizeHash, type ValidHash } from "./lib/utils";
+import { decodeSharePayload, importSharedRecipe } from "./lib/recipeShare";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useReminders } from "./hooks/useReminders";
 import { useSyncService } from "./hooks/useSyncService";
@@ -47,6 +48,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Recipes = lazy(() => import("./pages/Recipes"));
 const Progress = lazy(() => import("./pages/Progress"));
 const Settings = lazy(() => import("./pages/Settings"));
+const PrintPage = lazy(() => import("./pages/PrintPage").then((m) => ({ default: m.PrintPage })));
 
 const MOCK_USER_ID = UserId("1");
 const BOTTOM_NAV_HASHES = ["#dashboard", "#recipes", "#progress"] as const;
@@ -90,14 +92,16 @@ function App() {
   const openCommandPalette = useAppState((s) => s.openCommandPalette);
   const density = useAppState((s) => s.density);
   const accentTheme = useAppState((s) => s.accentTheme);
+  const edition = useAppState((s) => s.edition);
+  const broadsheet = useAppState((s) => s.broadsheet);
 
   useLayoutEffect(() => {
-    if (darkMode) {
+    if (darkMode || edition === "lamplight") {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [darkMode]);
+  }, [darkMode, edition]);
 
   useLayoutEffect(() => {
     document.documentElement.classList.remove("compact", "spacious");
@@ -120,6 +124,25 @@ function App() {
     }
   }, [accentTheme]);
 
+  useLayoutEffect(() => {
+    document.documentElement.classList.remove(
+      "edition-sepia",
+      "edition-lamplight",
+      "edition-large-print",
+    );
+    if (edition !== "standard") {
+      document.documentElement.classList.add(`edition-${edition}`);
+    }
+  }, [edition]);
+
+  useLayoutEffect(() => {
+    if (broadsheet) {
+      document.documentElement.classList.add("broadsheet");
+    } else {
+      document.documentElement.classList.remove("broadsheet");
+    }
+  }, [broadsheet]);
+
   useEffect(() => {
     const setupApp = async () => {
       await initializeDB();
@@ -135,7 +158,27 @@ function App() {
         const basePart = rawHash.slice(0, qMark);
         const queryStr = rawHash.slice(qMark + 1);
         const params = new URLSearchParams(queryStr);
-        if (basePart === "#log" || basePart === "#/log") {
+        if (basePart === "#recipes" || basePart === "#/recipes") {
+          const shareEncoded = params.get("share");
+          if (shareEncoded) {
+            const state = useAppState.getState();
+            if (state.userId) {
+              const payload = decodeSharePayload(shareEncoded);
+              if (payload) {
+                try {
+                  await importSharedRecipe(payload, state.userId);
+                  await state.fetchRecipes(state.userId);
+                  toast.success(`Recipe "${payload.name}" imported`);
+                } catch {
+                  toast.error("Failed to import shared recipe");
+                }
+              } else {
+                toast.error("Invalid or expired recipe link");
+              }
+            }
+            window.location.hash = "#recipes";
+          }
+        } else if (basePart === "#log" || basePart === "#/log") {
           const water = params.get("water");
           const steps = params.get("steps");
           const sharedTitle = params.get("title") ?? params.get("text");
@@ -201,6 +244,12 @@ function App() {
         return (
           <Suspense fallback={<SettingsSkeleton />}>
             <Settings />
+          </Suspense>
+        );
+      case "#print":
+        return (
+          <Suspense fallback={<PageLoading message="Preparing print preview..." />}>
+            <PrintPage />
           </Suspense>
         );
       case "#dashboard":
@@ -289,22 +338,59 @@ function App() {
 
         <nav className="bg-paper border-b border-rule sticky top-0 z-50">
           <div className="mx-auto max-w-[1280px] px-6 md:px-10 lg:px-14">
-            <div className="flex justify-between h-14 items-center">
+            {/* Running head - serif folio above nav links */}
+            <div className="hidden md:flex items-center justify-between border-b border-rule/40 py-1 gap-4">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <SeasonalOrnament
+                  date={new Date()}
+                  className="h-3 w-auto text-ink-soft/50 opacity-50"
+                />
+                <span className="font-serif text-[11px] italic text-ink-soft/60 tracking-tight">
+                  Field Journal
+                </span>
+              </div>
+              <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-ink-soft/35 truncate">
+                {(
+                  {
+                    "#dashboard": "Daily Record",
+                    "#recipes": "Recipe Compendium",
+                    "#progress": "Progress Charts",
+                    "#settings": "Preferences",
+                  } as Record<string, string>
+                )[currentPath] ?? "Field Journal"}{" "}
+                &middot;{" "}
+                {new Date().toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
               <button
+                type="button"
+                onClick={toggleDarkMode}
+                className="shrink-0 flex items-center justify-center size-5 text-ink-soft/50 hover:text-ink-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                aria-label="Toggle dark mode"
+              >
+                {darkMode ? <SunRay className="size-3.5" /> : <MoonPhase className="size-3.5" />}
+              </button>
+            </div>
+            <div className="flex justify-between h-12 items-center">
+              <button
+                type="button"
                 className="flex items-center gap-3 cursor-pointer rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
                 onClick={() => (window.location.hash = "#dashboard")}
               >
-                <div className="w-7 h-7 bg-persimmon flex items-center justify-center shrink-0">
-                  <span className="font-display text-paper text-sm font-semibold leading-none">
+                <div className="w-6 h-6 bg-persimmon flex items-center justify-center shrink-0">
+                  <span className="font-display text-paper text-xs font-semibold leading-none">
                     G
                   </span>
                 </div>
-                <span className="font-display text-lg text-ink tracking-tight leading-none">
+                <span className="font-display text-base text-ink tracking-tight leading-none">
                   Gryffin Calorai
                 </span>
               </button>
-              <div className="flex items-center gap-6">
-                <div className="hidden md:flex items-center gap-6">
+              <div className="flex items-center gap-5">
+                <div className="hidden md:flex items-center gap-5">
                   <NavLink
                     hash="#dashboard"
                     label="Dashboard"
@@ -333,12 +419,14 @@ function App() {
                   <Keyboard className="size-3.5" aria-hidden="true" />
                   <kbd className="font-mono text-[10px]">?</kbd>
                 </button>
+                {/* Dark mode toggle is in the running head on md+ */}
                 <button
+                  type="button"
                   onClick={toggleDarkMode}
-                  className="flex items-center justify-center size-11 border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
+                  className="md:hidden flex items-center justify-center size-9 border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
                   aria-label="Toggle dark mode"
                 >
-                  {darkMode ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                  {darkMode ? <SunRay className="size-4" /> : <MoonPhase className="size-4" />}
                 </button>
               </div>
             </div>

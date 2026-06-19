@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { computeAdaptiveTdee, computeWeeklyForecast, detectPlateau } from "./adaptiveTdee";
+import {
+  computeAdaptiveTdee,
+  computeWeeklyForecast,
+  computeWeightForecast,
+  detectPlateau,
+} from "./adaptiveTdee";
 import type { BodyMeasurement, FoodItem } from "@/db/dbService";
 import type { BodyMeasurementId, FoodItemId, ISODate, UserId } from "@/types";
 
@@ -134,6 +139,54 @@ describe("detectPlateau", () => {
     const result = detectPlateau(measurements);
     expect(result.isPlateauing).toBe(true);
     expect(result.daySpan).toBeGreaterThanOrEqual(21);
+  });
+});
+
+describe("computeWeightForecast", () => {
+  it("returns empty array with fewer than 2 measurements", () => {
+    expect(computeWeightForecast([makeWeight("2026-01-01", 80)])).toStrictEqual([]);
+    expect(computeWeightForecast([])).toStrictEqual([]);
+  });
+
+  it("returns empty array when weight is undefined on all entries", () => {
+    const m = { id: 1 as BodyMeasurementId, userId: USER_ID, measuredAt: "2026-01-01" as ISODate };
+    expect(computeWeightForecast([m, m])).toStrictEqual([]);
+  });
+
+  it("projects forward using linear regression slope", () => {
+    const m1 = makeWeight("2026-01-01", 80);
+    const m2 = makeWeight("2026-01-08", 79.3);
+    const result = computeWeightForecast([m1, m2], 7);
+    expect(result).toHaveLength(7);
+    expect(result[0]?.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(result[0]?.projected).toBeLessThan(79.3);
+  });
+
+  it("produces dates that increment by one day", () => {
+    const m1 = makeWeight("2026-01-01", 80);
+    const m2 = makeWeight("2026-01-15", 79);
+    const result = computeWeightForecast([m1, m2], 3);
+    const dates = result.map((p) => p.date);
+    expect(new Date(dates[1]!).getTime() - new Date(dates[0]!).getTime()).toBe(86400000);
+    expect(new Date(dates[2]!).getTime() - new Date(dates[1]!).getTime()).toBe(86400000);
+  });
+
+  it("label is mm-dd substring of date", () => {
+    const m1 = makeWeight("2026-01-01", 80);
+    const m2 = makeWeight("2026-01-15", 79);
+    const result = computeWeightForecast([m1, m2], 2);
+    result.forEach((p) => {
+      expect(p.label).toBe(p.date.substring(5));
+    });
+  });
+
+  it("uses last 30 days window when older data is available", () => {
+    const old = makeWeight("2025-10-01", 85);
+    const recent1 = makeWeight("2026-01-01", 80);
+    const recent2 = makeWeight("2026-01-15", 79);
+    const result = computeWeightForecast([old, recent1, recent2], 5);
+    expect(result).toHaveLength(5);
+    expect(result[0]?.projected).toBeCloseTo(78.9, 0);
   });
 });
 

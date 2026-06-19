@@ -196,6 +196,60 @@ describe("uiSlice", () => {
     });
   });
 
+  describe("edition", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_edition");
+    });
+
+    it("initializes edition as 'standard'", () => {
+      const store = makeStore();
+      expect(store.getState().edition).toBe("standard");
+    });
+
+    it("setEdition updates edition to sepia", () => {
+      const store = makeStore();
+      store.getState().setEdition("sepia");
+      expect(store.getState().edition).toBe("sepia");
+    });
+
+    it("setEdition updates edition to lamplight", () => {
+      const store = makeStore();
+      store.getState().setEdition("lamplight");
+      expect(store.getState().edition).toBe("lamplight");
+    });
+
+    it("setEdition updates edition to large-print", () => {
+      const store = makeStore();
+      store.getState().setEdition("large-print");
+      expect(store.getState().edition).toBe("large-print");
+    });
+
+    it("setEdition persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().setEdition("sepia");
+      expect(localStorage.getItem("gc_edition")).toBe("sepia");
+    });
+
+    it("loads edition from localStorage on init", () => {
+      localStorage.setItem("gc_edition", "lamplight");
+      const store = makeStore();
+      expect(store.getState().edition).toBe("lamplight");
+    });
+
+    it("falls back to standard for unknown stored value", () => {
+      localStorage.setItem("gc_edition", "unknown-edition");
+      const store = makeStore();
+      expect(store.getState().edition).toBe("standard");
+    });
+
+    it("setEdition can switch back to standard", () => {
+      const store = makeStore();
+      store.getState().setEdition("sepia");
+      store.getState().setEdition("standard");
+      expect(store.getState().edition).toBe("standard");
+    });
+  });
+
   describe("trainingDays", () => {
     const DATE_A = "2026-06-10" as import("@/types").ISODate;
     const DATE_B = "2026-06-11" as import("@/types").ISODate;
@@ -259,6 +313,67 @@ describe("uiSlice", () => {
       localStorage.setItem("gc_training_days", JSON.stringify([DATE_A]));
       const store = makeStore();
       expect(store.getState().trainingDays).toContain(DATE_A);
+    });
+  });
+
+  describe("almanacLocation", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_almanac_loc");
+    });
+
+    it("initializes almanacLocation as null", () => {
+      const store = makeStore();
+      expect(store.getState().almanacLocation).toBeNull();
+    });
+
+    it("setAlmanacLocation stores the location and persists to localStorage", () => {
+      const store = makeStore();
+      const loc = { lat: 51.5, lng: -0.1, label: "London" };
+      store.getState().setAlmanacLocation(loc);
+      expect(store.getState().almanacLocation).toStrictEqual(loc);
+      const stored = JSON.parse(localStorage.getItem("gc_almanac_loc") ?? "null") as typeof loc;
+      expect(stored).toStrictEqual(loc);
+    });
+
+    it("setAlmanacLocation(null) clears the location and removes from localStorage", () => {
+      const store = makeStore();
+      store.getState().setAlmanacLocation({ lat: 40.7, lng: -74, label: "New York" });
+      store.getState().setAlmanacLocation(null);
+      expect(store.getState().almanacLocation).toBeNull();
+      expect(localStorage.getItem("gc_almanac_loc")).toBeNull();
+    });
+
+    it("loads almanacLocation from localStorage on init", () => {
+      const loc = { lat: 48.8, lng: 2.35, label: "Paris" };
+      localStorage.setItem("gc_almanac_loc", JSON.stringify(loc));
+      const store = makeStore();
+      expect(store.getState().almanacLocation).toStrictEqual(loc);
+    });
+  });
+
+  describe("broadsheet", () => {
+    beforeEach(() => {
+      localStorage.removeItem("gc_broadsheet");
+    });
+
+    it("initializes broadsheet as false", () => {
+      const store = makeStore();
+      expect(store.getState().broadsheet).toBe(false);
+    });
+
+    it("setBroadsheet(true) enables broadsheet and persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().setBroadsheet(true);
+      expect(store.getState().broadsheet).toBe(true);
+      expect(localStorage.getItem("gc_broadsheet")).toBe("true");
+    });
+
+    it("setBroadsheet(false) disables broadsheet and persists to localStorage", () => {
+      const store = makeStore();
+      store.getState().setBroadsheet(true);
+      store.getState().setBroadsheet(false);
+      expect(store.getState().broadsheet).toBe(false);
+      expect(localStorage.getItem("gc_broadsheet")).toBe("false");
     });
   });
 });

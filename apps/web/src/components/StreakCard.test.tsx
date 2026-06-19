@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import StreakCard from "./StreakCard";
 import * as streaksHook from "../hooks/useStreaks";
 
@@ -9,9 +10,19 @@ vi.mock("motion/react", () => ({
     ),
   },
   useReducedMotion: () => false,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("../hooks/useStreaks");
+
+vi.mock("@/lib/a11y", () => ({
+  useReducedMotion: () => false,
+}));
+
+vi.mock("@/lib/shareCard", () => ({
+  renderStreakCard: vi.fn().mockResolvedValue(new Blob()),
+  shareOrDownloadCard: vi.fn().mockResolvedValue(undefined),
+}));
 
 const baseReturn = {
   loggedDates: new Set<string>(),
@@ -39,8 +50,8 @@ describe("StreakCard", () => {
       isLoading: true,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    const { container } = render(<StreakCard />);
+    expect(container.firstChild).toBeDefined();
   });
 
   it("renders streak data when loaded", () => {
@@ -51,8 +62,9 @@ describe("StreakCard", () => {
       isLoading: false,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    render(<StreakCard />);
+    expect(screen.getByText("5")).toBeDefined();
+    expect(screen.getByText("12")).toBeDefined();
   });
 
   it("renders with zero streaks", () => {
@@ -63,8 +75,8 @@ describe("StreakCard", () => {
       isLoading: false,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    render(<StreakCard />);
+    expect(screen.getAllByText("0")).toHaveLength(2);
   });
 
   it("renders with high current streak", () => {
@@ -75,8 +87,9 @@ describe("StreakCard", () => {
       isLoading: false,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    render(<StreakCard />);
+    expect(screen.getByText("10")).toBeDefined();
+    expect(screen.getByText("15")).toBeDefined();
   });
 
   it("renders with high longest streak", () => {
@@ -87,8 +100,9 @@ describe("StreakCard", () => {
       isLoading: false,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    render(<StreakCard />);
+    expect(screen.getByText("3")).toBeDefined();
+    expect(screen.getByText("50")).toBeDefined();
   });
 
   it("marks logged dates in the dot calendar", () => {
@@ -100,7 +114,8 @@ describe("StreakCard", () => {
       isLoading: false,
     });
 
-    const component = StreakCard();
-    expect(component).toBeDefined();
+    const { container } = render(<StreakCard />);
+    const filledDots = container.querySelectorAll('[class*="bg-persimmon"]');
+    expect(filledDots.length).toBeGreaterThan(0);
   });
 });

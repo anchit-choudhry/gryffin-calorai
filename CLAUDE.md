@@ -5,7 +5,7 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.10.0 released (June 2026); v0.11.0 in progress (June 2026). Full-stack: React
+**Context:** v0.15.0 released (June 2026); v0.16.0 in progress (June 2026). Full-stack: React
 frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool. Database schema
 v20. Target: v1.0.0 with cloud sync and native mobile apps.
 
@@ -69,7 +69,11 @@ v20. Target: v1.0.0 with cloud sync and native mobile apps.
   `trackerSlice`, `settingsSlice`, `coreSlice`, `syncSlice`, `uiSlice`) in `AppState.ts`.
   `coreSlice.selectedDate` drives date nav; `uiSlice` persists `density` (`gc_density`),
   `hapticsEnabled` (`gc_haptics`), `accentTheme` (`gc_accent`; persimmon/sage/indigo/amber/rose),
-  `trainingDays` (`gc_training_days`); `settingsSlice.customMacroGoals` (`gc_custom_macros`)
+  `trainingDays` (`gc_training_days`), `broadsheet` (`gc_broadsheet`; two-column dashboard
+  grid on lg screens), `almanacLocation` (`gc_almanac_loc`; JSON `{lat, lng, label}` for
+  AlmanacPanel sunrise/sunset), `edition` (`gc_edition`;
+  `standard/lamplight/sepia/large-print` paper editions);
+  `settingsSlice.customMacroGoals` (`gc_custom_macros`)
   overrides periodized macro targets.
 - **DB:** Dexie.js tables with compound indices; schema version 20
 - **FoodItem fields:** `apps/web/src/types/index.ts`; render unset macros as "---" not "0";
@@ -176,8 +180,8 @@ For persistent cross-session context, read @@project-knowledge/AGENTS.md first, 
 @@project-knowledge/index.md (canonical session-start artifact; update at session end).
 For architecture details, see @@docs/gryffin-calorai-specifications.md
 For security guidelines, see @@.claude/skills/owasp-security-audit/SKILL.md
-For release history, see @@release-notes/0.9.0.md (latest), @@release-notes/0.8.0.md, and older
-files in `release-notes/`
+For release history, see @@release-notes/0.15.0.md (latest), @@release-notes/0.14.0.md, and
+older files in `release-notes/`
 For roadmap, implemented history, and DB schema versions, see @@ROADMAP.md
 For UX/design system guidelines, see @@.claude/rules/ux-principles.md (auto-loaded for
 .tsx/.html/.css files)
@@ -194,8 +198,8 @@ For quick dev commands, see @@README.md
 | **Types** | `apps/web/src/types/index.ts` | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS, DietPreset, RestrictionFlag, ReminderId, REMINDER_LABELS, `shiftISODate(date, n)` - always use for date arithmetic |
 | **Pages** | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx` | Main views (lazy-loaded); Settings at `#/settings` |
 | **Components** | `apps/web/src/components/` | Sub-folders: `dashboard/`, `illustrations/`, `icons/almanac/`, `settings/`, `progress/`, `recipes/`, `charts/`, `tour/` |
-| **Dashboard** | `apps/web/src/components/dashboard/` | DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks |
-| **Progress** | `apps/web/src/components/progress/` | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel |
+| **Dashboard** | `apps/web/src/components/dashboard/` | AlmanacPanel (lazy), DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks; `SeasonalOrnament` (in `icons/almanac/`) is reused in App.tsx nav head - do not inline seasonal logic |
+| **Progress** | `apps/web/src/components/progress/` | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal) |
 | **Settings** | `apps/web/src/components/settings/` | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel |
 | **Tour** | `apps/web/src/components/tour/` | ProductTourOverlay, CoachmarkCard, tourSteps, useSpotlightRect |
 | **Hooks** | `apps/web/src/hooks/` | `useSyncService` (cloud sync), `useProgressData` (7-day avg), `useWeeklyHarvestTrigger`, `useFastingTimer`, `useReminders` |
@@ -209,9 +213,10 @@ For quick dev commands, see @@README.md
 | **Meal patterns** | `apps/web/src/lib/mealPatterns.ts` | `analyzeMealPatterns()` - timing and consistency suggestions |
 | **Importers** | `apps/web/src/lib/importers/` | MFP, Cronometer, Lose It CSV + Apple Health XML parsers; `isISODate()` type guard in `utils.ts` validates dates before DB write |
 | **Haptics lib** | `apps/web/src/lib/haptics.ts` | `triggerHaptic(pattern)` - Vibration API; patterns: `"success"`, `"achievement"`, `"error"` |
+| **Solar lib** | `apps/web/src/lib/solar.ts` | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel |
 | **Charts lib** | `apps/web/src/lib/chartTheme.ts` | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber) |
 | **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts` | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel |
-| **Tests** | `apps/web/src/**/*.test.{ts,tsx}` (124 files, 2285 tests) | Vitest + jsdom + fake-indexeddb + coverage |
+| **Tests** | `apps/web/src/**/*.test.{ts,tsx}` (135 files, 2484 tests) | Vitest + jsdom + fake-indexeddb + coverage |
 | **Config** | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup |
 | **Backend** | `apps/backend/src/main/java/com/gryffin/calorai/` | Spring Boot 4.0 + Java 25 |
 | **DB migrate** | `apps/backend/src/main/resources/db/migration/` | Flyway SQL migrations |
@@ -274,6 +279,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 14, 2026 | **Current release:** v0.10.0 (released June 2026) | **In
-progress:** v0.11.0 - adaptive TDEE, correlations, CSV/Apple Health import, meal pattern
-suggestions (124 test files, 2285 tests)
+**Last Updated:** June 19, 2026 | **Current release:** v0.15.0 (released June 2026) | **In
+progress:** v0.16.0 (135 test files, 2484 tests)

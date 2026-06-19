@@ -54,6 +54,10 @@
           {
             "type": "command",
             "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/run-web-related-tests.sh'"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/checkstyle-on-java-edit.sh'"
           }
         ]
       }

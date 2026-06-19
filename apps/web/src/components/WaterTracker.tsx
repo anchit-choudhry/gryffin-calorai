@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "../state/AppState";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS } from "../lib/utils";
 
 const QUICK_AMOUNTS = [250, 500, 750] as const;
+const TIDE_LABELS = ["12a", "3a", "6a", "9a", "12p", "3p", "6p", "9p"] as const;
 
 const WaterTracker = () => {
   const { dailyWaterLogs, addWaterLog, deleteWaterLog, waterGoalMl, setWaterGoalMl } =
@@ -20,6 +21,36 @@ const WaterTracker = () => {
 
   const totalMl = dailyWaterLogs.reduce((sum, l) => sum + l.amount, 0);
   const pct = Math.min(100, Math.round((totalMl / waterGoalMl) * 100));
+
+  // Tide register: 8 three-hour columns, cumulative intake as rising tide
+  const tideColumns = useMemo(() => {
+    type Col = { label: string; hasEvent: boolean; cumulativePct: number };
+    type Acc = { cols: Col[]; cumulativeMl: number };
+    return TIDE_LABELS.reduce<Acc>(
+      (acc, label, i) => {
+        const startH = i * 3;
+        const colMl = dailyWaterLogs
+          .filter((l) => {
+            const h = new Date(l.loggedAt).getHours();
+            return h >= startH && h < startH + 3;
+          })
+          .reduce((s, l) => s + l.amount, 0);
+        const newCumulativeMl = acc.cumulativeMl + colMl;
+        return {
+          cols: [
+            ...acc.cols,
+            {
+              label,
+              hasEvent: colMl > 0,
+              cumulativePct: Math.min(100, (newCumulativeMl / waterGoalMl) * 100),
+            },
+          ],
+          cumulativeMl: newCumulativeMl,
+        };
+      },
+      { cols: [], cumulativeMl: 0 },
+    ).cols;
+  }, [dailyWaterLogs, waterGoalMl]);
 
   return (
     <div className="overflow-hidden">
@@ -75,12 +106,40 @@ const WaterTracker = () => {
         )}
       </div>
 
-      {/* Progress bar */}
-      <div className="relative w-full h-[3px] bg-rule mb-4">
-        <div
-          className="absolute left-0 top-0 h-full bg-persimmon transition-all"
-          style={{ width: `${pct}%` }}
-        />
+      {/* Tide register - intra-day water visualization */}
+      <div className="mb-4" aria-hidden="true">
+        <div className="flex items-end gap-px h-7 border-b border-rule/40">
+          {tideColumns.map((col, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full relative">
+              {col.hasEvent && (
+                <div className="absolute top-0.5 size-[3px] rounded-full bg-persimmon/70" />
+              )}
+              <div
+                className="w-full bg-ink/12 dark:bg-ink/20 transition-[height] duration-500"
+                style={{ height: `${col.cumulativePct}%` }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="flex">
+          {tideColumns.map((col, i) => (
+            <div key={i} className="flex-1 text-center">
+              {i % 2 === 0 && (
+                <span className="font-mono text-[7px] text-ink-soft/35">{col.label}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* sr-only progress for screen readers */}
+      <div
+        className="sr-only"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        {totalMl} of {waterGoalMl} ml ({pct}%)
       </div>
 
       {/* Quick-add buttons */}

@@ -4,12 +4,23 @@ import type { ISODate } from "@/types";
 
 export type Density = "comfortable" | "compact" | "spacious";
 export type AccentTheme = "persimmon" | "sage" | "indigo" | "amber" | "rose";
+export type Edition = "standard" | "lamplight" | "sepia" | "large-print";
 
 const DENSITY_KEY = "gc_density";
 const SEEN_COACHMARKS_KEY = "gc_seen_coachmarks";
 const HAPTICS_KEY = "gc_haptics";
 const ACCENT_KEY = "gc_accent";
 const TRAINING_DAYS_KEY = "gc_training_days";
+const EDITION_KEY = "gc_edition";
+const ALMANAC_LOC_KEY = "gc_almanac_loc";
+const BROADSHEET_KEY = "gc_broadsheet";
+
+const VALID_EDITIONS: readonly Edition[] = ["standard", "lamplight", "sepia", "large-print"];
+
+function loadEdition(): Edition {
+  const stored = localStorage.getItem(EDITION_KEY);
+  return VALID_EDITIONS.includes(stored as Edition) ? (stored as Edition) : "standard";
+}
 
 const VALID_ACCENT_THEMES: readonly AccentTheme[] = [
   "persimmon",
@@ -67,6 +78,25 @@ function loadTrainingDays(): ISODate[] {
   }
 }
 
+export interface AlmanacLocation {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+function loadAlmanacLocation(): AlmanacLocation | null {
+  try {
+    const stored = localStorage.getItem(ALMANAC_LOC_KEY);
+    return stored ? (JSON.parse(stored) as AlmanacLocation) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadBroadsheet(): boolean {
+  return localStorage.getItem(BROADSHEET_KEY) === "true";
+}
+
 export interface UiSlice {
   quickAddOpen: boolean;
   openQuickAdd: () => void;
@@ -85,6 +115,12 @@ export interface UiSlice {
   trainingDays: ISODate[];
   toggleTrainingDay: (date: ISODate) => void;
   isTrainingDay: (date: ISODate) => boolean;
+  edition: Edition;
+  setEdition: (e: Edition) => void;
+  almanacLocation: AlmanacLocation | null;
+  setAlmanacLocation: (loc: AlmanacLocation | null) => void;
+  broadsheet: boolean;
+  setBroadsheet: (enabled: boolean) => void;
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
@@ -125,4 +161,23 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
     set({ trainingDays: updated });
   },
   isTrainingDay: (date: ISODate) => get().trainingDays.includes(date),
+  edition: loadEdition(),
+  setEdition: (e: Edition) => {
+    localStorage.setItem(EDITION_KEY, e);
+    set({ edition: e });
+  },
+  almanacLocation: loadAlmanacLocation(),
+  setAlmanacLocation: (loc: AlmanacLocation | null) => {
+    if (loc === null) {
+      localStorage.removeItem(ALMANAC_LOC_KEY);
+    } else {
+      localStorage.setItem(ALMANAC_LOC_KEY, JSON.stringify(loc));
+    }
+    set({ almanacLocation: loc });
+  },
+  broadsheet: loadBroadsheet(),
+  setBroadsheet: (enabled: boolean) => {
+    localStorage.setItem(BROADSHEET_KEY, String(enabled));
+    set({ broadsheet: enabled });
+  },
 });

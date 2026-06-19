@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { MoreHorizontal, Pencil, Star, X } from "lucide-react";
 import type { FoodItemId } from "@/types";
 import { DEFAULT_MEAL_TYPE } from "@/types";
@@ -13,6 +13,7 @@ interface Props {
   onEdit: (log: FoodItem) => void;
   onDelete: (id: FoodItemId) => void;
   onToggleFavorite: (id: FoodItemId, isFavorite: boolean) => void;
+  isNew?: boolean;
 }
 
 interface ActionStripProps {
@@ -44,8 +45,9 @@ function ActionStrip({ log, onDelete, onEdit, onToggleFavorite }: ActionStripPro
   );
 }
 
-const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorite }: Props) {
+const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorite, isNew }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   const handleDelete = () => {
     if (log.id) onDelete(log.id);
@@ -61,69 +63,116 @@ const LogEntry = memo(function LogEntry({ log, onEdit, onDelete, onToggleFavorit
   return (
     <motion.li
       layout
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -16 }}
-      transition={{ duration: motionTokens.durState, ease: motionTokens.easeOutExpo }}
-      className="flex flex-col py-4 group"
+      transition={{ duration: motionTokens.durState }}
+      className="relative flex flex-col group overflow-hidden"
       data-testid="log-entry"
     >
-      <div className="flex items-baseline gap-3">
-        <span className="text-xs text-ink-soft w-20 shrink-0">
-          {log.mealType ?? DEFAULT_MEAL_TYPE}
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-1 min-w-0">
-            <p className="font-sans text-base font-semibold text-ink truncate shrink-0 max-w-[60%]">
-              {log.name}
-            </p>
-            {log.captureMethod && log.captureMethod !== "manual" && (
-              <ProvenanceBadge method={log.captureMethod} />
-            )}
-            <span
-              className="flex-1 self-end border-b border-dotted border-rule/40 mb-[3px] min-w-[8px]"
-              aria-hidden="true"
-            />
-            <span className="font-sans text-base font-semibold tabular-nums text-ink shrink-0">
-              {log.calories.toLocaleString()}
-              <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
-            </span>
-          </div>
-          <p className="font-mono text-[11px] text-ink-soft mt-0.5 tabular-nums">
-            P {log.protein ?? 0}g · C {log.carbs ?? 0}g · F {log.fat ?? 0}g
-            {log.servingSize !== 1 && (
-              <span className="ml-2 text-ink-soft/70">· {log.servingSize} servings</span>
-            )}
-          </p>
-        </div>
-        {/* Mobile menu button — 44px touch target, hidden once container is wide enough */}
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="@md:hidden flex items-center justify-center size-11 rounded-none hover:bg-paper-muted transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
-          aria-label={`${menuOpen ? "Hide" : "Show"} actions for ${log.name}`}
-          aria-expanded={menuOpen}
-        >
-          <MoreHorizontal className="size-4 text-ink-soft" />
-        </button>
-        {/* Action row — container-driven: shown above @md container width */}
-        <div className="hidden @md:flex items-center gap-0.5 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-          <ActionStrip {...stripProps} />
-        </div>
-      </div>
-      {/* Mobile action strip */}
-      <AnimatePresence>
-        {menuOpen && (
+      {isNew && !shouldReduceMotion && (
+        <>
+          {/* Beat 1: rule draws across on new-entry mount, then fades */}
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: motionTokens.durInstant }}
-            className="@md:hidden mt-3 flex items-center gap-1 pl-24"
+            data-inking-rule="true"
+            className="h-px bg-persimmon/50 origin-left"
+            initial={{ scaleX: 0, opacity: 0.8 }}
+            animate={{ scaleX: 1, opacity: 0 }}
+            transition={{
+              scaleX: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
+              opacity: { duration: 0.2, delay: 0.22 },
+            }}
+            aria-hidden="true"
+          />
+          {/* Beat 3: ink-stamp dot at left margin */}
+          <motion.div
+            data-ink-dot="true"
+            className="size-2 rounded-full bg-persimmon absolute left-0 top-4 pointer-events-none"
+            initial={{ scale: 0, opacity: 1 }}
+            animate={{ scale: 1, opacity: 0 }}
+            transition={{ delay: 0.3, duration: 0.1 }}
+            aria-hidden="true"
+          />
+        </>
+      )}
+      {/* Beat 2: content fades up on new-entry; no animation for existing entries */}
+      <motion.div
+        className="flex flex-col py-4"
+        initial={
+          isNew
+            ? shouldReduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: -5, scale: 0.998 }
+            : false
+        }
+        animate={isNew ? { opacity: 1, y: 0, scale: 1 } : undefined}
+        transition={
+          isNew
+            ? shouldReduceMotion
+              ? { duration: 0.15 }
+              : {
+                  opacity: { duration: 0.22, delay: 0.1 },
+                  y: { type: "spring", stiffness: 400, damping: 28, delay: 0.1 },
+                  scale: { duration: 0.3, delay: 0.1 },
+                }
+            : undefined
+        }
+      >
+        <div className="flex items-baseline gap-3">
+          <span className="text-xs text-ink-soft w-20 shrink-0">
+            {log.mealType ?? DEFAULT_MEAL_TYPE}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1 min-w-0">
+              <p className="font-sans text-base font-semibold text-ink truncate shrink-0 max-w-[60%]">
+                {log.name}
+              </p>
+              {log.captureMethod && log.captureMethod !== "manual" && (
+                <ProvenanceBadge method={log.captureMethod} />
+              )}
+              <span
+                className="flex-1 self-end border-b border-dotted border-rule/40 mb-[3px] min-w-[8px]"
+                aria-hidden="true"
+              />
+              <span className="font-sans text-base font-semibold tabular-nums text-ink shrink-0">
+                {log.calories.toLocaleString()}
+                <span className="font-mono text-[10px] text-ink-soft ml-1">kcal</span>
+              </span>
+            </div>
+            <p className="font-mono text-[11px] text-ink-soft mt-0.5 tabular-nums">
+              P {log.protein ?? 0}g · C {log.carbs ?? 0}g · F {log.fat ?? 0}g
+              {log.servingSize !== 1 && (
+                <span className="ml-2 text-ink-soft/70">· {log.servingSize} servings</span>
+              )}
+            </p>
+          </div>
+          {/* Mobile menu button — 44px touch target, hidden once container is wide enough */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="@md:hidden flex items-center justify-center size-11 rounded-none hover:bg-paper-muted transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
+            aria-label={`${menuOpen ? "Hide" : "Show"} actions for ${log.name}`}
+            aria-expanded={menuOpen}
           >
+            <MoreHorizontal className="size-4 text-ink-soft" />
+          </button>
+          {/* Action row — container-driven: shown above @md container width */}
+          <div className="hidden @md:flex items-center gap-0.5 opacity-0 [@media(hover:none)]:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
             <ActionStrip {...stripProps} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+        {/* Mobile action strip */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: motionTokens.durInstant }}
+              className="@md:hidden mt-3 flex items-center gap-1 pl-24"
+            >
+              <ActionStrip {...stripProps} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.li>
   );
 });

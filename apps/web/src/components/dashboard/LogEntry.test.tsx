@@ -1,15 +1,33 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import LogEntry from "./LogEntry";
 import { FoodItemId, ISODate, UserId } from "@/types";
 import type { FoodItem } from "@/db/dbService";
 
+const mockReducedMotion = vi.hoisted(() => vi.fn().mockReturnValue(true));
+
 vi.mock("motion/react", () => ({
   motion: {
-    li: ({ children }: { children: React.ReactNode }) => <li>{children}</li>,
-    div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    li: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+      <li className={className}>{children}</li>
+    ),
+    div: ({
+      children,
+      "data-inking-rule": inkingRule,
+      "data-ink-dot": inkDot,
+    }: {
+      children?: React.ReactNode;
+      "data-inking-rule"?: string;
+      "data-ink-dot"?: string;
+    }) =>
+      inkDot !== undefined ? (
+        <div data-ink-dot={inkDot} />
+      ) : (
+        <div data-inking-rule={inkingRule}>{children}</div>
+      ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReducedMotion: () => mockReducedMotion(),
 }));
 
 const makeLog = (overrides: Partial<FoodItem> = {}): FoodItem => ({
@@ -28,6 +46,10 @@ const makeLog = (overrides: Partial<FoodItem> = {}): FoodItem => ({
 });
 
 describe("LogEntry", () => {
+  beforeEach(() => {
+    mockReducedMotion.mockReturnValue(true);
+  });
+
   it("renders food name", () => {
     render(
       <LogEntry log={makeLog()} onEdit={vi.fn()} onDelete={vi.fn()} onToggleFavorite={vi.fn()} />,
@@ -181,5 +203,50 @@ describe("LogEntry", () => {
     const nameParent = nameEl.closest("div");
     const caloriesParent = caloriesEl.closest("div");
     expect(nameParent).toBe(caloriesParent);
+  });
+
+  describe("G1 inking moment", () => {
+    it("isNew=true and not reduced motion renders the inking rule element", () => {
+      mockReducedMotion.mockReturnValue(false);
+      const { container } = render(
+        <LogEntry
+          log={makeLog()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onToggleFavorite={vi.fn()}
+          isNew={true}
+        />,
+      );
+      expect(container.querySelector("[data-inking-rule]")).toBeTruthy();
+    });
+
+    it("isNew=false does not render the inking rule element", () => {
+      mockReducedMotion.mockReturnValue(false);
+      const { container } = render(
+        <LogEntry
+          log={makeLog()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onToggleFavorite={vi.fn()}
+          isNew={false}
+        />,
+      );
+      expect(container.querySelector("[data-inking-rule]")).toBeNull();
+    });
+
+    it("isNew=true with reducedMotion=true renders content but no inking rule", () => {
+      mockReducedMotion.mockReturnValue(true);
+      const { container } = render(
+        <LogEntry
+          log={makeLog()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onToggleFavorite={vi.fn()}
+          isNew={true}
+        />,
+      );
+      expect(container.querySelector("[data-inking-rule]")).toBeNull();
+      expect(screen.getByText("Chicken Breast")).toBeTruthy();
+    });
   });
 });

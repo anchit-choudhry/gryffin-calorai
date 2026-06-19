@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import Settings from "./Settings";
 import * as appState from "../state/AppState";
 import type { AppState } from "../state/AppState";
@@ -51,10 +51,20 @@ vi.mock("../components/RemindersSettings", () => ({
 vi.mock("../components/CloudSyncPanel", () => ({
   CloudSyncPanel: () => <div data-testid="cloud-sync-panel">CloudSyncPanel</div>,
 }));
+vi.mock("../hooks/useDataExport", () => ({
+  useDataExport: () => ({ downloadJSON: vi.fn(), isExporting: false }),
+}));
+vi.mock("../lib/apiClient", () => ({
+  isAuthenticated: vi.fn().mockReturnValue(false),
+}));
+vi.mock("@/db/dbService", () => ({
+  db: { delete: vi.fn().mockResolvedValue(undefined) },
+}));
 
 const mockSetHapticsEnabled = vi.fn();
 const mockSetAccentTheme = vi.fn();
 const mockSetDensity = vi.fn();
+const mockSetBroadsheet = vi.fn();
 
 type MockState = {
   userId: ReturnType<typeof UserId>;
@@ -71,6 +81,8 @@ type MockState = {
   setHapticsEnabled: ReturnType<typeof vi.fn>;
   accentTheme: string;
   setAccentTheme: ReturnType<typeof vi.fn>;
+  broadsheet: boolean;
+  setBroadsheet: ReturnType<typeof vi.fn>;
 };
 
 function makeMockState(overrides: Partial<MockState> = {}): MockState {
@@ -89,6 +101,8 @@ function makeMockState(overrides: Partial<MockState> = {}): MockState {
     setHapticsEnabled: mockSetHapticsEnabled,
     accentTheme: "persimmon",
     setAccentTheme: mockSetAccentTheme,
+    broadsheet: false,
+    setBroadsheet: mockSetBroadsheet,
     ...overrides,
   };
 }
@@ -144,7 +158,7 @@ describe("Settings", () => {
       render(<Settings />);
     });
     expect(screen.getByText(/0\.11\.0/)).toBeTruthy();
-    expect(screen.getByText("Edition")).toBeTruthy();
+    expect(screen.getByText("Field Journal - Colophon")).toBeTruthy();
   });
 
   it("renders GitHub link", async () => {
@@ -235,6 +249,76 @@ describe("Settings", () => {
       });
       fireEvent.click(screen.getByRole("radio", { name: /indigo/i }));
       expect(mockSetAccentTheme).toHaveBeenCalledWith("indigo");
+    });
+  });
+
+  describe("broadsheet layout toggle", () => {
+    function getLayoutGroup() {
+      return screen.getByRole("radiogroup", { name: /dashboard layout/i });
+    }
+
+    it("renders Standard and Broadsheet radio buttons in the layout group", async () => {
+      setupMocks({ broadsheet: false });
+      await act(async () => {
+        render(<Settings />);
+      });
+      const group = getLayoutGroup();
+      expect(within(group).getByRole("radio", { name: /^standard$/i })).toBeTruthy();
+      expect(within(group).getByRole("radio", { name: /^broadsheet$/i })).toBeTruthy();
+    });
+
+    it("Standard radio is checked when broadsheet is false", async () => {
+      setupMocks({ broadsheet: false });
+      await act(async () => {
+        render(<Settings />);
+      });
+      const group = getLayoutGroup();
+      expect(
+        within(group)
+          .getByRole("radio", { name: /^standard$/i })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
+      expect(
+        within(group)
+          .getByRole("radio", { name: /^broadsheet$/i })
+          .getAttribute("aria-checked"),
+      ).toBe("false");
+    });
+
+    it("Broadsheet radio is checked when broadsheet is true", async () => {
+      setupMocks({ broadsheet: true });
+      await act(async () => {
+        render(<Settings />);
+      });
+      const group = getLayoutGroup();
+      expect(
+        within(group)
+          .getByRole("radio", { name: /^broadsheet$/i })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
+      expect(
+        within(group)
+          .getByRole("radio", { name: /^standard$/i })
+          .getAttribute("aria-checked"),
+      ).toBe("false");
+    });
+
+    it("clicking Broadsheet calls setBroadsheet(true)", async () => {
+      setupMocks({ broadsheet: false });
+      await act(async () => {
+        render(<Settings />);
+      });
+      fireEvent.click(within(getLayoutGroup()).getByRole("radio", { name: /^broadsheet$/i }));
+      expect(mockSetBroadsheet).toHaveBeenCalledWith(true);
+    });
+
+    it("clicking Standard calls setBroadsheet(false)", async () => {
+      setupMocks({ broadsheet: true });
+      await act(async () => {
+        render(<Settings />);
+      });
+      fireEvent.click(within(getLayoutGroup()).getByRole("radio", { name: /^standard$/i }));
+      expect(mockSetBroadsheet).toHaveBeenCalledWith(false);
     });
   });
 

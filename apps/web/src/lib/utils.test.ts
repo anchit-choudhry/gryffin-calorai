@@ -6,6 +6,7 @@ import {
   LABEL_MONO_CLS,
   mapDbError,
   normalizeHash,
+  toRoman,
 } from "./utils";
 import { FoodItemId, ISODate, type MealType, UserId } from "@/types";
 import type { FoodItem } from "../db/dbService";
@@ -336,6 +337,36 @@ describe("stripHtml", () => {
   it("strips script tags", async () => {
     const { stripHtml } = await import("./utils");
     expect(stripHtml("<script>alert('xss')</script>text")).toBe("text");
+  });
+});
+
+describe("toRoman", () => {
+  it("converts 1 to I", () => {
+    expect(toRoman(1)).toBe("I");
+  });
+
+  it("converts 4 to IV", () => {
+    expect(toRoman(4)).toBe("IV");
+  });
+
+  it("converts 9 to IX", () => {
+    expect(toRoman(9)).toBe("IX");
+  });
+
+  it("converts 14 to XIV", () => {
+    expect(toRoman(14)).toBe("XIV");
+  });
+
+  it("converts 40 to XL", () => {
+    expect(toRoman(40)).toBe("XL");
+  });
+
+  it("converts 100 to C", () => {
+    expect(toRoman(100)).toBe("C");
+  });
+
+  it("converts 99 to XCIX", () => {
+    expect(toRoman(99)).toBe("XCIX");
   });
 });
 

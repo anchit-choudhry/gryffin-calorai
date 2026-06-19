@@ -33,8 +33,14 @@ export function groupLogsByMeal(logs: FoodItem[]): GroupedMealLog[] {
   })).filter((group) => group.items.length > 0);
 }
 
-const VALID_HASHES = new Set(["#dashboard", "#recipes", "#progress", "#settings"] as const);
-export type ValidHash = "#dashboard" | "#recipes" | "#progress" | "#settings";
+const VALID_HASHES = new Set([
+  "#dashboard",
+  "#recipes",
+  "#progress",
+  "#settings",
+  "#print",
+] as const);
+export type ValidHash = "#dashboard" | "#recipes" | "#progress" | "#settings" | "#print";
 
 export function normalizeHash(raw: string): ValidHash {
   const h = raw.toLowerCase();
@@ -47,6 +53,19 @@ export function stripHtml(html: string): string {
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function toRoman(n: number): string {
+  const vals = [1, 4, 5, 9, 10, 40, 50, 90, 100];
+  const syms = ["I", "IV", "V", "IX", "X", "XL", "L", "XC", "C"];
+  let result = "";
+  for (let i = vals.length - 1; i >= 0; i--) {
+    while (n >= (vals[i] ?? 1)) {
+      result += syms[i] ?? "";
+      n -= vals[i] ?? 1;
+    }
+  }
+  return result;
 }
 
 export function mapDbError(error: unknown, fallback: string): string {

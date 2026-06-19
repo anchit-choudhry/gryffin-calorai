@@ -7,43 +7,41 @@ import { MoonPhase } from "@/components/icons/almanac/MoonPhase";
 import { useFastingTimer } from "../hooks/useFastingTimer";
 import { useAppState } from "../state/AppState";
 
-const RING_R = 40;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R;
+const MOON_R = 40;
 
-interface RingProps {
+interface MoonDiskProps {
   progress: number;
-  isComplete: boolean;
-  animate: boolean;
 }
 
-function FastingRing({ progress, isComplete, animate }: RingProps) {
-  const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
+function MoonDisk({ progress }: MoonDiskProps) {
   return (
-    <svg viewBox="0 0 100 100" className="size-24" aria-hidden="true">
+    <svg viewBox="0 0 100 100" className="size-24" aria-hidden="true" data-moon-disk="true">
+      <defs>
+        <clipPath id="moon-clip">
+          <ellipse
+            cx={50}
+            cy={50}
+            rx={progress * MOON_R}
+            ry={MOON_R}
+            data-moon-clip-ellipse="true"
+          />
+        </clipPath>
+      </defs>
+      {/* Dark base disk */}
       <circle
-        cx="50"
-        cy="50"
-        r={RING_R}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="6"
-        className="text-rule"
+        cx={50}
+        cy={50}
+        r={MOON_R}
+        fill="oklch(88% 0.008 60)"
+        className="dark:[fill:oklch(18%_0.01_60)]"
       />
+      {/* Illuminated face - persimmon tint, clipped to ellipse */}
       <circle
-        cx="50"
-        cy="50"
-        r={RING_R}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeDasharray={RING_CIRCUMFERENCE}
-        strokeDashoffset={animate ? dashOffset : RING_CIRCUMFERENCE * (1 - progress)}
-        transform="rotate(-90 50 50)"
-        className={cn(
-          "transition-[stroke-dashoffset] duration-1000 ease-linear",
-          isComplete ? "text-persimmon" : "text-ink",
-        )}
+        cx={50}
+        cy={50}
+        r={MOON_R}
+        fill="oklch(72% 0.16 38 / 0.9)"
+        clipPath="url(#moon-clip)"
       />
     </svg>
   );
@@ -82,28 +80,24 @@ const FastingTimer = () => {
 
       {isActive ? (
         <div className="flex flex-col items-center gap-3">
-          <div className="relative">
-            <div className={cn(isComplete && !shouldReduceMotion && "animate-pulse")}>
-              <FastingRing
-                progress={progress}
-                isComplete={isComplete}
-                animate={!shouldReduceMotion}
-              />
+          <div className="flex flex-col items-center">
+            <div className={cn("relative", isComplete && !shouldReduceMotion && "animate-pulse")}>
+              <MoonDisk progress={progress} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <MoonPhase
+                  progress={progress}
+                  className={cn("size-6", isComplete ? "text-persimmon" : "text-ink")}
+                />
+              </div>
             </div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-              <MoonPhase
-                progress={progress}
-                className={cn("size-10", isComplete ? "text-persimmon" : "text-ink")}
-              />
-              <span
-                className={cn(
-                  "font-mono text-[9px] tabular-nums leading-none",
-                  isComplete ? "text-persimmon" : "text-ink-soft",
-                )}
-              >
-                {isComplete ? "Done!" : formattedElapsed}
-              </span>
-            </div>
+            <span
+              className={cn(
+                "font-mono text-[9px] tabular-nums leading-none mt-2",
+                isComplete ? "text-persimmon" : "text-ink-soft",
+              )}
+            >
+              {isComplete ? "Done!" : formattedElapsed}
+            </span>
           </div>
 
           <div className="text-center overflow-hidden">
@@ -141,7 +135,7 @@ const FastingTimer = () => {
                 key={preset.hours}
                 type="button"
                 onClick={() => handleStart(preset.hours)}
-                className="border border-rule py-1 px-0.5 font-mono text-[9px] text-ink-soft hover:border-ink hover:text-ink transition-colors truncate"
+                className="border border-rule py-1 px-0.5 font-mono text-[9px] text-ink-soft hover:border-ink hover:text-ink transition-colors truncate active:scale-[0.97]"
               >
                 <span className="block font-semibold text-ink text-[9px] truncate">
                   {preset.label}

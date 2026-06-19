@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { coachmarkVariants } from "@/lib/motionVariants";
+import { toRoman } from "@/lib/utils";
 import type { TourStep } from "./tourSteps";
 
 interface CoachmarkCardProps {
@@ -67,67 +68,76 @@ const CoachmarkCard: FC<CoachmarkCardProps> = ({
         animate={reducedMotion ? undefined : "show"}
         exit={reducedMotion ? undefined : "exit"}
         style={style}
-        className="fixed z-[61] w-72 border border-rule bg-paper shadow-lg"
+        className="fixed z-[61] w-72 border border-rule bg-paper"
         onKeyDown={handleKeyDown}
       >
-        <div className="p-5 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-[10px] font-sans uppercase tracking-widest text-ink-soft">
-                Step {stepIndex + 1} of {totalSteps}
-              </span>
-              <h2
-                id={labelId}
-                className="font-display text-lg font-semibold text-ink leading-tight"
-              >
-                {step.isFirst ? "Quick tour" : step.title}
-              </h2>
-            </div>
-            <button
-              onClick={onSkip}
-              className="shrink-0 mt-0.5 size-[44px] flex items-center justify-center text-ink-soft hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-              aria-label="Skip tour"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
+        {/* Journal running head - folio + close */}
+        <div className="flex items-center justify-between border-b border-rule/50 px-4 py-1.5">
+          <span className="font-serif text-[9px] italic text-ink-soft/50 tracking-tight">
+            Field Journal
+          </span>
+          <span className="font-mono text-[8px] uppercase tracking-[0.22em] text-ink-soft/35">
+            {toRoman(stepIndex + 1)}&nbsp;&middot;&nbsp;{toRoman(totalSteps)}
+          </span>
+          <button
+            type="button"
+            onClick={onSkip}
+            className="flex items-center justify-center size-[44px] -mr-2.5 text-ink-soft/50 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+            aria-label="Skip tour"
+          >
+            <X className="size-3" />
+          </button>
+        </div>
+
+        {/* Journal entry body */}
+        <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
+          <h2 id={labelId} className="font-serif text-[19px] font-normal text-ink leading-snug">
+            {isFirst ? "Welcome to your field journal" : step.title}
+          </h2>
+
+          {/* Dotted leader rule under title - field journal annotation style */}
+          <div className="border-b border-dotted border-rule/60" aria-hidden="true" />
 
           <p id={bodyId} className="font-sans text-sm text-ink-soft leading-relaxed">
-            {step.isFirst ? `${step.body} Take 90 seconds to see the highlights.` : step.body}
+            {isFirst ? `${step.body} Take 90 seconds to see the highlights.` : step.body}
           </p>
 
           {/* aria-live region for screen-reader step announcements */}
           <div aria-live="polite" className="sr-only">
             Step {stepIndex + 1} of {totalSteps}: {step.title}. {step.body}
           </div>
+        </div>
 
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <button
-              onClick={onSkip}
-              className="font-sans text-xs text-ink-soft hover:text-ink underline underline-offset-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1 px-2 py-2"
-            >
-              Skip tour
-            </button>
-            <div className="flex items-center gap-2">
-              {!isFirst && (
-                <button
-                  onClick={onPrev}
-                  className="flex items-center justify-center size-[44px] border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
-                  aria-label="Previous step"
-                >
-                  <ChevronLeft className="size-4" />
-                </button>
-              )}
+        {/* Journal footer - page-turn navigation */}
+        <div className="flex items-center justify-between border-t border-rule/50 px-4 py-2.5">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="font-mono text-[9px] uppercase tracking-[0.18em] text-ink-soft/50 hover:text-ink-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1 py-2 pr-2"
+          >
+            Close
+          </button>
+          <div className="flex items-center gap-1.5">
+            {!isFirst && (
               <button
-                ref={nextBtnRef}
-                onClick={onNext}
-                className="flex items-center gap-1.5 px-4 h-[44px] bg-persimmon text-paper font-sans text-sm font-medium hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
-                aria-label={isLast ? "Finish tour" : "Next step"}
+                type="button"
+                onClick={onPrev}
+                className="flex items-center justify-center size-9 border border-rule text-ink-soft hover:text-ink hover:border-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1 active:scale-[0.97]"
+                aria-label="Previous step"
               >
-                {isLast ? "Done" : "Next"}
-                {!isLast && <ChevronRight className="size-3.5" />}
+                <ChevronLeft className="size-3.5" />
               </button>
-            </div>
+            )}
+            <button
+              ref={nextBtnRef}
+              type="button"
+              onClick={onNext}
+              className="flex items-center gap-1 px-4 h-9 bg-persimmon text-paper font-mono text-[10px] uppercase tracking-[0.14em] hover:bg-persimmon/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-2"
+              aria-label={isLast ? "Finish tour" : "Next step"}
+            >
+              {isLast ? "Done" : "Next"}
+              {!isLast && <ChevronRight className="size-3" />}
+            </button>
           </div>
         </div>
       </motion.div>

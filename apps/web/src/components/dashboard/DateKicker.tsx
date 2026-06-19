@@ -84,10 +84,18 @@ const DateKicker: FC<Props> = ({ date, interactive = false }) => {
             key={display}
             className={textCls}
             aria-hidden="true"
-            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: dir * 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: dir * -14 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: dir * 28 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={
+              shouldReduceMotion
+                ? { opacity: 0 }
+                : {
+                    opacity: 0,
+                    x: dir * -28,
+                    boxShadow: `inset ${dir * -6}px 0 8px -4px oklch(15% 0.01 60 / 0.18)`,
+                  }
+            }
+            transition={{ duration: 0.22, ease: "easeOut" }}
           >
             {display}
           </motion.span>

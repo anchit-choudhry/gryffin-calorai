@@ -59,6 +59,7 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/motion", "vendor-motion"],
   ["node_modules/fflate", "vendor-state"],
   ["node_modules/zustand", "vendor-state"],
+  ["node_modules/qr-creator", "vendor-qr"],
   ["node_modules/react-hook-form", "vendor-form"],
   ["node_modules/@hookform", "vendor-form"],
   ["node_modules/zod", "vendor-form"],
