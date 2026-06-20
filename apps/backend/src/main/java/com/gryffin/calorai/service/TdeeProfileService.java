@@ -50,6 +50,16 @@ public class TdeeProfileService {
     return toDto(tdeeProfileRepository.save(profile));
   }
 
+  /**
+   * Deletes the TDEE profile for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteByUserId(final UUID userId) {
+    tdeeProfileRepository.deleteByUserId(userId);
+  }
+
   private TdeeProfileDto toDto(final TdeeProfile profile) {
     return new TdeeProfileDto(
         profile.getId().toString(),

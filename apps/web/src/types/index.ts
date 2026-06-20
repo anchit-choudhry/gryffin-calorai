@@ -1,4 +1,4 @@
-import type { UserProfile } from "../db/dbService";
+import type { SyncEntityType, SyncOperation, UserProfile } from "../db/dbService";
 
 // Domain-specific branded types to prevent ID mix-ups at compile time
 type Brand<T, B extends string> = T & { readonly __brand: B };
@@ -610,3 +610,11 @@ export type AppInitState =
   | { status: "loading" }
   | { status: "ready"; user: UserProfile }
   | { status: "error"; message: string };
+
+/** Payload structure encrypted inside each E2E sync blob. */
+export interface SyncBlobPayload {
+  entityType: SyncEntityType;
+  operation: SyncOperation;
+  syncId: string;
+  payload: unknown;
+}

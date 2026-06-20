@@ -16,4 +16,11 @@ public interface BodyMeasurementRepository extends JpaRepository<BodyMeasurement
   List<BodyMeasurement> findByUserIdAndUpdatedAtAfter(UUID userId, Instant updatedAt);
 
   long countByUserId(UUID userId);
+
+  /**
+   * Delete all body measurements for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }

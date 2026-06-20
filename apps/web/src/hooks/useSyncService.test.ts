@@ -1,13 +1,52 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { enqueueSyncOperation, useSyncService } from "./useSyncService";
+import { activateE2E, enqueueSyncOperation, useSyncService } from "./useSyncService";
 import * as apiClient from "../lib/apiClient";
 import { ApiError } from "../lib/apiClient";
 import type { SyncEntityType, SyncQueueEntry } from "../db/dbService";
 import * as dbService from "../db/dbService";
 import type { AppState } from "../state/AppState";
-import { useAppState } from "../state/AppState";
 import type { UserId } from "@/types";
+
+const mockGetE2EKey = vi.hoisted(() => vi.fn(() => undefined as CryptoKey | undefined));
+const mockClearE2EKey = vi.hoisted(() => vi.fn());
+const mockSetE2EKey = vi.hoisted(() => vi.fn());
+const mockDeriveKey = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve({ type: "secret" } as unknown as CryptoKey)),
+);
+const mockEncryptBlob = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve({ iv: "testiv", ciphertext: "testct" })),
+);
+const mockDecryptBlob = vi.hoisted(() =>
+  vi.fn(() =>
+    Promise.resolve({
+      entityType: "foodItem" as string,
+      operation: "update" as string,
+      syncId: "sync-1",
+      payload: { name: "Apple", calories: 80 } as unknown,
+    }),
+  ),
+);
+const mockApiGet = vi.hoisted(() => vi.fn());
+const mockApiPost = vi.hoisted(() => vi.fn());
+// All AppState-related hoisted mocks are grouped so getState closure references work.
+const { mockSetE2EEnabled, mockSetE2EKeyReady, mockUseAppState } = vi.hoisted(() => {
+  const setE2EEnabled = vi.fn();
+  const setE2EKeyReady = vi.fn();
+  const fn = vi.fn();
+  // Zustand stores expose getState() directly on the hook function.
+  // activateE2E and runSync call useAppState.getState() to read state.
+  (fn as unknown as { getState: () => unknown }).getState = () => ({
+    setE2EEnabled,
+    setE2EKeyReady,
+    e2eEnabled: false,
+  });
+  return {
+    mockSetE2EEnabled: setE2EEnabled,
+    mockSetE2EKeyReady: setE2EKeyReady,
+    mockUseAppState: fn,
+  };
+});
 
 vi.mock("../lib/apiClient", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/apiClient")>();
@@ -17,8 +56,8 @@ vi.mock("../lib/apiClient", async (importOriginal) => {
     clearTokens: vi.fn(),
     storeTokens: vi.fn(),
     api: {
-      get: vi.fn(),
-      post: vi.fn(),
+      get: mockApiGet,
+      post: mockApiPost,
       put: vi.fn(),
       delete: vi.fn(),
       auth: {
@@ -29,7 +68,24 @@ vi.mock("../lib/apiClient", async (importOriginal) => {
   };
 });
 vi.mock("../db/dbService");
-vi.mock("../state/AppState");
+vi.mock("../state/AppState", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state/AppState")>();
+  return {
+    ...actual,
+    useAppState: mockUseAppState,
+  };
+});
+vi.mock("../lib/e2eKeyStore", () => ({
+  getE2EKey: mockGetE2EKey,
+  clearE2EKey: mockClearE2EKey,
+  setE2EKey: mockSetE2EKey,
+  isE2EKeyReady: vi.fn(() => false),
+}));
+vi.mock("../lib/e2eEncryption", () => ({
+  deriveKey: mockDeriveKey,
+  encryptBlob: mockEncryptBlob,
+  decryptBlob: mockDecryptBlob,
+}));
 
 const userId = "user-1" as UserId;
 
@@ -37,8 +93,8 @@ describe("useSyncService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(apiClient.isAuthenticated).mockReturnValue(true);
-    vi.mocked(apiClient.api.get).mockResolvedValue([]);
-    vi.mocked(apiClient.api.post).mockResolvedValue({});
+    mockApiGet.mockResolvedValue([]);
+    mockApiPost.mockResolvedValue({});
     vi.mocked(apiClient.api.put).mockResolvedValue({});
     vi.mocked(apiClient.api.delete).mockResolvedValue(undefined);
 
@@ -98,7 +154,7 @@ describe("useSyncService", () => {
 
     vi.mocked(dbService.saveTdeeProfile).mockResolvedValue(undefined);
 
-    vi.mocked(useAppState).mockImplementation((selector) => {
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
       const state = {
         setSyncStatus: vi.fn(),
         setLastSyncedAt: vi.fn(),
@@ -107,6 +163,9 @@ describe("useSyncService", () => {
         lastSyncedAt: null,
         userId,
         fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: false,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
       };
       return selector(state as unknown as AppState);
     });
@@ -131,7 +190,7 @@ describe("useSyncService", () => {
   });
 
   it("does not sync if userId is missing", async () => {
-    vi.mocked(useAppState).mockImplementation((selector) => {
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
       const state = {
         setSyncStatus: vi.fn(),
         setLastSyncedAt: vi.fn(),
@@ -139,6 +198,9 @@ describe("useSyncService", () => {
         lastSyncedAt: null,
         userId: null,
         fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: false,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
       };
       return selector(state as unknown as AppState);
     });
@@ -182,7 +244,7 @@ describe("useSyncService", () => {
       const setSyncError = vi.fn();
       const fetchInitialData = vi.fn().mockResolvedValue(undefined);
 
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus,
           setLastSyncedAt,
@@ -233,7 +295,7 @@ describe("useSyncService", () => {
     });
 
     it("uses lastSyncedAt timestamp when set", async () => {
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
@@ -262,7 +324,7 @@ describe("useSyncService", () => {
       const setSyncStatus = vi.fn();
       const setSyncError = vi.fn();
 
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus,
           setLastSyncedAt: vi.fn(),
@@ -290,7 +352,7 @@ describe("useSyncService", () => {
     it("calls setSyncStatus offline when navigator is offline", async () => {
       const setSyncStatus = vi.fn();
 
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus,
           setLastSyncedAt: vi.fn(),
@@ -317,7 +379,7 @@ describe("useSyncService", () => {
     it("calls setSyncError on general error when online", async () => {
       const setSyncError = vi.fn();
 
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
@@ -344,7 +406,7 @@ describe("useSyncService", () => {
     it("calls setSyncError with fallback message for non-Error throws", async () => {
       const setSyncError = vi.fn();
 
-      vi.mocked(useAppState).mockImplementation((selector) => {
+      mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
         const state = {
           setSyncStatus: vi.fn(),
           setLastSyncedAt: vi.fn(),
@@ -1087,6 +1149,877 @@ describe("useSyncService", () => {
         }),
       ).resolves.not.toThrow();
     });
+  });
+});
+
+describe("activateE2E", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(apiClient.isAuthenticated).mockReturnValue(true);
+    mockApiPost.mockResolvedValue(undefined);
+    mockApiGet.mockResolvedValue([]);
+    mockDeriveKey.mockResolvedValue({ type: "secret" } as unknown as CryptoKey);
+    mockEncryptBlob.mockResolvedValue({ iv: "testiv", ciphertext: "testct" });
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+    vi.mocked(dbService.syncQueue.bulkAdd).mockResolvedValue([]);
+
+    vi.mocked(dbService.foodItems.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.foodItems.where>);
+    vi.mocked(dbService.waterLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.waterLogs.where>);
+    vi.mocked(dbService.activityLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.activityLogs.where>);
+    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.bodyMeasurements.where>);
+    vi.mocked(dbService.stepLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.stepLogs.where>);
+    vi.mocked(dbService.fastingSessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.fastingSessions.where>);
+
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
+      const state = {
+        setSyncStatus: vi.fn(),
+        setLastSyncedAt: vi.fn(),
+        setSyncError: vi.fn(),
+        setPendingSyncCount: vi.fn(),
+        lastSyncedAt: null,
+        userId,
+        fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: false,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
+      };
+      return selector(state as unknown as AppState);
+    });
+  });
+
+  it("posts salt, derives key, resets server, re-queues local data, and flushes", async () => {
+    await expect(activateE2E("user-1" as UserId, "correct-horse")).resolves.toBeUndefined();
+    expect(mockDeriveKey).toHaveBeenCalledWith("correct-horse", expect.any(Uint8Array));
+    expect(mockApiPost).toHaveBeenCalledWith(
+      "/api/v1/sync/e2e-config",
+      expect.objectContaining({ salt: expect.any(String) }),
+    );
+    expect(mockApiPost).toHaveBeenCalledWith("/api/v1/sync/reset", {});
+  });
+
+  it("calls setE2EEnabled(true) only after successful upload", async () => {
+    // activateE2E uses useAppState.getState() (not the hook), so assertions go
+    // against the hoisted mockSetE2EEnabled/mockSetE2EKeyReady returned by getState.
+    await activateE2E("user-1" as UserId, "pass");
+
+    expect(mockSetE2EEnabled).toHaveBeenCalledWith(true);
+    expect(mockSetE2EKeyReady).toHaveBeenCalledWith(true);
+  });
+
+  it("stores the derived key via setE2EKey", async () => {
+    const fakeKey = { type: "secret" } as unknown as CryptoKey;
+    mockDeriveKey.mockResolvedValue(fakeKey);
+
+    await activateE2E("user-1" as UserId, "pass");
+
+    expect(mockSetE2EKey).toHaveBeenCalledWith(fakeKey);
+  });
+});
+
+describe("enqueueAllLocalData via activateE2E", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(apiClient.isAuthenticated).mockReturnValue(true);
+    mockApiPost.mockResolvedValue(undefined);
+    mockApiGet.mockResolvedValue([]);
+    mockDeriveKey.mockResolvedValue({ type: "secret" } as unknown as CryptoKey);
+    mockEncryptBlob.mockResolvedValue({ iv: "iv", ciphertext: "ct" });
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+    vi.mocked(dbService.syncQueue.bulkAdd).mockResolvedValue([]);
+    vi.mocked(dbService.syncQueue.orderBy).mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    } as unknown as ReturnType<typeof dbService.syncQueue.orderBy>);
+
+    vi.mocked(dbService.foodItems.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.foodItems.where>);
+    vi.mocked(dbService.waterLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.waterLogs.where>);
+    vi.mocked(dbService.activityLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.activityLogs.where>);
+    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.bodyMeasurements.where>);
+    vi.mocked(dbService.stepLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.stepLogs.where>);
+    vi.mocked(dbService.fastingSessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.fastingSessions.where>);
+
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
+      const state = {
+        setSyncStatus: vi.fn(),
+        setLastSyncedAt: vi.fn(),
+        setSyncError: vi.fn(),
+        setPendingSyncCount: vi.fn(),
+        lastSyncedAt: null,
+        userId,
+        fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: false,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
+      };
+      return selector(state as unknown as AppState);
+    });
+  });
+
+  // NOTE: All Dexie Table instances share the same auto-mocked `where` function.
+  // mockReturnValue on foodItems.where, waterLogs.where, syncQueue.where etc. all
+  // override the SAME underlying vi.fn(). The fix: use mockImplementation with a
+  // toArray vi.fn() that uses mockReturnValueOnce to return different data per call.
+  // enqueueAllLocalData calls 6 entity toArray() calls, then flushQueueE2E calls
+  // syncQueue toArray(). Use mockReturnValueOnce for entity calls, mockReturnValue
+  // for the syncQueue call (the fallback).
+
+  it("returns early without calling bulkAdd when no entities have syncId", async () => {
+    // Food item has no syncId: filter removes all, entries.length === 0, early return.
+    const toArrayMock = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 1, name: "Apple", calories: 80 }]) // food - no syncId
+      .mockResolvedValueOnce([]) // water
+      .mockResolvedValueOnce([]) // activity
+      .mockResolvedValueOnce([]) // body
+      .mockResolvedValueOnce([]) // step
+      .mockResolvedValueOnce([]) // fasting
+      .mockResolvedValue([]); // syncQueue toArray (fallback for flushQueueE2E)
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: toArrayMock,
+        delete: vi.fn().mockResolvedValue(undefined),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    await activateE2E(userId, "pass");
+
+    expect(dbService.syncQueue.bulkAdd).not.toHaveBeenCalled();
+  });
+
+  it("calls bulkAdd with foodItem entries when food items have syncId", async () => {
+    const foodItem = {
+      id: 1,
+      name: "Apple",
+      calories: 80,
+      syncId: "sync-food-enqueue-1",
+      userId,
+    };
+
+    // Call order: food, water, activity, body, step, fasting (enqueueAllLocalData),
+    // then syncQueue (flushQueueE2E). Fallback returns [] so flushQueueE2E exits early.
+    const toArrayMock = vi
+      .fn()
+      .mockResolvedValueOnce([foodItem]) // food - has syncId
+      .mockResolvedValueOnce([]) // water
+      .mockResolvedValueOnce([]) // activity
+      .mockResolvedValueOnce([]) // body
+      .mockResolvedValueOnce([]) // step
+      .mockResolvedValueOnce([]) // fasting
+      .mockResolvedValue([]); // syncQueue toArray (fallback)
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: toArrayMock,
+        delete: vi.fn().mockResolvedValue(undefined),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    await activateE2E(userId, "pass");
+
+    expect(dbService.syncQueue.bulkAdd).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entityType: "foodItem",
+          syncId: "sync-food-enqueue-1",
+          operation: "update",
+          retries: 0,
+        }),
+      ]),
+    );
+  });
+
+  it("calls bulkAdd with entries for all entity types that have syncId", async () => {
+    const foodItem = { id: 1, name: "Apple", calories: 80, syncId: "sync-food-all-1", userId };
+    const waterLog = {
+      id: 2,
+      amount: 250,
+      dateLogged: "2026-06-01",
+      syncId: "sync-water-all-1",
+      userId,
+    };
+    const activityLog = {
+      id: 3,
+      activityType: "Running",
+      durationMin: 30,
+      caloriesBurned: 300,
+      syncId: "sync-act-all-1",
+      userId,
+    };
+    const bodyMeasurement = {
+      id: 4,
+      weight: 72.5,
+      measuredAt: "2026-06-01",
+      syncId: "sync-body-all-1",
+      userId,
+    };
+    const stepLog = {
+      id: 5,
+      steps: 8000,
+      dateLogged: "2026-06-01",
+      syncId: "sync-step-all-1",
+      userId,
+    };
+    const fastingSession = {
+      id: 6,
+      startTime: "2026-06-01T08:00:00Z",
+      targetHours: 16,
+      completed: false,
+      syncId: "sync-fast-all-1",
+      userId,
+    };
+
+    // One entity per type, all with syncId. flushQueueE2E gets [] on 7th call.
+    const toArrayMock = vi
+      .fn()
+      .mockResolvedValueOnce([foodItem])
+      .mockResolvedValueOnce([waterLog])
+      .mockResolvedValueOnce([activityLog])
+      .mockResolvedValueOnce([bodyMeasurement])
+      .mockResolvedValueOnce([stepLog])
+      .mockResolvedValueOnce([fastingSession])
+      .mockResolvedValue([]); // syncQueue toArray fallback
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: toArrayMock,
+        delete: vi.fn().mockResolvedValue(undefined),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    await activateE2E(userId, "pass");
+
+    const bulkAddCall = vi.mocked(dbService.syncQueue.bulkAdd).mock.calls[0]?.[0];
+    expect(bulkAddCall).toBeDefined();
+    const entityTypes = (bulkAddCall as unknown as Array<{ entityType: string }>).map(
+      (e) => e.entityType,
+    );
+    expect(entityTypes).toStrictEqual([
+      "foodItem",
+      "waterLog",
+      "activityLog",
+      "bodyMeasurement",
+      "stepLog",
+      "fastingSession",
+    ]);
+    const syncIds = (bulkAddCall as unknown as Array<{ syncId: string }>).map((e) => e.syncId);
+    expect(syncIds).toStrictEqual([
+      "sync-food-all-1",
+      "sync-water-all-1",
+      "sync-act-all-1",
+      "sync-body-all-1",
+      "sync-step-all-1",
+      "sync-fast-all-1",
+    ]);
+  });
+
+  it("filters out entities without syncId and only enqueues those with syncId", async () => {
+    const foodItemWithSync = {
+      id: 1,
+      name: "Apple",
+      calories: 80,
+      syncId: "sync-food-filter-1",
+      userId,
+    };
+    const foodItemNoSync = { id: 2, name: "Banana", calories: 89, userId };
+
+    // Two food items: one with syncId, one without. Only one should be enqueued.
+    const toArrayMock = vi
+      .fn()
+      .mockResolvedValueOnce([foodItemWithSync, foodItemNoSync]) // food - mixed
+      .mockResolvedValueOnce([]) // water
+      .mockResolvedValueOnce([]) // activity
+      .mockResolvedValueOnce([]) // body
+      .mockResolvedValueOnce([]) // step
+      .mockResolvedValueOnce([]) // fasting
+      .mockResolvedValue([]); // syncQueue toArray fallback
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: toArrayMock,
+        delete: vi.fn().mockResolvedValue(undefined),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    await activateE2E(userId, "pass");
+
+    const bulkAddCall = vi.mocked(dbService.syncQueue.bulkAdd).mock.calls[0]?.[0];
+    expect(bulkAddCall).toHaveLength(1);
+    expect((bulkAddCall as unknown as Array<{ syncId: string }>)[0]?.syncId).toBe(
+      "sync-food-filter-1",
+    );
+  });
+});
+
+describe("runSync - E2E path", () => {
+  const fakeKey = { type: "secret" } as unknown as CryptoKey;
+
+  // Helper: override getState to return e2eEnabled: true for the duration of a test.
+  function enableE2E() {
+    (mockUseAppState as unknown as { getState: () => unknown }).getState = () => ({
+      setE2EEnabled: mockSetE2EEnabled,
+      setE2EKeyReady: mockSetE2EKeyReady,
+      e2eEnabled: true,
+    });
+  }
+
+  function disableE2E() {
+    (mockUseAppState as unknown as { getState: () => unknown }).getState = () => ({
+      setE2EEnabled: mockSetE2EEnabled,
+      setE2EKeyReady: mockSetE2EKeyReady,
+      e2eEnabled: false,
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(apiClient.isAuthenticated).mockReturnValue(true);
+    mockApiGet.mockResolvedValue([]);
+    mockApiPost.mockResolvedValue(undefined);
+    mockGetE2EKey.mockReturnValue(fakeKey);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "foodItem",
+      operation: "update",
+      syncId: "sync-remote-1",
+      payload: { name: "Banana", calories: 90 },
+    });
+
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    vi.mocked(dbService.foodItems.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.foodItems.where>);
+    vi.mocked(dbService.foodItems.add).mockResolvedValue(1);
+    vi.mocked(dbService.waterLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.waterLogs.where>);
+    vi.mocked(dbService.waterLogs.add).mockResolvedValue(1);
+    vi.mocked(dbService.activityLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.activityLogs.where>);
+    vi.mocked(dbService.activityLogs.add).mockResolvedValue(1);
+    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.bodyMeasurements.where>);
+    vi.mocked(dbService.bodyMeasurements.add).mockResolvedValue(1);
+    vi.mocked(dbService.stepLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.stepLogs.where>);
+    vi.mocked(dbService.stepLogs.add).mockResolvedValue(1);
+    vi.mocked(dbService.fastingSessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.fastingSessions.where>);
+    vi.mocked(dbService.fastingSessions.add).mockResolvedValue(1);
+    vi.mocked(dbService.fastingSessions.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.stepLogs.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.bodyMeasurements.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.activityLogs.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.waterLogs.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.foodItems.delete).mockResolvedValue(undefined);
+
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
+      const state = {
+        setSyncStatus: vi.fn(),
+        setLastSyncedAt: vi.fn(),
+        setSyncError: vi.fn(),
+        setPendingSyncCount: vi.fn(),
+        lastSyncedAt: null,
+        userId,
+        fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: true,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
+      };
+      return selector(state as unknown as AppState);
+    });
+    enableE2E();
+  });
+
+  afterEach(() => {
+    disableE2E();
+    vi.restoreAllMocks();
+  });
+
+  it("calls flushQueueE2E and pullBlobsE2E instead of plaintext paths when e2eEnabled", async () => {
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    // E2E path posts blobs batch (flush) and GETs blobs (pull), not entity-specific endpoints.
+    const getCalls = mockApiGet.mock.calls.map((c) => c[0] as string);
+    expect(getCalls.some((u) => u.includes("/sync/blobs"))).toBe(true);
+    expect(getCalls.some((u) => u.includes("/food-items/changes"))).toBe(false);
+  });
+
+  it("returns early without syncing when e2eEnabled but key is not loaded", async () => {
+    mockGetE2EKey.mockReturnValue(undefined);
+
+    const setSyncStatus = vi.fn();
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
+      const state = {
+        setSyncStatus,
+        setLastSyncedAt: vi.fn(),
+        setSyncError: vi.fn(),
+        setPendingSyncCount: vi.fn(),
+        lastSyncedAt: null,
+        userId,
+        fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: true,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
+      };
+      return selector(state as unknown as AppState);
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(mockApiGet).not.toHaveBeenCalled();
+    expect(setSyncStatus).toHaveBeenCalledWith("idle");
+  });
+
+  it("decrypts pulled blobs and upserts into foodItems table", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "foodItem:sync-remote-1", iv: "iv1", ciphertext: "ct1", isDeleted: false },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "foodItem",
+      operation: "update",
+      syncId: "sync-remote-1",
+      payload: { name: "Banana", calories: 90 },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(mockDecryptBlob).toHaveBeenCalled();
+    expect(dbService.foodItems.add).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Banana", syncId: "sync-remote-1" }),
+    );
+  });
+
+  it("applies remote delete from blob when isDeleted is true for foodItem", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "foodItem:sync-del-1",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.foodItems.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 99, syncId: "sync-del-1" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.foodItems.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.foodItems.delete).toHaveBeenCalledWith(99);
+  });
+
+  it("applies remote delete for waterLog entity type", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "waterLog:sync-wl-del",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.waterLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 77, syncId: "sync-wl-del" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.waterLogs.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.waterLogs.delete).toHaveBeenCalledWith(77);
+  });
+
+  it("applies remote delete for activityLog entity type", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "activityLog:sync-al-del",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.activityLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 66, syncId: "sync-al-del" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.activityLogs.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.activityLogs.delete).toHaveBeenCalledWith(66);
+  });
+
+  it("applies remote delete for bodyMeasurement entity type", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "bodyMeasurement:sync-bm-del",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 55, syncId: "sync-bm-del" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.bodyMeasurements.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.bodyMeasurements.delete).toHaveBeenCalledWith(55);
+  });
+
+  it("applies remote delete for stepLog entity type", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "stepLog:sync-sl-del",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.stepLogs.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 44, syncId: "sync-sl-del" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.stepLogs.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.stepLogs.delete).toHaveBeenCalledWith(44);
+  });
+
+  it("applies remote delete for fastingSession entity type", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "fastingSession:sync-fs-del",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    vi.mocked(dbService.fastingSessions.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue({ id: 33, syncId: "sync-fs-del" }),
+        toArray: vi.fn().mockResolvedValue([]),
+      }),
+    } as unknown as ReturnType<typeof dbService.fastingSessions.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.fastingSessions.delete).toHaveBeenCalledWith(33);
+  });
+
+  it("upserts waterLog from decrypted blob", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "waterLog:sync-wl-1", iv: "iv2", ciphertext: "ct2", isDeleted: false },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "waterLog",
+      operation: "update",
+      syncId: "sync-wl-1",
+      payload: { amount: 250, dateLogged: "2026-06-01" },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.waterLogs.add).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 250, syncId: "sync-wl-1" }),
+    );
+  });
+
+  it("upserts activityLog from decrypted blob", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "activityLog:sync-al-1", iv: "iv3", ciphertext: "ct3", isDeleted: false },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "activityLog",
+      operation: "update",
+      syncId: "sync-al-1",
+      payload: { activityType: "Running", durationMin: 30, caloriesBurned: 300 },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.activityLogs.add).toHaveBeenCalledWith(
+      expect.objectContaining({ activityType: "Running", syncId: "sync-al-1" }),
+    );
+  });
+
+  it("upserts bodyMeasurement from decrypted blob", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "bodyMeasurement:sync-bm-1",
+        iv: "iv4",
+        ciphertext: "ct4",
+        isDeleted: false,
+      },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "bodyMeasurement",
+      operation: "update",
+      syncId: "sync-bm-1",
+      payload: { weight: 72.5, measuredAt: "2026-06-01" },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.bodyMeasurements.add).toHaveBeenCalledWith(
+      expect.objectContaining({ weight: 72.5, syncId: "sync-bm-1" }),
+    );
+  });
+
+  it("upserts stepLog from decrypted blob", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "stepLog:sync-sl-1", iv: "iv5", ciphertext: "ct5", isDeleted: false },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "stepLog",
+      operation: "update",
+      syncId: "sync-sl-1",
+      payload: { steps: 9000, dateLogged: "2026-06-01" },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.stepLogs.add).toHaveBeenCalledWith(
+      expect.objectContaining({ steps: 9000, syncId: "sync-sl-1" }),
+    );
+  });
+
+  it("upserts fastingSession from decrypted blob", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "fastingSession:sync-fs-1",
+        iv: "iv6",
+        ciphertext: "ct6",
+        isDeleted: false,
+      },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "fastingSession",
+      operation: "update",
+      syncId: "sync-fs-1",
+      payload: { startTime: "2026-06-01T08:00:00Z", targetHours: 16, completed: false },
+    });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.fastingSessions.add).toHaveBeenCalledWith(
+      expect.objectContaining({ targetHours: 16, syncId: "sync-fs-1" }),
+    );
+  });
+
+  it("clears E2E key and sets sync error on DOMException (wrong passphrase)", async () => {
+    const setSyncError = vi.fn();
+    mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
+      const state = {
+        setSyncStatus: vi.fn(),
+        setLastSyncedAt: vi.fn(),
+        setSyncError,
+        setPendingSyncCount: vi.fn(),
+        lastSyncedAt: null,
+        userId,
+        fetchInitialData: vi.fn().mockResolvedValue(undefined),
+        e2eEnabled: true,
+        setE2EEnabled: vi.fn(),
+        setE2EKeyReady: vi.fn(),
+      };
+      return selector(state as unknown as AppState);
+    });
+
+    mockApiGet.mockRejectedValue(
+      new DOMException("The operation failed for an operation-specific reason", "OperationError"),
+    );
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(mockClearE2EKey).toHaveBeenCalled();
+    expect(setSyncError).toHaveBeenCalledWith("Incorrect passphrase - unlock sync to continue");
+  });
+
+  it("ignores unknown entityType in remote delete without throwing", async () => {
+    mockApiGet.mockResolvedValue([
+      {
+        clientBlobId: "unknownEntity:sync-unk-1",
+        iv: "",
+        ciphertext: "",
+        isDeleted: true,
+        updatedAt: null,
+      },
+    ]);
+
+    const { result } = renderHook(() => useSyncService());
+    await expect(
+      act(async () => {
+        await result.current.runSync();
+      }),
+    ).resolves.not.toThrow();
   });
 });
 

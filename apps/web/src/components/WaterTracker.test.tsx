@@ -49,6 +49,14 @@ vi.mock("lucide-react", () => ({
   X: () => <svg data-testid="x-icon" />,
 }));
 
+vi.mock("../hooks/useWaterHistoryData", () => ({
+  useWaterHistoryData: () => ({
+    labels: ["06-13", "06-14", "06-15", "06-16", "06-17", "06-18", "06-19"],
+    data: [0, 500, 1200, 2000, 800, 0, 300],
+    isLoading: false,
+  }),
+}));
+
 const makeLog = (id: number, amount: number): WaterLog => ({
   id: WaterLogId(id),
   userId: UserId("user-1"),
@@ -258,5 +266,10 @@ describe("WaterTracker", () => {
     });
     expect(mockSubmitWaterLog).toHaveBeenCalled();
     expect(screen.queryByLabelText("Custom water amount in ml")).toBeNull();
+  });
+
+  it("renders the weekly tide section when history data is available", () => {
+    render(<WaterTracker />);
+    expect(screen.getByText(/This week:/)).toBeTruthy();
   });
 });

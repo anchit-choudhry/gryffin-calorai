@@ -67,6 +67,16 @@ public class WaterLogService {
     return toDto(waterLogRepository.save(log));
   }
 
+  /**
+   * Deletes all water logs for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    waterLogRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void delete(final UUID userId, final UUID logId) {
     final WaterLog log = waterLogRepository.findById(logId)

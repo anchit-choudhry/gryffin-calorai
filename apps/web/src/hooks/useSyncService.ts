@@ -9,12 +9,20 @@ import {
   saveTdeeProfile,
   stepLogs,
   syncQueue,
+  type ActivityLog,
+  type BodyMeasurement,
+  type FastingSession,
+  type FoodItem,
+  type StepLog,
   type SyncQueueEntry,
   type TdeeProfile,
   tdeeProfiles,
+  type WaterLog,
   waterLogs,
 } from "../db/dbService";
-import type { UserId } from "@/types";
+import { decryptBlob, deriveKey, encryptBlob } from "../lib/e2eEncryption";
+import { clearE2EKey, getE2EKey, setE2EKey } from "../lib/e2eKeyStore";
+import type { SyncBlobPayload, UserId } from "@/types";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RETRIES = 3;
@@ -324,6 +332,269 @@ async function flushQueue(onStart?: (count: number) => void): Promise<void> {
   }
 }
 
+interface EncryptedBlobDto {
+  clientBlobId: string;
+  iv: string;
+  ciphertext: string;
+  updatedAt: string | null;
+  isDeleted: boolean;
+}
+
+async function applyRemoteDelete(entityType: string, syncId: string): Promise<void> {
+  switch (entityType) {
+    case "foodItem": {
+      const existing = await foodItems.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await foodItems.delete(existing.id);
+      break;
+    }
+    case "waterLog": {
+      const existing = await waterLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await waterLogs.delete(existing.id);
+      break;
+    }
+    case "activityLog": {
+      const existing = await activityLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await activityLogs.delete(existing.id);
+      break;
+    }
+    case "bodyMeasurement": {
+      const existing = await bodyMeasurements.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await bodyMeasurements.delete(existing.id);
+      break;
+    }
+    case "stepLog": {
+      const existing = await stepLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await stepLogs.delete(existing.id);
+      break;
+    }
+    case "fastingSession": {
+      const existing = await fastingSessions.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await fastingSessions.delete(existing.id);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+async function applyRemoteUpsert(userId: UserId, decoded: SyncBlobPayload): Promise<void> {
+  const { entityType, syncId, payload } = decoded;
+  switch (entityType) {
+    case "foodItem": {
+      const record = { ...(payload as FoodItem), userId, syncId };
+      const existing = await foodItems.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await foodItems.update(existing.id, record);
+      } else {
+        await foodItems.add(record);
+      }
+      break;
+    }
+    case "waterLog": {
+      const record = { ...(payload as WaterLog), userId, syncId };
+      const existing = await waterLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await waterLogs.update(existing.id, record);
+      } else {
+        await waterLogs.add(record);
+      }
+      break;
+    }
+    case "activityLog": {
+      const record = { ...(payload as ActivityLog), userId, syncId };
+      const existing = await activityLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await activityLogs.update(existing.id, record);
+      } else {
+        await activityLogs.add(record);
+      }
+      break;
+    }
+    case "bodyMeasurement": {
+      const record = { ...(payload as BodyMeasurement), userId, syncId };
+      const existing = await bodyMeasurements.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await bodyMeasurements.update(existing.id, record);
+      } else {
+        await bodyMeasurements.add(record);
+      }
+      break;
+    }
+    case "stepLog": {
+      const record = { ...(payload as StepLog), userId, syncId };
+      const existing = await stepLogs.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await stepLogs.update(existing.id, record);
+      } else {
+        await stepLogs.add(record);
+      }
+      break;
+    }
+    case "fastingSession": {
+      const record = { ...(payload as FastingSession), userId, syncId };
+      const existing = await fastingSessions.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await fastingSessions.update(existing.id, record);
+      } else {
+        await fastingSessions.add(record);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+async function flushQueueE2E(userId: UserId, key: CryptoKey): Promise<void> {
+  const entries = await syncQueue.where("userId").equals(userId).toArray();
+  if (entries.length === 0) return;
+
+  const blobs = await Promise.all(
+    entries.map(async (entry) => {
+      const plaintext: SyncBlobPayload = {
+        entityType: entry.entityType,
+        operation: entry.operation,
+        syncId: entry.syncId,
+        payload: entry.payload,
+      };
+      const { iv, ciphertext } = await encryptBlob(key, plaintext);
+      return {
+        clientBlobId: `${entry.entityType}:${entry.syncId}`,
+        iv,
+        ciphertext,
+        updatedAt: null,
+        isDeleted: false,
+      };
+    }),
+  );
+
+  await api.post("/api/v1/sync/blobs/batch", blobs);
+  await syncQueue.where("userId").equals(userId).delete();
+}
+
+async function pullBlobsE2E(userId: UserId, key: CryptoKey, since: string): Promise<void> {
+  const blobs = await api.get<EncryptedBlobDto[]>(
+    `/api/v1/sync/blobs?since=${encodeURIComponent(since)}`,
+  );
+
+  for (const blob of blobs) {
+    if (blob.isDeleted) {
+      const colonIdx = blob.clientBlobId.indexOf(":");
+      const entityType = blob.clientBlobId.slice(0, colonIdx);
+      const syncId = blob.clientBlobId.slice(colonIdx + 1);
+      await applyRemoteDelete(entityType, syncId);
+      continue;
+    }
+    const decoded = (await decryptBlob(key, blob.iv, blob.ciphertext)) as SyncBlobPayload;
+    await applyRemoteUpsert(userId, decoded);
+  }
+}
+
+async function enqueueAllLocalData(userId: UserId): Promise<void> {
+  const now = new Date().toISOString();
+
+  const [
+    allFoodItems,
+    allWaterLogs,
+    allActivityLogs,
+    allBodyMeasurements,
+    allStepLogs,
+    allFastingSessions,
+  ] = await Promise.all([
+    foodItems.where("userId").equals(userId).toArray(),
+    waterLogs.where("userId").equals(userId).toArray(),
+    activityLogs.where("userId").equals(userId).toArray(),
+    bodyMeasurements.where("userId").equals(userId).toArray(),
+    stepLogs.where("userId").equals(userId).toArray(),
+    fastingSessions.where("userId").equals(userId).toArray(),
+  ]);
+
+  type QueueEntry = Omit<SyncQueueEntry, "id" | "retries">;
+  const entries: QueueEntry[] = [
+    ...allFoodItems
+      .filter((item) => item.syncId !== undefined)
+      .map((item) => ({
+        userId,
+        entityType: "foodItem" as const,
+        syncId: item.syncId as string,
+        operation: "update" as const,
+        payload: item,
+        createdAt: now,
+      })),
+    ...allWaterLogs
+      .filter((log) => log.syncId !== undefined)
+      .map((log) => ({
+        userId,
+        entityType: "waterLog" as const,
+        syncId: log.syncId as string,
+        operation: "update" as const,
+        payload: log,
+        createdAt: now,
+      })),
+    ...allActivityLogs
+      .filter((log) => log.syncId !== undefined)
+      .map((log) => ({
+        userId,
+        entityType: "activityLog" as const,
+        syncId: log.syncId as string,
+        operation: "update" as const,
+        payload: log,
+        createdAt: now,
+      })),
+    ...allBodyMeasurements
+      .filter((m) => m.syncId !== undefined)
+      .map((m) => ({
+        userId,
+        entityType: "bodyMeasurement" as const,
+        syncId: m.syncId as string,
+        operation: "update" as const,
+        payload: m,
+        createdAt: now,
+      })),
+    ...allStepLogs
+      .filter((log) => log.syncId !== undefined)
+      .map((log) => ({
+        userId,
+        entityType: "stepLog" as const,
+        syncId: log.syncId as string,
+        operation: "update" as const,
+        payload: log,
+        createdAt: now,
+      })),
+    ...allFastingSessions
+      .filter((s) => s.syncId !== undefined)
+      .map((s) => ({
+        userId,
+        entityType: "fastingSession" as const,
+        syncId: s.syncId as string,
+        operation: "update" as const,
+        payload: s,
+        createdAt: now,
+      })),
+  ];
+
+  if (entries.length === 0) return;
+  await syncQueue.bulkAdd(entries.map((e) => ({ ...e, retries: 0 })));
+}
+
+/** Activates E2E encryption: stores salt, derives key, migrates all local data to ciphertext. */
+export async function activateE2E(userId: UserId, passphrase: string): Promise<void> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltB64 = btoa(String.fromCharCode(...salt));
+  await api.post("/api/v1/sync/e2e-config", { salt: saltB64 });
+
+  const key = await deriveKey(passphrase, salt);
+  setE2EKey(key);
+
+  await api.post("/api/v1/sync/reset", {});
+  await enqueueAllLocalData(userId);
+  await flushQueueE2E(userId, key);
+
+  const { setE2EEnabled, setE2EKeyReady } = useAppState.getState();
+  setE2EEnabled(true);
+  setE2EKeyReady(true);
+}
+
 export function useSyncService() {
   const setSyncStatus = useAppState((s) => s.setSyncStatus);
   const setLastSyncedAt = useAppState((s) => s.setLastSyncedAt);
@@ -341,22 +612,38 @@ export function useSyncService() {
     try {
       const raw = lastSyncedAt;
       const since = raw !== null && ISO_RE.test(raw) ? raw : new Date(0).toISOString();
-      await flushQueue((count) => setPendingSyncCount(count));
-      setPendingSyncCount(0);
-      await Promise.all([
-        pullFoodItems(userId, since),
-        pullWaterLogs(userId, since),
-        pullActivityLogs(userId, since),
-        pullBodyMeasurements(userId, since),
-        pullStepLogs(userId, since),
-        pullFastingSessions(userId, since),
-        pullTdeeProfile(userId),
-      ]);
+      const { e2eEnabled } = useAppState.getState();
+
+      if (e2eEnabled) {
+        const key = getE2EKey();
+        if (key === undefined) {
+          setSyncStatus("idle");
+          return;
+        }
+        await flushQueueE2E(userId, key);
+        await pullBlobsE2E(userId, key, since);
+      } else {
+        await flushQueue((count) => setPendingSyncCount(count));
+        setPendingSyncCount(0);
+        await Promise.all([
+          pullFoodItems(userId, since),
+          pullWaterLogs(userId, since),
+          pullActivityLogs(userId, since),
+          pullBodyMeasurements(userId, since),
+          pullStepLogs(userId, since),
+          pullFastingSessions(userId, since),
+          pullTdeeProfile(userId),
+        ]);
+      }
+
       const now = new Date().toISOString();
       setLastSyncedAt(now);
       await fetchInitialData(userId);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
+      if (err instanceof DOMException) {
+        clearE2EKey();
+        setSyncError("Incorrect passphrase - unlock sync to continue");
+      } else if (err instanceof ApiError && err.status === 401) {
         setSyncStatus("idle");
       } else if (!navigator.onLine) {
         setSyncStatus("offline");

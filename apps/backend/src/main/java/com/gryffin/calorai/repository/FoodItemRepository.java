@@ -38,4 +38,11 @@ public interface FoodItemRepository extends JpaRepository<FoodItem, UUID> {
 
   /** Count non-deleted food items for a user. */
   long countByUserIdAndDeletedAtIsNull(UUID userId);
+
+  /**
+   * Delete all food items for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }

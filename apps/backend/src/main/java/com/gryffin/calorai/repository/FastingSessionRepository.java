@@ -21,4 +21,11 @@ public interface FastingSessionRepository extends JpaRepository<FastingSession, 
   List<FastingSession> findByUserIdAndUpdatedAtAfter(UUID userId, Instant updatedAt);
 
   long countByUserId(UUID userId);
+
+  /**
+   * Delete all fasting sessions for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }

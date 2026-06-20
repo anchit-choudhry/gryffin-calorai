@@ -18,4 +18,11 @@ public interface WaterLogRepository extends JpaRepository<WaterLog, UUID> {
   List<WaterLog> findByUserIdAndUpdatedAtAfter(UUID userId, Instant updatedAt);
 
   long countByUserId(UUID userId);
+
+  /**
+   * Delete all water logs for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }

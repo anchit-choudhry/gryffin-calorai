@@ -5,9 +5,9 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.15.0 released (June 2026); v0.16.0 in progress (June 2026). Full-stack: React
+**Context:** v0.16.0 released (June 2026); v0.17.0 in progress (June 2026). Full-stack: React
 frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool. Database schema
-v20. Target: v1.0.0 with cloud sync and native mobile apps.
+v20. Target: v1.0.0 with native mobile apps (E2E encrypted cloud sync shipped in v0.16.0).
 
 ---
 
@@ -67,7 +67,9 @@ v20. Target: v1.0.0 with cloud sync and native mobile apps.
   `vendor-state`, `vendor-form`, `vendor-motion`, `vendor-ui`
 - **Store:** 9 Zustand slices (`foodSlice`, `recipeSlice`, `bodySlice`, `activitySlice`,
   `trackerSlice`, `settingsSlice`, `coreSlice`, `syncSlice`, `uiSlice`) in `AppState.ts`.
-  `coreSlice.selectedDate` drives date nav; `uiSlice` persists `density` (`gc_density`),
+  `coreSlice.selectedDate` drives date nav; `syncSlice` has `e2eEnabled` (persisted as
+  `gc_e2e_enabled`) and `e2eKeyReady` (in-memory only, never persisted); `uiSlice` persists
+  `density` (`gc_density`),
   `hapticsEnabled` (`gc_haptics`), `accentTheme` (`gc_accent`; persimmon/sage/indigo/amber/rose),
   `trainingDays` (`gc_training_days`), `broadsheet` (`gc_broadsheet`; two-column dashboard
   grid on lg screens), `almanacLocation` (`gc_almanac_loc`; JSON `{lat, lng, label}` for
@@ -206,6 +208,8 @@ For quick dev commands, see @@README.md
 | **Forms** | `apps/web/src/forms/schemas.ts` | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup, diet profile, recurring meal |
 | **Motion** | `apps/web/src/lib/motionVariants.ts` | `counterPopVariants` (spring pop), `useSectionMotion()` (crossfade), `easeSpring` |
 | **a11y lib** | `apps/web/src/lib/a11y.ts` | `MAIN_CONTENT_ID`, `liveRegionProps`, `assertiveRegionProps`, `visuallyHiddenProps`, `useMotionPreset(name)` |
+| **E2E crypto** | `apps/web/src/lib/e2eEncryption.ts` | PBKDF2 (600k iterations) + AES-GCM-256: `deriveKey`, `encryptData`, `decryptData`, `exportSalt` pure async functions |
+| **E2E key store** | `apps/web/src/lib/e2eKeyStore.ts` | In-memory `CryptoKey` singleton; never persisted; `setKey`, `getKey`, `clearKey` |
 | **API client** | `apps/web/src/lib/apiClient.ts` | JWT-aware HTTP; auto-refresh 60s before expiry; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()` |
 | **TDEE lib** | `apps/web/src/lib/tdee.ts` | `mifflinStJeorBMR`, `computeTDEE`, `computeCalorieGoal`, `computeMacroTargets`, `applyPeriodization` |
 | **Adaptive TDEE** | `apps/web/src/lib/adaptiveTdee.ts` | `computeAdaptiveTdee`, `detectPlateau`, `computeWeeklyForecast`; EMA smoothing; uses `FoodLogEntry` structural type (not full `FoodItem`) |
@@ -279,5 +283,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 19, 2026 | **Current release:** v0.15.0 (released June 2026) | **In
-progress:** v0.16.0 (135 test files, 2484 tests)
+**Last Updated:** June 20, 2026 | **Current release:** v0.16.0 (released June 2026) | **In
+progress:** v0.17.0 (139 test files, 2561 tests)

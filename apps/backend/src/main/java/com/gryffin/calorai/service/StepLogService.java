@@ -62,6 +62,16 @@ public class StepLogService {
     return toDto(stepLogRepository.save(log));
   }
 
+  /**
+   * Deletes all step logs for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    stepLogRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void deleteByDate(final UUID userId, final LocalDate date) {
     final StepLog log = stepLogRepository

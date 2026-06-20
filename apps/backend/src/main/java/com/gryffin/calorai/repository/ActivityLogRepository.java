@@ -18,4 +18,11 @@ public interface ActivityLogRepository extends JpaRepository<ActivityLog, UUID> 
   List<ActivityLog> findByUserIdAndUpdatedAtAfter(UUID userId, Instant updatedAt);
 
   long countByUserId(UUID userId);
+
+  /**
+   * Delete all activity logs for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }

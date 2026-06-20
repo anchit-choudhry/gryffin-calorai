@@ -81,6 +81,16 @@ public class FastingSessionService {
     return toDto(fastingSessionRepository.save(session));
   }
 
+  /**
+   * Deletes all fasting sessions for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    fastingSessionRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void delete(final UUID userId, final UUID sessionId) {
     final FastingSession session = fastingSessionRepository.findById(sessionId)

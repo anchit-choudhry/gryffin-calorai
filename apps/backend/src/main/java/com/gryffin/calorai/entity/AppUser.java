@@ -49,6 +49,11 @@ public class AppUser {
     return id;
   }
 
+  /** Sets the entity ID (used in tests and batch operations). */
+  public void setId(UUID id) {
+    this.id = id;
+  }
+
   public String getDisplayName() {
     return displayName;
   }

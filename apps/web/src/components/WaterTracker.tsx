@@ -6,6 +6,9 @@ import { useWaterForm } from "../hooks/useWaterForm";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn, EDITORIAL_INPUT_CLS } from "../lib/utils";
+import { todayISO } from "@/types";
+import { useWaterHistoryData } from "../hooks/useWaterHistoryData";
+import { WaterTideWeek } from "./WaterTideWeek";
 
 const QUICK_AMOUNTS = [250, 500, 750] as const;
 const TIDE_LABELS = ["12a", "3a", "6a", "9a", "12p", "3p", "6p", "9p"] as const;
@@ -21,6 +24,8 @@ const WaterTracker = () => {
 
   const totalMl = dailyWaterLogs.reduce((sum, l) => sum + l.amount, 0);
   const pct = Math.min(100, Math.round((totalMl / waterGoalMl) * 100));
+  const { labels, data: weekData, isLoading: weekLoading } = useWaterHistoryData(7);
+  const todayLabel = todayISO().substring(5);
 
   // Tide register: 8 three-hour columns, cumulative intake as rising tide
   const tideColumns = useMemo(() => {
@@ -107,7 +112,7 @@ const WaterTracker = () => {
       </div>
 
       {/* Tide register - intra-day water visualization */}
-      <div className="mb-4" aria-hidden="true">
+      <div aria-hidden="true">
         <div className="flex items-end gap-px h-7 border-b border-rule/40">
           {tideColumns.map((col, i) => (
             <div key={i} className="flex-1 flex flex-col items-center justify-end h-full relative">
@@ -130,6 +135,16 @@ const WaterTracker = () => {
             </div>
           ))}
         </div>
+      </div>
+      {/* Weekly tide register - 7-day history */}
+      <div className="mt-3 mb-4">
+        <WaterTideWeek
+          data={weekData}
+          labels={labels}
+          goalMl={waterGoalMl}
+          todayLabel={todayLabel}
+          isLoading={weekLoading}
+        />
       </div>
       {/* sr-only progress for screen readers */}
       <div

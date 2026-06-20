@@ -71,6 +71,16 @@ public class ActivityLogService {
     return toDto(activityLogRepository.save(log));
   }
 
+  /**
+   * Deletes all activity logs for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    activityLogRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void delete(final UUID userId, final UUID logId) {
     final ActivityLog log = activityLogRepository.findById(logId)

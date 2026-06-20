@@ -72,6 +72,16 @@ public class FoodItemService {
     return toDto(foodItemRepository.save(item));
   }
 
+  /**
+   * Deletes all food items for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    foodItemRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void delete(UUID userId, UUID itemId) {
     FoodItem item = foodItemRepository.findById(itemId)

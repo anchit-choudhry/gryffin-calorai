@@ -72,6 +72,16 @@ public class BodyMeasurementService {
     return toDto(bodyMeasurementRepository.save(bm));
   }
 
+  /**
+   * Deletes all body measurements for a user. Called during E2E activation migration.
+   *
+   * @param userId the user ID
+   */
+  @Transactional
+  public void deleteAllByUserId(final UUID userId) {
+    bodyMeasurementRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void delete(final UUID userId, final UUID measurementId) {
     final BodyMeasurement bm = bodyMeasurementRepository.findById(measurementId)

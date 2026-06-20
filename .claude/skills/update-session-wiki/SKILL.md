@@ -1,5 +1,5 @@
 ---
-name: session-wiki-update
+name: update-session-wiki
 description: Run the session-end wiki update checklist from project-knowledge/AGENTS.md. Updates wiki pages, appends to log.md, creates a weekly summary if needed, and refreshes index.md.
 disable-model-invocation: true
 ---

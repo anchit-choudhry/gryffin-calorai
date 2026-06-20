@@ -22,4 +22,11 @@ public interface StepLogRepository extends JpaRepository<StepLog, UUID> {
   List<StepLog> findByUserIdAndUpdatedAtAfter(UUID userId, Instant updatedAt);
 
   long countByUserId(UUID userId);
+
+  /**
+   * Delete all step logs for a user.
+   *
+   * @param userId the user ID
+   */
+  void deleteAllByUserId(UUID userId);
 }
