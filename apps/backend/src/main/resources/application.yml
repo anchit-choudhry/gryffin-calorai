@@ -17,8 +17,13 @@ spring:
       hibernate:
         format_sql: true
 
+  data:
+    redis:
+      host: ${VALKEY_HOST:localhost}
+      port: ${VALKEY_PORT:6379}
+
   flyway:
-    enabled: false
+    enabled: true
 
   security:
     oauth2:

@@ -81,6 +81,16 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'root=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$root\" && bash .claude/hooks/inject-wiki-context.sh'"
+          }
+        ]
+      }
     ]
   }
 }

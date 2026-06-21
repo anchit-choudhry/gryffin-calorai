@@ -49,6 +49,7 @@ import { FoodSpecimenSheet } from "../components/FoodSpecimenSheet";
 import { Button } from "@/components/ui/button";
 import { useFastingTimer } from "../hooks/useFastingTimer";
 import { useWeeklyHarvestTrigger } from "../hooks/useWeeklyHarvestTrigger";
+import { lookupBarcode, offProductToFoodItem } from "../lib/offProductApi";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
 const AlmanacPanel = lazy(() =>
@@ -130,7 +131,7 @@ const Dashboard = () => {
 
   const [editingLog, setEditingLog] = useState<FoodItem | null>(null);
   const [specimenFood, setSpecimenFood] = useState<FoodItem | null>(null);
-  const [barcodeFood, setBarcodeFood] = useState<{ name: string } | null>(null);
+  const [barcodeFood, setBarcodeFood] = useState<{ name: string; prefill?: FoodItem } | null>(null);
   const [voiceFood, setVoiceFood] = useState<{ name: string } | null>(null);
   const [photoStripKey, setPhotoStripKey] = useState(0);
 
@@ -226,6 +227,28 @@ const Dashboard = () => {
   const closeBarcodeFood = useCallback(() => setBarcodeFood(null), []);
   const closeVoiceFood = useCallback(() => setVoiceFood(null), []);
 
+  const handleBarcodeDetected = useCallback(
+    async (barcode: string) => {
+      const toastId = toast.loading("Looking up barcode...");
+      try {
+        const product = await lookupBarcode(barcode);
+        if (product) {
+          setBarcodeFood({
+            name: product.productName ?? barcode,
+            prefill: offProductToFoodItem(product),
+          });
+        } else {
+          setBarcodeFood({ name: barcode });
+        }
+      } catch {
+        setBarcodeFood({ name: barcode });
+      } finally {
+        toast.dismiss(toastId);
+      }
+    },
+    [setBarcodeFood],
+  );
+
   const handleQuickAdd = useCallback(
     async (item: FoodItem) => {
       if (!userId) return;
@@ -298,12 +321,15 @@ const Dashboard = () => {
         <DialogContent className="sm:max-w-xl rounded-none border border-rule bg-paper">
           <DialogHeader>
             <DialogTitle className="font-sans text-xl font-semibold text-ink">
-              Barcode: {barcodeFood?.name}
+              {barcodeFood?.prefill ? barcodeFood.name : `Barcode: ${barcodeFood?.name}`}
             </DialogTitle>
           </DialogHeader>
-          {barcodeFood && (
-            <FoodLogger prefillName={barcodeFood.name} onSuccess={closeBarcodeFood} />
-          )}
+          {barcodeFood &&
+            (barcodeFood.prefill ? (
+              <FoodLogger initialFood={barcodeFood.prefill} onSuccess={closeBarcodeFood} />
+            ) : (
+              <FoodLogger prefillName={barcodeFood.name} onSuccess={closeBarcodeFood} />
+            ))}
         </DialogContent>
       </Dialog>
 
@@ -547,9 +573,7 @@ const Dashboard = () => {
                 <div className="col-span-12 md:col-span-4 lg:col-span-2">
                   <EditorialFrame label="Scan">
                     <Suspense fallback={<PageLoading message="Loading scanner..." />}>
-                      <BarcodeScanner
-                        onBarcodeDetected={(barcode) => setBarcodeFood({ name: barcode })}
-                      />
+                      <BarcodeScanner onBarcodeDetected={handleBarcodeDetected} />
                     </Suspense>
                   </EditorialFrame>
                 </div>

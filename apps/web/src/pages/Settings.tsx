@@ -19,7 +19,7 @@ import { cn } from "../lib/utils";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
-const APP_VERSION = "0.11.0";
+const APP_VERSION = "0.17.0";
 
 const DENSITY_OPTIONS: { value: Density; label: string; description: string }[] = [
   { value: "comfortable", label: "Comfortable", description: "Standard spacing" },

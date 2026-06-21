@@ -14,7 +14,7 @@ fi
 echo ""
 echo "Modified web source files detected. Pre-commit checklist (CLAUDE.md):"
 echo "  1. pnpm lint:fix        - ESLint + Prettier (required before commit)"
-echo "  2. pnpm test            - All tests must pass (2484+ tests, 90% coverage threshold)"
+echo "  2. pnpm test            - All tests must pass (2594+ tests, 90% coverage threshold)"
 echo "  3. pnpm build           - Production build must succeed with no errors"
 echo ""
 

@@ -67,5 +67,21 @@ services:
       valkey:
         condition: service_healthy
 
+  off-importer:
+    build:
+      context: .
+      dockerfile: Dockerfile.off-importer
+    volumes:
+      - ${OFF_PARQUET_PATH:?Set OFF_PARQUET_PATH to the absolute path of your Parquet file}:/data/off.parquet:ro
+      - ./scripts:/scripts:ro
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+    profiles:
+      - tools
+
 volumes:
   postgres_data:

@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.gryffin</groupId>
   <artifactId>gryffin-calorai-backend</artifactId>
-  <version>0.11.0</version>
+  <version>0.17.0</version>
   <name>Gryffin Calorai Backend</name>
   <description>Spring Boot backend for Gryffin Calorai</description>
 
@@ -246,4 +246,22 @@
     <springdoc-openapi-starter-webmvc-ui.version>3.0.3</springdoc-openapi-starter-webmvc-ui.version>
     <testcontainers.version>1.21.4</testcontainers.version>
   </properties>
+
+  <profiles>
+    <profile>
+      <id>docker</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.github.git-commit-id</groupId>
+            <artifactId>git-commit-id-maven-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>

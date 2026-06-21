@@ -1,0 +1,28 @@
+FROM --platform=linux/amd64 debian:bookworm-slim
+
+# Pinned to amd64: DuckDB does not publish a Linux aarch64 CLI binary for all releases.
+# Docker Desktop on Apple Silicon runs amd64 containers transparently via Rosetta 2.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        curl \
+        unzip \
+        ca-certificates \
+    && DUCKDB_VERSION=$( \
+         curl -fsSL "https://api.github.com/repos/duckdb/duckdb/releases/latest" \
+         | grep '"tag_name"' | head -1 \
+         | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' \
+       ) \
+    && echo "Installing DuckDB ${DUCKDB_VERSION} for linux-amd64" \
+    && curl -fsSL \
+         "https://github.com/duckdb/duckdb/releases/download/${DUCKDB_VERSION}/duckdb_cli-linux-amd64.zip" \
+         -o /tmp/duckdb.zip \
+    && unzip /tmp/duckdb.zip -d /usr/local/bin/ \
+    && chmod +x /usr/local/bin/duckdb \
+    && rm -rf /tmp/duckdb.zip /var/lib/apt/lists/*
+
+WORKDIR /work
+
+COPY scripts/refresh-off-products.sh /usr/local/bin/refresh-off-products.sh
+RUN chmod +x /usr/local/bin/refresh-off-products.sh
+
+ENTRYPOINT ["refresh-off-products.sh"]

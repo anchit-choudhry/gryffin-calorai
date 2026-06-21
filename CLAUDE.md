@@ -5,9 +5,10 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.16.0 released (June 2026); v0.17.0 in progress (June 2026). Full-stack: React
+**Context:** v0.17.0 released (June 2026); v0.18.0 in progress (June 2026). Full-stack: React
 frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool. Database schema
-v20. Target: v1.0.0 with native mobile apps (E2E encrypted cloud sync shipped in v0.16.0).
+v20 (frontend) + Flyway V22 (backend). Target: v1.0.0 with native mobile apps (E2E encrypted cloud
+sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
 
 ---
 
@@ -180,6 +181,10 @@ v20. Target: v1.0.0 with native mobile apps (E2E encrypted cloud sync shipped in
 
 For persistent cross-session context, read @@project-knowledge/AGENTS.md first, then
 @@project-knowledge/index.md (canonical session-start artifact; update at session end).
+For automation, check `.claude/agents/` (migration-safety-reviewer, backend-code-reviewer,
+a11y-reviewer, web-bundle-analysis, web-dead-code-finder, web-test-coverage-gap-finder) and
+`.claude/skills/` (dexie-migration, flyway-migration, scaffold-backend, scaffold-new-react-component,
+scaffold-new-react-hook, scaffold-zustand-slice, generate-vitest) before implementing manually.
 For architecture details, see @@docs/gryffin-calorai-specifications.md
 For security guidelines, see @@.claude/skills/owasp-security-audit/SKILL.md
 For release history, see @@release-notes/0.15.0.md (latest), @@release-notes/0.14.0.md, and
@@ -210,6 +215,7 @@ For quick dev commands, see @@README.md
 | **a11y lib** | `apps/web/src/lib/a11y.ts` | `MAIN_CONTENT_ID`, `liveRegionProps`, `assertiveRegionProps`, `visuallyHiddenProps`, `useMotionPreset(name)` |
 | **E2E crypto** | `apps/web/src/lib/e2eEncryption.ts` | PBKDF2 (600k iterations) + AES-GCM-256: `deriveKey`, `encryptData`, `decryptData`, `exportSalt` pure async functions |
 | **E2E key store** | `apps/web/src/lib/e2eKeyStore.ts` | In-memory `CryptoKey` singleton; never persisted; `setKey`, `getKey`, `clearKey` |
+| **OFF API** | `apps/web/src/lib/offProductApi.ts` | `searchOff(q)` FTS search + `lookupBarcode(code)` exact match; converts g/100g nutrients to `FoodItem` prefill; 300ms debounce fallback in FoodSearchCombobox |
 | **API client** | `apps/web/src/lib/apiClient.ts` | JWT-aware HTTP; auto-refresh 60s before expiry; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()` |
 | **TDEE lib** | `apps/web/src/lib/tdee.ts` | `mifflinStJeorBMR`, `computeTDEE`, `computeCalorieGoal`, `computeMacroTargets`, `applyPeriodization` |
 | **Adaptive TDEE** | `apps/web/src/lib/adaptiveTdee.ts` | `computeAdaptiveTdee`, `detectPlateau`, `computeWeeklyForecast`; EMA smoothing; uses `FoodLogEntry` structural type (not full `FoodItem`) |
@@ -220,11 +226,12 @@ For quick dev commands, see @@README.md
 | **Solar lib** | `apps/web/src/lib/solar.ts` | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel |
 | **Charts lib** | `apps/web/src/lib/chartTheme.ts` | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber) |
 | **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts` | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel |
-| **Tests** | `apps/web/src/**/*.test.{ts,tsx}` (135 files, 2484 tests) | Vitest + jsdom + fake-indexeddb + coverage |
+| **Tests** | `apps/web/src/**/*.test.{ts,tsx}` (139+ files, 2594+ tests) | Vitest + jsdom + fake-indexeddb + coverage |
 | **Config** | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup |
 | **Backend** | `apps/backend/src/main/java/com/gryffin/calorai/` | Spring Boot 4.0 + Java 25 |
 | **DB migrate** | `apps/backend/src/main/resources/db/migration/` | Flyway SQL migrations |
 | **Codegen** | `apps/backend/openapi-codegen/` | OpenAPI generator configs + `generate.sh` for TS/Kotlin/Swift SDKs |
+| **OFF ops** | `apps/backend/OFF-IMPORT.md` | Runbook: initial import + monthly refresh for 4.5M-row `off_products` table |
 
 ---
 
@@ -270,8 +277,9 @@ export CORS_ALLOWED_ORIGINS=http://localhost:5173
 mvn spring-boot:run
 ```
 
-Backend: `http://localhost:8080` | Swagger: `.../swagger-ui/index.html` | Health:
-`.../actuator/health`
+Backend base: `http://localhost:8080/gryffin/calorai/api` | Swagger:
+`.../swagger-ui/index.html` | Health: `http://localhost:8080/actuator/health`
+(Note: actuator is at root, not under the context path)
 
 ### OpenAPI codegen
 
@@ -283,5 +291,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 20, 2026 | **Current release:** v0.16.0 (released June 2026) | **In
-progress:** v0.17.0 (139 test files, 2561 tests)
+**Last Updated:** June 20, 2026 | **Current release:** v0.17.0 (released June 2026) | **In
+progress:** v0.18.0 (139+ test files, 2594+ tests)

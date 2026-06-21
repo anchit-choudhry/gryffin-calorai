@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import type { FoodItem } from "@/db/dbService";
 import { fuzzyMatchFoodName } from "@/types";
 import { cn } from "@/lib/utils";
+import { offProductToFoodItem, searchOff } from "@/lib/offProductApi";
 
 interface Props {
   query: string;
@@ -20,19 +21,36 @@ export function FoodSearchCombobox({
   const listId = useId();
   const [activeIndex, setActiveIndex] = useState(-1);
   const [prevQuery, setPrevQuery] = useState(query);
+  const [offResults, setOffResults] = useState<FoodItem[]>([]);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const matches = useMemo(
+  const localMatches = useMemo(
     () => (query.length >= 2 ? fuzzyMatchFoodName(query, corpus, 6) : []),
     [query, corpus],
   );
 
-  // Render-phase state reset: React re-renders immediately with the new index,
-  // avoiding the double-render that setState inside useEffect would cause.
+  // Mask stale OFF results during render when local matches exist or query is too
+  // short - this avoids calling setState inside a useEffect just to clear them.
+  const effectiveOffResults = query.length >= 2 && localMatches.length === 0 ? offResults : [];
+  const allItems = localMatches.length > 0 ? localMatches : effectiveOffResults;
+  const showOffSection = localMatches.length === 0 && effectiveOffResults.length > 0;
+
+  // Render-phase state reset: avoids double-render from setState inside useEffect.
   if (query !== prevQuery) {
     setPrevQuery(query);
     if (activeIndex !== -1) setActiveIndex(-1);
   }
+
+  // Debounced OFF search: only fires when local corpus has no matches.
+  useEffect(() => {
+    if (query.length < 2 || localMatches.length > 0) return;
+    const id = setTimeout(() => {
+      void searchOff(query).then((products) => {
+        setOffResults(products.map(offProductToFoodItem));
+      });
+    }, 300);
+    return () => clearTimeout(id);
+  }, [query, localMatches.length]);
 
   const handleSelect = useCallback(
     (food: FoodItem) => {
@@ -45,14 +63,14 @@ export function FoodSearchCombobox({
   // Keyboard navigation from the name input: ArrowDown enters the list.
   useEffect(() => {
     const input = inputRef.current;
-    if (!input || matches.length === 0) return;
+    if (!input || allItems.length === 0) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        const nextIndex = Math.min(activeIndex + 1, matches.length - 1);
+        const nextIndex = Math.min(activeIndex + 1, allItems.length - 1);
         setActiveIndex(nextIndex);
-        const el = listRef.current?.children[nextIndex];
+        const el = listRef.current?.querySelector(`[data-item-index="${nextIndex}"]`);
         if (el instanceof Element && typeof el.scrollIntoView === "function") {
           el.scrollIntoView({ block: "nearest" });
         }
@@ -61,7 +79,7 @@ export function FoodSearchCombobox({
         setActiveIndex((i) => Math.max(i - 1, -1));
       } else if (e.key === "Enter" && activeIndex >= 0) {
         e.preventDefault();
-        const match = matches[activeIndex];
+        const match = allItems[activeIndex];
         if (match) handleSelect(match);
       } else if (e.key === "Escape") {
         setActiveIndex(-1);
@@ -88,22 +106,31 @@ export function FoodSearchCombobox({
       input.removeAttribute("aria-controls");
       input.removeAttribute("aria-activedescendant");
     };
-  }, [inputRef, matches, activeIndex, handleSelect, listId]);
+  }, [inputRef, allItems, activeIndex, handleSelect, listId]);
 
-  if (matches.length === 0) return null;
+  if (allItems.length === 0) return null;
 
   return (
     <ul
       ref={listRef}
       id={listId}
       role="listbox"
-      aria-label="Recent food matches"
+      aria-label={showOffSection ? "Open Food Facts results" : "Recent food matches"}
       className="absolute left-0 right-0 top-full z-50 mt-1 max-h-52 overflow-y-auto border border-rule bg-paper shadow-md"
     >
-      {matches.map((food, i) => (
+      {showOffSection && (
         <li
-          key={food.id ?? food.name}
+          role="presentation"
+          className="border-b border-rule px-3 py-1 font-mono text-[9px] uppercase tracking-widest text-ink-soft/50"
+        >
+          Open Food Facts
+        </li>
+      )}
+      {allItems.map((food, i) => (
+        <li
+          key={food.id ?? `off-${food.name}-${i}`}
           id={`${listId}-${i}`}
+          data-item-index={i}
           role="option"
           aria-selected={i === activeIndex}
         >

@@ -2,6 +2,7 @@ package com.gryffin.calorai.controller;
 
 import com.gryffin.calorai.security.OidcVerificationException;
 import io.jsonwebtoken.JwtException;
+import jakarta.validation.ConstraintViolationException;
 import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,22 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleOidc(OidcVerificationException ex) {
     log.warn("OIDC verification failed: {}", ex.getMessage());
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Authentication failed");
+  }
+
+  /**
+   * Maps Bean Validation constraint violations (from @Validated path/query params) to 400.
+   *
+   * @param ex the constraint violation exception
+   * @return a 400 Bad Request problem detail
+   */
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
+    log.debug("Constraint violation: {}", ex.getMessage());
+    var detail = ex.getConstraintViolations().stream()
+        .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+        .findFirst()
+        .orElse("Validation failed");
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
