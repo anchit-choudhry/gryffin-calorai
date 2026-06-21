@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for activity and exercise log entries. */
+/**
+ * REST controller for activity and exercise log entries.
+ */
 @Tag(name = "Activity Logs", description = "CRUD for activity / exercise log entries")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -41,8 +43,8 @@ public class ActivityLogController {
   @Operation(summary = "List activity logs for a given date")
   @GetMapping
   public List<ActivityLogDto> getByDate(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
   ) {
     return activityLogService.getDailyLogs(UUID.fromString(jwt.getSubject()), date);
   }
@@ -50,8 +52,8 @@ public class ActivityLogController {
   @Operation(summary = "Get all changes since a timestamp (for delta sync)")
   @GetMapping("/changes")
   public List<ActivityLogDto> getChanges(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam final Instant since
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam final Instant since
   ) {
     return activityLogService.getChangesSince(UUID.fromString(jwt.getSubject()), since);
   }
@@ -59,20 +61,20 @@ public class ActivityLogController {
   @Operation(summary = "Log an activity entry")
   @PostMapping
   public ResponseEntity<ActivityLogDto> create(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final ActivityLogDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final ActivityLogDto dto
   ) {
     final ActivityLogDto created =
-        activityLogService.create(UUID.fromString(jwt.getSubject()), dto);
+      activityLogService.create(UUID.fromString(jwt.getSubject()), dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @Operation(summary = "Upsert an activity log by ID (creates if not found, updates if found)")
   @PutMapping("/{id}")
   public ActivityLogDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id,
-      @Valid @RequestBody final ActivityLogDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id,
+    @Valid @RequestBody final ActivityLogDto dto
   ) {
     return activityLogService.upsert(UUID.fromString(jwt.getSubject()), id, dto);
   }
@@ -80,8 +82,8 @@ public class ActivityLogController {
   @Operation(summary = "Soft-delete an activity log")
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id
   ) {
     activityLogService.delete(UUID.fromString(jwt.getSubject()), id);
     return ResponseEntity.noContent().build();

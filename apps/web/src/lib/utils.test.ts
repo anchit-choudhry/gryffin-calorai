@@ -246,6 +246,13 @@ describe("normalizeHash", () => {
     expect(normalizeHash("#dashboard ")).toBe("#dashboard");
     expect(normalizeHash(" #RECIPES ")).toBe("#dashboard");
   });
+
+  it("strips query string before matching", () => {
+    expect(normalizeHash("#progress?tab=body")).toBe("#progress");
+    expect(normalizeHash("#progress?tab=activity")).toBe("#progress");
+    expect(normalizeHash("#dashboard?foo=bar")).toBe("#dashboard");
+    expect(normalizeHash("#invalid?tab=x")).toBe("#dashboard");
+  });
 });
 
 describe("LABEL_MONO_CLS", () => {

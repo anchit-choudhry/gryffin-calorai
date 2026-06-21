@@ -53,7 +53,7 @@ class ActivityLogServiceTest {
     final var log = buildLog("Running", 30, 250.0, LocalDate.now());
     BDDMockito.given(activityLogRepository
         .findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(List.of(log));
+      .willReturn(List.of(log));
 
     final var result = activityLogService.getDailyLogs(userId, LocalDate.now());
 
@@ -65,7 +65,7 @@ class ActivityLogServiceTest {
   void getChangesSinceReturnsLogsUpdatedAfterTimestamp() {
     final var since = Instant.now().minusSeconds(3600);
     BDDMockito.given(activityLogRepository.findByUserIdAndUpdatedAtAfter(userId, since))
-        .willReturn(List.of(buildLog("Cycling", 45, 300.0, LocalDate.now())));
+      .willReturn(List.of(buildLog("Cycling", 45, 300.0, LocalDate.now())));
 
     final var result = activityLogService.getChangesSince(userId, since);
 
@@ -80,7 +80,7 @@ class ActivityLogServiceTest {
     BDDMockito.given(activityLogRepository.save(ArgumentMatchers.any())).willReturn(saved);
 
     final var dto = new ActivityLogDto(null, "Swimming", 60, 400.0, LocalDate.now(), null, null,
-        null);
+      null);
     final var result = activityLogService.create(userId, dto);
 
     Assertions.assertThat(result.activityType()).isEqualTo("Swimming");
@@ -92,9 +92,9 @@ class ActivityLogServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.empty());
 
     final var dto = new ActivityLogDto(null, "Running", 30, 200.0, LocalDate.now(), null, null,
-        null);
+      null);
     Assertions.assertThatThrownBy(() -> activityLogService.create(userId, dto))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
@@ -103,10 +103,10 @@ class ActivityLogServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.of(user));
     BDDMockito.given(activityLogRepository.findById(logId)).willReturn(Optional.empty());
     BDDMockito.given(activityLogRepository.save(ArgumentMatchers.any()))
-        .willReturn(buildLog("Yoga", 30, 150.0, LocalDate.now()));
+      .willReturn(buildLog("Yoga", 30, 150.0, LocalDate.now()));
 
     final var dto = new ActivityLogDto(logId.toString(), "Yoga", 30, 150.0, LocalDate.now(), null,
-        null, null);
+      null, null);
     final var result = activityLogService.upsert(userId, logId, dto);
 
     Assertions.assertThat(result).isNotNull();
@@ -121,7 +121,7 @@ class ActivityLogServiceTest {
     BDDMockito.given(activityLogRepository.save(ArgumentMatchers.any())).willReturn(existing);
 
     final var dto = new ActivityLogDto(logId.toString(), "Cycling", 45, 320.0, LocalDate.now(),
-        null, null, null);
+      null, null, null);
     activityLogService.upsert(userId, logId, dto);
 
     BDDMockito.then(userRepository).shouldHaveNoInteractions();
@@ -150,11 +150,11 @@ class ActivityLogServiceTest {
     BDDMockito.given(activityLogRepository.findById(logId)).willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> activityLogService.delete(userId, logId))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private ActivityLog buildLog(final String type, final int duration, final double calories,
-      final LocalDate date) {
+    final LocalDate date) {
     final var log = new ActivityLog();
     log.setId(UUID.randomUUID());
     log.setUser(user);

@@ -8,7 +8,9 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 
-/** JPA entity storing the PBKDF2 salt for a user's E2E encryption config. Not a secret. */
+/**
+ * JPA entity storing the PBKDF2 salt for a user's E2E encryption config. Not a secret.
+ */
 @Entity
 @Table(name = "user_e2e_config")
 public class UserE2EConfig {
@@ -24,27 +26,37 @@ public class UserE2EConfig {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt = Instant.now();
 
-  /** Returns the user ID (primary key). */
+  /**
+   * Returns the user ID (primary key).
+   */
   public UUID getUserId() {
     return userId;
   }
 
-  /** Sets the user ID. */
+  /**
+   * Sets the user ID.
+   */
   public void setUserId(UUID userId) {
     this.userId = userId;
   }
 
-  /** Returns the base64-encoded PBKDF2 salt. */
+  /**
+   * Returns the base64-encoded PBKDF2 salt.
+   */
   public String getSalt() {
     return salt;
   }
 
-  /** Sets the base64-encoded PBKDF2 salt. */
+  /**
+   * Sets the base64-encoded PBKDF2 salt.
+   */
   public void setSalt(String salt) {
     this.salt = salt;
   }
 
-  /** Returns the timestamp when E2E was first configured. */
+  /**
+   * Returns the timestamp when E2E was first configured.
+   */
   public Instant getCreatedAt() {
     return createdAt;
   }

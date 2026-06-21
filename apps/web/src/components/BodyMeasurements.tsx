@@ -449,7 +449,9 @@ const BodyMeasurements = () => {
                           },
                         });
                       }}
-                      aria-label={`Delete measurement from ${m.measuredAt}`}
+                      aria-label={`Delete
+                    measurement from
+                    ${m.measuredAt}`}
                       className="text-ink-soft hover:text-persimmon transition-colors opacity-0 group-hover:opacity-100"
                     >
                       ✕

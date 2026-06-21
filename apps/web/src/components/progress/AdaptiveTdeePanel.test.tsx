@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { AdaptiveTdeePanel } from "./AdaptiveTdeePanel";
 import type { BodyMeasurement, FoodItem, TdeeProfile } from "@/db/dbService";
 import type { BodyMeasurementId, FoodItemId, ISODate, UserId } from "@/types";

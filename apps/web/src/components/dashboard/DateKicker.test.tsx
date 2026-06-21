@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DateKicker from "./DateKicker";
 import { useAppState } from "@/state/AppState";
 import { ISODate, todayISO, UserId } from "@/types";

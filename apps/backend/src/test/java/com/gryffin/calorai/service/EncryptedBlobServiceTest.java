@@ -26,24 +26,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-/** Unit tests for EncryptedBlobService. */
+/**
+ * Unit tests for EncryptedBlobService.
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class EncryptedBlobServiceTest {
 
+  private static final UUID USER_ID = UUID.randomUUID();
   @Mock
   private EncryptedBlobRepository blobRepository;
-
   @Mock
   private UserE2EConfigRepository configRepository;
-
   @Mock
   private UserRepository userRepository;
-
   @InjectMocks
   private EncryptedBlobService service;
-
-  private static final UUID USER_ID = UUID.randomUUID();
 
   private AppUser makeUser() {
     final AppUser user = new AppUser();
@@ -101,11 +99,11 @@ class EncryptedBlobServiceTest {
     final AppUser user = makeUser();
     given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
     given(blobRepository.findByUserIdAndClientBlobId(USER_ID, "foodItem:abc"))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
     given(blobRepository.save(any(EncryptedBlob.class))).willAnswer(i -> i.getArgument(0));
 
     final List<EncryptedBlobDto> dtos = List.of(
-        new EncryptedBlobDto("foodItem:abc", "iv1", "ct1", null, false)
+      new EncryptedBlobDto("foodItem:abc", "iv1", "ct1", null, false)
     );
     service.upsertBlobs(USER_ID, dtos);
 
@@ -122,11 +120,11 @@ class EncryptedBlobServiceTest {
     existing.setCiphertext("oldct");
     given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
     given(blobRepository.findByUserIdAndClientBlobId(USER_ID, "foodItem:abc"))
-        .willReturn(Optional.of(existing));
+      .willReturn(Optional.of(existing));
     given(blobRepository.save(any(EncryptedBlob.class))).willAnswer(i -> i.getArgument(0));
 
     final List<EncryptedBlobDto> dtos = List.of(
-        new EncryptedBlobDto("foodItem:abc", "newiv", "newct", null, false)
+      new EncryptedBlobDto("foodItem:abc", "newiv", "newct", null, false)
     );
     service.upsertBlobs(USER_ID, dtos);
 
@@ -143,10 +141,10 @@ class EncryptedBlobServiceTest {
     blob.setIv("iv");
     blob.setCiphertext("ct");
     given(blobRepository.findByUserIdAndUpdatedAtAfterOrderByUpdatedAtAsc(
-        any(UUID.class), any(Instant.class))).willReturn(List.of(blob));
+      any(UUID.class), any(Instant.class))).willReturn(List.of(blob));
 
     final List<EncryptedBlobDto> result = service.getBlobsSince(
-        USER_ID, Instant.EPOCH, Integer.MAX_VALUE);
+      USER_ID, Instant.EPOCH, Integer.MAX_VALUE);
 
     Assertions.assertThat(result).hasSize(1);
     Assertions.assertThat(result.get(0).clientBlobId()).isEqualTo("waterLog:xyz");
@@ -166,7 +164,7 @@ class EncryptedBlobServiceTest {
     b2.setIv("iv2");
     b2.setCiphertext("ct2");
     given(blobRepository.findByUserIdAndUpdatedAtAfterOrderByUpdatedAtAsc(
-        any(UUID.class), any(Instant.class))).willReturn(List.of(b1, b2));
+      any(UUID.class), any(Instant.class))).willReturn(List.of(b1, b2));
 
     final List<EncryptedBlobDto> result = service.getBlobsSince(USER_ID, Instant.EPOCH, 1);
 
@@ -183,9 +181,9 @@ class EncryptedBlobServiceTest {
   void upsertBlobsThrowsWhenUserNotFound() {
     given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
     final List<EncryptedBlobDto> dtos = List.of(
-        new EncryptedBlobDto("foodItem:abc", "iv", "ct", null, false)
+      new EncryptedBlobDto("foodItem:abc", "iv", "ct", null, false)
     );
     Assertions.assertThatThrownBy(() -> service.upsertBlobs(USER_ID, dtos))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 }

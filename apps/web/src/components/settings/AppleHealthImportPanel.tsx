@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { FileUp, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, FileUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAppState } from "@/state/AppState";
-import { parseAppleHealthExport, type AppleHealthResult } from "@/lib/importers/appleHealth";
+import { type AppleHealthResult, parseAppleHealthExport } from "@/lib/importers/appleHealth";
 import {
   addBodyMeasurement as addBodyMeasurementToDB,
   addStepLog as addStepLogToDB,

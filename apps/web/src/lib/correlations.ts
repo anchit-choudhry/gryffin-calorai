@@ -1,4 +1,4 @@
-import type { BodyMeasurement, FoodItem, FastingSession } from "@/db/dbService";
+import type { BodyMeasurement, FastingSession, FoodItem } from "@/db/dbService";
 import type { ISODate } from "@/types";
 
 export interface CorrelationResult {

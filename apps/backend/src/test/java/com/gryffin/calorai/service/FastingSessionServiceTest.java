@@ -53,7 +53,7 @@ class FastingSessionServiceTest {
     final var session = buildSession(16, false);
     BDDMockito.given(
         fastingSessionRepository.findByUserIdAndDeletedAtIsNullOrderByStartTimeDesc(userId))
-        .willReturn(List.of(session));
+      .willReturn(List.of(session));
 
     final var result = fastingSessionService.getAll(userId);
 
@@ -66,7 +66,7 @@ class FastingSessionServiceTest {
     final var session = buildSession(16, false);
     BDDMockito.given(fastingSessionRepository
         .findFirstByUserIdAndCompletedFalseAndDeletedAtIsNullOrderByStartTimeDesc(userId))
-        .willReturn(Optional.of(session));
+      .willReturn(Optional.of(session));
 
     final var result = fastingSessionService.getActive(userId);
 
@@ -78,7 +78,7 @@ class FastingSessionServiceTest {
   void getActiveReturnsEmptyWhenNoneActive() {
     BDDMockito.given(fastingSessionRepository
         .findFirstByUserIdAndCompletedFalseAndDeletedAtIsNullOrderByStartTimeDesc(userId))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
 
     final var result = fastingSessionService.getActive(userId);
 
@@ -89,7 +89,7 @@ class FastingSessionServiceTest {
   void getChangesSinceReturnsSessionsUpdatedAfterTimestamp() {
     final var since = Instant.now().minusSeconds(3600);
     BDDMockito.given(fastingSessionRepository.findByUserIdAndUpdatedAtAfter(userId, since))
-        .willReturn(List.of(buildSession(14, true)));
+      .willReturn(List.of(buildSession(14, true)));
 
     final var result = fastingSessionService.getChangesSince(userId, since);
 
@@ -104,12 +104,12 @@ class FastingSessionServiceTest {
 
     final var startTime = Instant.now();
     final var dto = new FastingSessionDto(null, startTime, null, 16, LocalDate.now(), false, null,
-        null);
+      null);
     final var result = fastingSessionService.create(userId, dto);
 
     Assertions.assertThat(result.targetHours()).isEqualTo(16);
     BDDMockito.then(fastingSessionRepository).should()
-        .save(ArgumentMatchers.any(FastingSession.class));
+      .save(ArgumentMatchers.any(FastingSession.class));
   }
 
   @Test
@@ -117,9 +117,9 @@ class FastingSessionServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.empty());
 
     final var dto = new FastingSessionDto(null, Instant.now(), null, 16, LocalDate.now(), false,
-        null, null);
+      null, null);
     Assertions.assertThatThrownBy(() -> fastingSessionService.create(userId, dto))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
@@ -128,13 +128,13 @@ class FastingSessionServiceTest {
     final var existing = buildSession(16, false);
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.of(user));
     BDDMockito.given(fastingSessionRepository.findById(sessionId))
-        .willReturn(Optional.of(existing));
+      .willReturn(Optional.of(existing));
     BDDMockito.given(fastingSessionRepository.save(ArgumentMatchers.any())).willReturn(existing);
 
     final var endTime = Instant.now();
     final var dto = new FastingSessionDto(
-        sessionId.toString(), existing.getStartTime(), endTime, 16, LocalDate.now(), true, null,
-        null
+      sessionId.toString(), existing.getStartTime(), endTime, 16, LocalDate.now(), true, null,
+      null
     );
     fastingSessionService.upsert(userId, sessionId, dto);
 
@@ -163,7 +163,7 @@ class FastingSessionServiceTest {
     BDDMockito.given(fastingSessionRepository.findById(sessionId)).willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> fastingSessionService.delete(userId, sessionId))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private FastingSession buildSession(final int targetHours, final boolean completed) {

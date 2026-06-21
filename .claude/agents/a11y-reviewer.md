@@ -15,6 +15,7 @@ specified) for accessibility issues specific to this codebase.
 ### 1. Reduced motion (critical)
 
 Every `motion/react` animation must either:
+
 - Call `useMotionPreset(name)` from `apps/web/src/lib/a11y.ts`, or
 - Respect `prefers-reduced-motion` via the `motionVariants` in
   `apps/web/src/lib/motionVariants.ts`
@@ -26,6 +27,7 @@ props inline without going through `useMotionPreset` or a shared variant.
 
 All interactive elements (`<button>`, `<a>`, role="button") must have a minimum
 44x44px tap area. Look for:
+
 - Missing `min-h-[44px] min-w-[44px]` or equivalent `p-*` padding that achieves
   it
 - Icon-only buttons that are smaller than 44px without a transparent padding
@@ -57,11 +59,12 @@ classes used so the developer can verify.
 
 Report findings as a table:
 
-| File | Line | Issue | Severity |
-|------|------|-------|----------|
-| ComponentName.tsx | 42 | `<motion.div animate=...>` without useMotionPreset | critical |
+| File              | Line | Issue                                              | Severity |
+|-------------------|------|----------------------------------------------------|----------|
+| ComponentName.tsx | 42   | `<motion.div animate=...>` without useMotionPreset | critical |
 
 Then a summary:
+
 - Total issues: X (Y critical, Z high, W informational)
 - Files checked: N
 - Files with no issues: M

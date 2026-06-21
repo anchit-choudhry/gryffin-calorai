@@ -10,7 +10,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-/** Integration smoke test - requires Docker; skipped in CI unless DOCKER_AVAILABLE=true. */
+/**
+ * Integration smoke test - requires Docker; skipped in CI unless DOCKER_AVAILABLE=true.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
@@ -19,9 +21,9 @@ class CaloraiApplicationTests {
 
   @Container
   static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18-alpine")
-      .withDatabaseName("calorai_test")
-      .withUsername("calorai")
-      .withPassword("calorai");
+    .withDatabaseName("calorai_test")
+    .withUsername("calorai")
+    .withPassword("calorai");
 
   @DynamicPropertySource
   static void configureProperties(DynamicPropertyRegistry registry) {

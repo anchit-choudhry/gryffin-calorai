@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for intermittent fasting sessions. */
+/**
+ * REST controller for intermittent fasting sessions.
+ */
 @Tag(name = "Fasting Sessions", description = "CRUD for intermittent fasting sessions")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -46,15 +48,15 @@ public class FastingSessionController {
   @GetMapping("/active")
   public ResponseEntity<FastingSessionDto> getActive(@AuthenticationPrincipal final Jwt jwt) {
     return fastingSessionService.getActive(UUID.fromString(jwt.getSubject()))
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+      .map(ResponseEntity::ok)
+      .orElse(ResponseEntity.notFound().build());
   }
 
   @Operation(summary = "Get all changes since a timestamp (for delta sync)")
   @GetMapping("/changes")
   public List<FastingSessionDto> getChanges(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam final Instant since
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam final Instant since
   ) {
     return fastingSessionService.getChangesSince(UUID.fromString(jwt.getSubject()), since);
   }
@@ -62,20 +64,20 @@ public class FastingSessionController {
   @Operation(summary = "Start a new fasting session")
   @PostMapping
   public ResponseEntity<FastingSessionDto> create(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final FastingSessionDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final FastingSessionDto dto
   ) {
     final FastingSessionDto created =
-        fastingSessionService.create(UUID.fromString(jwt.getSubject()), dto);
+      fastingSessionService.create(UUID.fromString(jwt.getSubject()), dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @Operation(summary = "Upsert a fasting session by ID (creates if not found, updates if found)")
   @PutMapping("/{id}")
   public FastingSessionDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id,
-      @Valid @RequestBody final FastingSessionDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id,
+    @Valid @RequestBody final FastingSessionDto dto
   ) {
     return fastingSessionService.upsert(UUID.fromString(jwt.getSubject()), id, dto);
   }
@@ -83,8 +85,8 @@ public class FastingSessionController {
   @Operation(summary = "Soft-delete a fasting session")
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id
   ) {
     fastingSessionService.delete(UUID.fromString(jwt.getSubject()), id);
     return ResponseEntity.noContent().build();

@@ -26,8 +26,9 @@ variants, hold the chroma+hue roughly constant and vary the lightness, but **red
 approach white or black**, because high chroma at extreme lightness looks garish.
 
 The hue you pick is a brand decision and should not come from a default. Do not reach for blue (hue
+
 250) or warm orange (hue 60) by reflex; those are the dominant AI-design defaults, not the right
-answer for any specific brand.
+     answer for any specific brand.
 
 ## Building Functional Palettes
 
@@ -45,12 +46,12 @@ tech" formula.
 
 A complete system needs:
 
-| Role | Purpose | Example |
-|------|---------|---------|
-| **Primary** | Brand, CTAs, key actions | 1 color, 3-5 shades |
-| **Neutral** | Text, backgrounds, borders | 9-11 shade scale |
+| Role         | Purpose                       | Example                   |
+|--------------|-------------------------------|---------------------------|
+| **Primary**  | Brand, CTAs, key actions      | 1 color, 3-5 shades       |
+| **Neutral**  | Text, backgrounds, borders    | 9-11 shade scale          |
 | **Semantic** | Success, error, warning, info | 4 colors, 2-3 shades each |
-| **Surface** | Cards, modals, overlays | 2-3 elevation levels |
+| **Surface**  | Cards, modals, overlays       | 2-3 elevation levels      |
 
 **Skip secondary/tertiary unless you need them.** Most apps work fine with one accent color.
 
@@ -67,12 +68,12 @@ work *because* they're rare. Overuse kills their power.
 
 ### WCAG Requirements
 
-| Content Type | AA Minimum | AAA Target |
-|-------------|------------|------------|
-| Body text | 4.5:1 | 7:1 |
-| Large text (18px+ or 14px bold) | 3:1 | 4.5:1 |
-| UI components, icons | 3:1 | 4.5:1 |
-| Non-essential decorations | None | None |
+| Content Type                    | AA Minimum | AAA Target |
+|---------------------------------|------------|------------|
+| Body text                       | 4.5:1      | 7:1        |
+| Large text (18px+ or 14px bold) | 3:1        | 4.5:1      |
+| UI components, icons            | 3:1        | 4.5:1      |
+| Non-essential decorations       | None       | None       |
 
 **The gotcha**: Placeholder text still needs 4.5:1.
 
@@ -85,12 +86,12 @@ Pure gray (`oklch(50% 0 0)`) and pure black (`#000`) don't exist in nature. Even
 
 ### Dark Mode Is Not Inverted Light Mode
 
-| Light Mode | Dark Mode |
-|-----------|----------|
-| Shadows for depth | Lighter surfaces for depth (no shadows) |
-| Dark text on light | Light text on dark (reduce font weight) |
-| Vibrant accents | Desaturate accents slightly |
-| White backgrounds | Never pure black; use dark gray (oklch 12-18%) |
+| Light Mode         | Dark Mode                                      |
+|--------------------|------------------------------------------------|
+| Shadows for depth  | Lighter surfaces for depth (no shadows)        |
+| Dark text on light | Light text on dark (reduce font weight)        |
+| Vibrant accents    | Desaturate accents slightly                    |
+| White backgrounds  | Never pure black; use dark gray (oklch 12-18%) |
 
 In dark mode, depth comes from surface lightness, not shadow. Build a 3-step surface scale where
 higher elevations are lighter (e.g. 15% / 20% / 25% lightness). Reduce body text weight slightly
@@ -121,13 +122,13 @@ Use `gap` instead of margins for sibling spacing; it eliminates margin collapse 
 
 Don't rely on size alone. Combine:
 
-| Tool | Strong Hierarchy | Weak Hierarchy |
-|------|-----------------|---------------|
-| **Size** | 3:1 ratio or more | <2:1 ratio |
-| **Weight** | Bold vs Regular | Medium vs Regular |
-| **Color** | High contrast | Similar tones |
-| **Position** | Top/left (primary) | Bottom/right |
-| **Space** | Surrounded by white space | Crowded |
+| Tool         | Strong Hierarchy          | Weak Hierarchy    |
+|--------------|---------------------------|-------------------|
+| **Size**     | 3:1 ratio or more         | <2:1 ratio        |
+| **Weight**   | Bold vs Regular           | Medium vs Regular |
+| **Color**    | High contrast             | Similar tones     |
+| **Position** | Top/left (primary)        | Bottom/right      |
+| **Space**    | Surrounded by white space | Crowded           |
 
 **The best hierarchy uses 2-3 dimensions at once**: A heading that's larger, bolder, AND has more
 space above it.
@@ -165,12 +166,12 @@ to expand tap targets without changing visual size.
 
 ## Duration: The 100/300/500 Rule
 
-| Duration | Use Case | Examples |
-|----------|---------|---------|
-| **100-150ms** | Instant feedback | Button press, toggle, color change |
-| **200-300ms** | State changes | Menu open, tooltip, hover states |
-| **300-500ms** | Layout changes | Accordion, modal, drawer |
-| **500-800ms** | Entrance animations | Page load, hero reveals |
+| Duration      | Use Case            | Examples                           |
+|---------------|---------------------|------------------------------------|
+| **100-150ms** | Instant feedback    | Button press, toggle, color change |
+| **200-300ms** | State changes       | Menu open, tooltip, hover states   |
+| **300-500ms** | Layout changes      | Accordion, modal, drawer           |
+| **500-800ms** | Entrance animations | Page load, hero reveals            |
 
 **Exit animations are faster than entrances.** Use ~75% of enter duration.
 
@@ -178,10 +179,10 @@ to expand tap targets without changing visual size.
 
 **Don't use `ease`.** It's a compromise that's rarely optimal. Instead:
 
-| Curve | Use For | CSS |
-|-------|--------|-----|
-| **ease-out** | Elements entering | `cubic-bezier(0.16, 1, 0.3, 1)` |
-| **ease-in** | Elements leaving | `cubic-bezier(0.7, 0, 0.84, 0)` |
+| Curve           | Use For                      | CSS                              |
+|-----------------|------------------------------|----------------------------------|
+| **ease-out**    | Elements entering            | `cubic-bezier(0.16, 1, 0.3, 1)`  |
+| **ease-in**     | Elements leaving             | `cubic-bezier(0.7, 0, 0.84, 0)`  |
 | **ease-in-out** | State toggles (there - back) | `cubic-bezier(0.65, 0, 0.35, 1)` |
 
 **Avoid bounce and elastic curves.** They were trendy in 2015 but now feel tacky. Real objects
@@ -225,16 +226,16 @@ focus indicators should still work, just without spatial movement.
 
 Every interactive element needs these states designed:
 
-| State | When | Visual Treatment |
-|-------|------|-----------------|
-| **Default** | At rest | Base styling |
-| **Hover** | Pointer over (not touch) | Subtle lift, color shift |
-| **Focus** | Keyboard/programmatic focus | Visible ring (see below) |
-| **Active** | Being pressed | Pressed in, darker |
-| **Disabled** | Not interactive | Reduced opacity, no pointer |
-| **Loading** | Processing | Spinner, skeleton |
-| **Error** | Invalid state | Red border, icon, message |
-| **Success** | Completed | Green check, confirmation |
+| State        | When                        | Visual Treatment            |
+|--------------|-----------------------------|-----------------------------|
+| **Default**  | At rest                     | Base styling                |
+| **Hover**    | Pointer over (not touch)    | Subtle lift, color shift    |
+| **Focus**    | Keyboard/programmatic focus | Visible ring (see below)    |
+| **Active**   | Being pressed               | Pressed in, darker          |
+| **Disabled** | Not interactive             | Reduced opacity, no pointer |
+| **Loading**  | Processing                  | Spinner, skeleton           |
+| **Error**    | Invalid state               | Red border, icon, message   |
+| **Success**  | Completed                   | Green check, confirmation   |
 
 **The common miss**: Designing hover without focus, or vice versa.
 
@@ -351,7 +352,8 @@ Use `SERIF_TITLE_CLS` for section headings. Use `EDITORIAL_INPUT_CLS` on all `<I
 Training-data defaults. Look further:
 
 Fraunces - Newsreader - Lora - Crimson Pro - Playfair Display - Cormorant - Syne - IBM Plex Mono -
-IBM Plex Sans - Space Mono - Space Grotesk - Inter - DM Sans - DM Serif Display - Plus Jakarta Sans -
+IBM Plex Sans - Space Mono - Space Grotesk - Inter - DM Sans - DM Serif Display - Plus Jakarta
+Sans -
 Instrument Sans - Instrument Serif
 
 ## Brand Permissions

@@ -24,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for daily food log entries. */
+/**
+ * REST controller for daily food log entries.
+ */
 @Tag(name = "Food Items", description = "CRUD for daily food log entries")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -40,8 +42,8 @@ public class FoodItemController {
   @Operation(summary = "List food items logged on a given date")
   @GetMapping
   public List<FoodItemDto> getByDate(
-      @AuthenticationPrincipal Jwt jwt,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    @AuthenticationPrincipal Jwt jwt,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
   ) {
     return foodItemService.getDailyLogs(UUID.fromString(jwt.getSubject()), date);
   }
@@ -55,8 +57,8 @@ public class FoodItemController {
   @Operation(summary = "Log a new food item")
   @PostMapping
   public ResponseEntity<FoodItemDto> create(
-      @AuthenticationPrincipal Jwt jwt,
-      @Valid @RequestBody FoodItemDto dto
+    @AuthenticationPrincipal Jwt jwt,
+    @Valid @RequestBody FoodItemDto dto
   ) {
     FoodItemDto created = foodItemService.create(UUID.fromString(jwt.getSubject()), dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -65,9 +67,9 @@ public class FoodItemController {
   @Operation(summary = "Update an existing food item")
   @PutMapping("/{id}")
   public FoodItemDto update(
-      @AuthenticationPrincipal Jwt jwt,
-      @PathVariable UUID id,
-      @Valid @RequestBody FoodItemDto dto
+    @AuthenticationPrincipal Jwt jwt,
+    @PathVariable UUID id,
+    @Valid @RequestBody FoodItemDto dto
   ) {
     return foodItemService.update(UUID.fromString(jwt.getSubject()), id, dto);
   }
@@ -75,8 +77,8 @@ public class FoodItemController {
   @Operation(summary = "Delete a food item")
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal Jwt jwt,
-      @PathVariable UUID id
+    @AuthenticationPrincipal Jwt jwt,
+    @PathVariable UUID id
   ) {
     foodItemService.delete(UUID.fromString(jwt.getSubject()), id);
     return ResponseEntity.noContent().build();

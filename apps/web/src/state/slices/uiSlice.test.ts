@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { create, type StateCreator } from "zustand";
 import { createUiSlice, type UiSlice } from "./uiSlice";
 

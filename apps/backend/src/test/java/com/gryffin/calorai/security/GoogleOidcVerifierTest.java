@@ -34,9 +34,9 @@ class GoogleOidcVerifierTest {
     privateKey = (RSAPrivateKey) keyPair.getPrivate();
 
     final var testKey = new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
-        .privateKey(privateKey)
-        .keyID("test-kid")
-        .build();
+      .privateKey(privateKey)
+      .keyID("test-kid")
+      .build();
     final var jwkSource = new ImmutableJWKSet<>(new JWKSet(testKey));
     verifier = new GoogleOidcVerifier(CLIENT_ID, jwkSource);
   }
@@ -50,13 +50,13 @@ class GoogleOidcVerifierTest {
 
   private JWTClaimsSet.Builder validClaims() {
     return new JWTClaimsSet.Builder()
-        .issuer(GOOGLE_ISSUER)
-        .subject("google-sub-123")
-        .audience(CLIENT_ID)
-        .claim("email", "user@example.com")
-        .claim("name", "Test User")
-        .claim("email_verified", true)
-        .expirationTime(Date.from(Instant.now().plusSeconds(3600)));
+      .issuer(GOOGLE_ISSUER)
+      .subject("google-sub-123")
+      .audience(CLIENT_ID)
+      .claim("email", "user@example.com")
+      .claim("name", "Test User")
+      .claim("email_verified", true)
+      .expirationTime(Date.from(Instant.now().plusSeconds(3600)));
   }
 
   @Test
@@ -76,8 +76,8 @@ class GoogleOidcVerifierTest {
     final var token = sign(validClaims().issuer("https://evil.com").build());
 
     Assertions.assertThatThrownBy(() -> verifier.verify(token))
-        .isInstanceOf(OidcVerificationException.class)
-        .hasMessageContaining("issuer");
+      .isInstanceOf(OidcVerificationException.class)
+      .hasMessageContaining("issuer");
   }
 
   @Test
@@ -85,8 +85,8 @@ class GoogleOidcVerifierTest {
     final var token = sign(validClaims().audience(List.of("wrong-client-id")).build());
 
     Assertions.assertThatThrownBy(() -> verifier.verify(token))
-        .isInstanceOf(OidcVerificationException.class)
-        .hasMessageContaining("audience");
+      .isInstanceOf(OidcVerificationException.class)
+      .hasMessageContaining("audience");
   }
 
   @Test
@@ -94,36 +94,36 @@ class GoogleOidcVerifierTest {
     final var token = sign(validClaims().claim("email_verified", false).build());
 
     Assertions.assertThatThrownBy(() -> verifier.verify(token))
-        .isInstanceOf(OidcVerificationException.class)
-        .hasMessageContaining("email");
+      .isInstanceOf(OidcVerificationException.class)
+      .hasMessageContaining("email");
   }
 
   @Test
   void expiredTokenThrowsVerificationException() throws Exception {
     final var token = sign(
-        validClaims().expirationTime(Date.from(Instant.now().minusSeconds(60))).build()
+      validClaims().expirationTime(Date.from(Instant.now().minusSeconds(60))).build()
     );
 
     Assertions.assertThatThrownBy(() -> verifier.verify(token))
-        .isInstanceOf(OidcVerificationException.class);
+      .isInstanceOf(OidcVerificationException.class);
   }
 
   @Test
   void malformedTokenThrowsVerificationException() {
     Assertions.assertThatThrownBy(() -> verifier.verify("not.a.valid.jwt"))
-        .isInstanceOf(OidcVerificationException.class);
+      .isInstanceOf(OidcVerificationException.class);
   }
 
   @Test
   void missingNameClaimReturnsEmptyName() throws Exception {
     final var claims = new JWTClaimsSet.Builder()
-        .issuer(GOOGLE_ISSUER)
-        .subject("sub-no-name")
-        .audience(CLIENT_ID)
-        .claim("email", "user@example.com")
-        .claim("email_verified", true)
-        .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
-        .build();
+      .issuer(GOOGLE_ISSUER)
+      .subject("sub-no-name")
+      .audience(CLIENT_ID)
+      .claim("email", "user@example.com")
+      .claim("email_verified", true)
+      .expirationTime(Date.from(Instant.now().plusSeconds(3600)))
+      .build();
 
     final var result = verifier.verify(sign(claims));
 
@@ -137,6 +137,6 @@ class GoogleOidcVerifierTest {
     final var tampered = parts[0] + "." + parts[1] + ".invalidsignature";
 
     Assertions.assertThatThrownBy(() -> verifier.verify(tampered))
-        .isInstanceOf(OidcVerificationException.class);
+      .isInstanceOf(OidcVerificationException.class);
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiClient";
-import { lookupBarcode, offProductToFoodItem, searchOff } from "./offProductApi";
 import type { OffProductResponse } from "./offProductApi";
+import { lookupBarcode, offProductToFoodItem, searchOff } from "./offProductApi";
 
 const mockApiGet = vi.hoisted(() => vi.fn());
 

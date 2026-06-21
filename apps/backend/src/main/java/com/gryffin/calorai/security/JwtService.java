@@ -10,7 +10,9 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/** Service for JWT generation, validation, and claims extraction. */
+/**
+ * Service for JWT generation, validation, and claims extraction.
+ */
 @Service
 public class JwtService {
 
@@ -19,9 +21,9 @@ public class JwtService {
   private final long refreshExpirationMs;
 
   public JwtService(
-      SecretKey jwtSigningKey,
-      @Value("${app.jwt.expiration-ms}") long accessExpirationMs,
-      @Value("${app.jwt.refresh-expiration-ms}") long refreshExpirationMs
+    SecretKey jwtSigningKey,
+    @Value("${app.jwt.expiration-ms}") long accessExpirationMs,
+    @Value("${app.jwt.refresh-expiration-ms}") long refreshExpirationMs
   ) {
     this.signingKey = jwtSigningKey;
     this.accessExpirationMs = accessExpirationMs;
@@ -31,32 +33,32 @@ public class JwtService {
   public String generateAccessToken(UUID userId, String email) {
     var now = new Date();
     return Jwts.builder()
-        .subject(userId.toString())
-        .claims(Map.of("email", email != null ? email : "", "type", "access"))
-        .issuedAt(now)
-        .expiration(new Date(now.getTime() + accessExpirationMs))
-        .signWith(signingKey)
-        .compact();
+      .subject(userId.toString())
+      .claims(Map.of("email", email != null ? email : "", "type", "access"))
+      .issuedAt(now)
+      .expiration(new Date(now.getTime() + accessExpirationMs))
+      .signWith(signingKey)
+      .compact();
   }
 
   public String generateRefreshToken(UUID userId) {
     var now = new Date();
     return Jwts.builder()
-        .subject(userId.toString())
-        .id(UUID.randomUUID().toString())
-        .claim("type", "refresh")
-        .issuedAt(now)
-        .expiration(new Date(now.getTime() + refreshExpirationMs))
-        .signWith(signingKey)
-        .compact();
+      .subject(userId.toString())
+      .id(UUID.randomUUID().toString())
+      .claim("type", "refresh")
+      .issuedAt(now)
+      .expiration(new Date(now.getTime() + refreshExpirationMs))
+      .signWith(signingKey)
+      .compact();
   }
 
   public Claims parseToken(String token) {
     return Jwts.parser()
-        .verifyWith(signingKey)
-        .build()
-        .parseSignedClaims(token)
-        .getPayload();
+      .verifyWith(signingKey)
+      .build()
+      .parseSignedClaims(token)
+      .getPayload();
   }
 
   public UUID extractUserId(String token) {

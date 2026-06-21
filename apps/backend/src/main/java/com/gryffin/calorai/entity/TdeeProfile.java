@@ -19,7 +19,9 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 
-/** JPA entity representing a user's TDEE and calorie goal profile. */
+/**
+ * JPA entity representing a user's TDEE and calorie goal profile.
+ */
 @Entity
 @Table(name = "tdee_profiles")
 public class TdeeProfile {
@@ -130,7 +132,9 @@ public class TdeeProfile {
     return updatedAt;
   }
 
-  /** Sets updatedAt to now before every INSERT and UPDATE. */
+  /**
+   * Sets updatedAt to now before every INSERT and UPDATE.
+   */
   @PrePersist
   @PreUpdate
   protected void onSave() {

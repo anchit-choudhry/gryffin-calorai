@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PhenologyWheel } from "./PhenologyWheel";
-import type { FoodItem, BodyMeasurement, UserAchievement } from "@/db/dbService";
+import type { BodyMeasurement, FoodItem, UserAchievement } from "@/db/dbService";
 
 const currentYear = new Date().getFullYear();
 

@@ -12,7 +12,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Global exception handler that maps domain exceptions to HTTP problem details. */
+/**
+ * Global exception handler that maps domain exceptions to HTTP problem details.
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -58,18 +60,18 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
     log.debug("Constraint violation: {}", ex.getMessage());
     var detail = ex.getConstraintViolations().stream()
-        .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-        .findFirst()
-        .orElse("Validation failed");
+      .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+      .findFirst()
+      .orElse("Validation failed");
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
     var detail = ex.getBindingResult().getFieldErrors().stream()
-        .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-        .findFirst()
-        .orElse("Validation failed");
+      .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+      .findFirst()
+      .orElse("Validation failed");
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
   }
 
@@ -77,6 +79,6 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleGeneric(Exception ex) {
     log.error("Unexpected error", ex);
     return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR,
-        "An unexpected error occurred");
+      "An unexpected error occurred");
   }
 }

@@ -15,49 +15,49 @@ import java.time.LocalDate;
  */
 @Schema(description = "Food item log entry")
 public record FoodItemDto(
-    @Schema(description = "Unique ID (UUID)", accessMode = Schema.AccessMode.READ_ONLY)
-    String id,
+  @Schema(description = "Unique ID (UUID)", accessMode = Schema.AccessMode.READ_ONLY)
+  String id,
 
-    @NotBlank @Size(max = 255)
-    @Schema(description = "Food name") String name,
+  @NotBlank @Size(max = 255)
+  @Schema(description = "Food name") String name,
 
-    @DecimalMin("0") @DecimalMax("9999")
-    @Schema(description = "Calories (kcal)") double calories,
+  @DecimalMin("0") @DecimalMax("9999")
+  @Schema(description = "Calories (kcal)") double calories,
 
-    @DecimalMin("0")
-    @Schema(description = "Serving size multiplier") double servingSize,
+  @DecimalMin("0")
+  @Schema(description = "Serving size multiplier") double servingSize,
 
-    @DecimalMin("0") @DecimalMax("999")
-    @Schema(description = "Protein (g)") double protein,
+  @DecimalMin("0") @DecimalMax("999")
+  @Schema(description = "Protein (g)") double protein,
 
-    @DecimalMin("0") @DecimalMax("999")
-    @Schema(description = "Carbohydrates (g)") double carbs,
+  @DecimalMin("0") @DecimalMax("999")
+  @Schema(description = "Carbohydrates (g)") double carbs,
 
-    @DecimalMin("0") @DecimalMax("999")
-    @Schema(description = "Fat (g)") double fat,
+  @DecimalMin("0") @DecimalMax("999")
+  @Schema(description = "Fat (g)") double fat,
 
-    @NotNull
-    @Schema(description = "Date logged (YYYY-MM-DD)") LocalDate dateLogged,
+  @NotNull
+  @Schema(description = "Date logged (YYYY-MM-DD)") LocalDate dateLogged,
 
-    @Schema(description = "Whether marked as favourite") boolean isFavorite,
+  @Schema(description = "Whether marked as favourite") boolean isFavorite,
 
-    @Pattern(
-        regexp = "^(Breakfast|Lunch|Snacks|Dinner)$",
-        message = "mealType must be Breakfast, Lunch, Snacks, or Dinner"
-    )
-    @Schema(description = "Meal type: Breakfast | Lunch | Snacks | Dinner") String mealType,
+  @Pattern(
+    regexp = "^(Breakfast|Lunch|Snacks|Dinner)$",
+    message = "mealType must be Breakfast, Lunch, Snacks, or Dinner"
+  )
+  @Schema(description = "Meal type: Breakfast | Lunch | Snacks | Dinner") String mealType,
 
-    @Schema(
-        description = "Last updated timestamp (server-managed)",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    Instant updatedAt,
+  @Schema(
+    description = "Last updated timestamp (server-managed)",
+    accessMode = Schema.AccessMode.READ_ONLY
+  )
+  Instant updatedAt,
 
-    @Schema(
-        description = "Soft-delete timestamp; non-null means deleted",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    Instant deletedAt
+  @Schema(
+    description = "Soft-delete timestamp; non-null means deleted",
+    accessMode = Schema.AccessMode.READ_ONLY
+  )
+  Instant deletedAt
 ) {
 
 }

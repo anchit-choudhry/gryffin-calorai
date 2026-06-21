@@ -78,7 +78,7 @@ class TdeeProfileServiceTest {
 
     Assertions.assertThat(result.age()).isEqualTo(30);
     BDDMockito.then(tdeeProfileRepository).should()
-        .save(ArgumentMatchers.any(TdeeProfile.class));
+      .save(ArgumentMatchers.any(TdeeProfile.class));
   }
 
   @Test
@@ -86,7 +86,7 @@ class TdeeProfileServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.of(user));
     final var existing = buildProfile();
     BDDMockito.given(tdeeProfileRepository.findByUserId(userId))
-        .willReturn(Optional.of(existing));
+      .willReturn(Optional.of(existing));
     BDDMockito.given(tdeeProfileRepository.save(ArgumentMatchers.any())).willReturn(existing);
 
     final var dto = new TdeeProfileDto(null, 31, "male", 178.0, 77.0, "moderate", "lose", null);
@@ -103,7 +103,7 @@ class TdeeProfileServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> tdeeProfileService.upsert(userId, buildDto()))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private TdeeProfile buildProfile() {

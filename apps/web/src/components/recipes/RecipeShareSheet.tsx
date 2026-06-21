@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import type { FC } from "react";
+import { useEffect, useRef, useState } from "react";
 import QrCreator from "qr-creator";
-import { Copy, Check, X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 import type { Recipe } from "@/db/dbService";
 import { useAppState } from "../../state/AppState";
 import { buildShareUrl } from "../../lib/recipeShare";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { zipSync, strToU8 } from "fflate";
+import { strToU8, zipSync } from "fflate";
 import { parseAppleHealthExport } from "./appleHealth";
 import type { UserId } from "@/types";
 

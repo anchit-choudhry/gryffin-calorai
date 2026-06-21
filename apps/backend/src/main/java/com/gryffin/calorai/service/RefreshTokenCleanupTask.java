@@ -7,7 +7,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Scheduled task that prunes expired refresh tokens from the database nightly. */
+/**
+ * Scheduled task that prunes expired refresh tokens from the database nightly.
+ */
 @Component
 public class RefreshTokenCleanupTask {
 

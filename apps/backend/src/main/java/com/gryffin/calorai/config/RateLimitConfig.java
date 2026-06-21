@@ -17,7 +17,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 
-/** Configures Bucket4j rate limiting backed by Valkey (Redis-compatible) via Lettuce. */
+/**
+ * Configures Bucket4j rate limiting backed by Valkey (Redis-compatible) via Lettuce.
+ */
 @Configuration
 public class RateLimitConfig {
 
@@ -47,9 +49,9 @@ public class RateLimitConfig {
   @Bean(destroyMethod = "shutdown")
   public RedisClient rateLimitRedisClient() {
     return RedisClient.create(RedisURI.builder()
-        .withHost(valkeyHost)
-        .withPort(valkeyPort)
-        .build());
+      .withHost(valkeyHost)
+      .withPort(valkeyPort)
+      .build());
   }
 
   /**
@@ -60,7 +62,7 @@ public class RateLimitConfig {
    */
   @Bean(destroyMethod = "close")
   public StatefulRedisConnection<String, byte[]> rateLimitRedisConnection(
-      final RedisClient rateLimitRedisClient
+    final RedisClient rateLimitRedisClient
   ) {
     return rateLimitRedisClient.connect(RedisCodec.of(StringCodec.UTF8, new ByteArrayCodec()));
   }
@@ -73,12 +75,12 @@ public class RateLimitConfig {
    */
   @Bean
   public ProxyManager<String> rateLimitProxyManager(
-      final StatefulRedisConnection<String, byte[]> rateLimitRedisConnection
+    final StatefulRedisConnection<String, byte[]> rateLimitRedisConnection
   ) {
     return Bucket4jLettuce.casBasedBuilder(rateLimitRedisConnection)
-        .expirationAfterWrite(
-            ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(2)))
-        .build();
+      .expirationAfterWrite(
+        ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofMinutes(2)))
+      .build();
   }
 
   /**
@@ -90,11 +92,11 @@ public class RateLimitConfig {
   @Bean
   public RateLimitFilter rateLimitFilter(final ProxyManager<String> rateLimitProxyManager) {
     return new RateLimitFilter(
-        rateLimitProxyManager,
-        tokenCapacity,
-        tokenRefillSeconds,
-        refreshCapacity,
-        refreshRefillSeconds
+      rateLimitProxyManager,
+      tokenCapacity,
+      tokenRefillSeconds,
+      refreshCapacity,
+      refreshRefillSeconds
     );
   }
 
@@ -106,7 +108,7 @@ public class RateLimitConfig {
    */
   @Bean
   public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(
-      final RateLimitFilter rateLimitFilter
+    final RateLimitFilter rateLimitFilter
   ) {
     final var registration = new FilterRegistrationBean<>(rateLimitFilter);
     registration.setOrder(Ordered.HIGHEST_PRECEDENCE);

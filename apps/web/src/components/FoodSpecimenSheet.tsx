@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import type { FC } from "react";
+import { useMemo } from "react";
 import { X } from "lucide-react";
 import type { FoodItem } from "@/db/dbService";
 import type { ISODate } from "@/types";

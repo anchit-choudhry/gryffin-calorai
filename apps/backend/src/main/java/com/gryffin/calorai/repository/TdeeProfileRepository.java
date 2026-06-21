@@ -5,7 +5,9 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/** Repository for TdeeProfile entities. */
+/**
+ * Repository for TdeeProfile entities.
+ */
 public interface TdeeProfileRepository extends JpaRepository<TdeeProfile, UUID> {
 
   /**

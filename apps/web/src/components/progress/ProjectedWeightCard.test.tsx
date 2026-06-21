@@ -3,12 +3,11 @@ import { render, screen } from "@testing-library/react";
 import ProjectedWeightCard from "./ProjectedWeightCard";
 import type { TdeeProfile } from "@/db/dbService";
 import { UserId } from "@/types";
+import { useAppState } from "@/state/AppState";
 
 vi.mock("@/state/AppState", () => ({
   useAppState: vi.fn(() => ({ bodyMeasurements: [] })),
 }));
-
-import { useAppState } from "@/state/AppState";
 
 const userId = UserId("test-user");
 

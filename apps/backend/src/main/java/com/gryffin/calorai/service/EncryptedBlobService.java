@@ -16,7 +16,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Service for E2E encrypted blob storage and salt management. */
+/**
+ * Service for E2E encrypted blob storage and salt management.
+ */
 @Service
 public class EncryptedBlobService {
 
@@ -24,11 +26,13 @@ public class EncryptedBlobService {
   private final UserE2EConfigRepository configRepository;
   private final UserRepository userRepository;
 
-  /** Constructor injection. */
+  /**
+   * Constructor injection.
+   */
   public EncryptedBlobService(
-      final EncryptedBlobRepository blobRepository,
-      final UserE2EConfigRepository configRepository,
-      final UserRepository userRepository) {
+    final EncryptedBlobRepository blobRepository,
+    final UserE2EConfigRepository configRepository,
+    final UserRepository userRepository) {
     this.blobRepository = blobRepository;
     this.configRepository = configRepository;
     this.userRepository = userRepository;
@@ -42,47 +46,47 @@ public class EncryptedBlobService {
    */
   public Optional<UserE2ESaltDto> getSalt(final UUID userId) {
     return configRepository.findById(userId)
-        .map(c -> new UserE2ESaltDto(c.getSalt()));
+      .map(c -> new UserE2ESaltDto(c.getSalt()));
   }
 
   /**
    * Stores or updates the PBKDF2 salt for a user. Safe to call multiple times (upsert).
    *
    * @param userId the user ID
-   * @param dto the salt payload
+   * @param dto    the salt payload
    */
   @Transactional
   public void saveSalt(final UUID userId, final UserE2ESaltDto dto) {
     final UserE2EConfig config = configRepository.findById(userId)
-        .orElseGet(() -> {
-          final UserE2EConfig newConfig = new UserE2EConfig();
-          newConfig.setUserId(userId);
-          return newConfig;
-        });
+      .orElseGet(() -> {
+        final UserE2EConfig newConfig = new UserE2EConfig();
+        newConfig.setUserId(userId);
+        return newConfig;
+      });
     config.setSalt(dto.salt());
     configRepository.save(config);
   }
 
   /**
-   * Upserts a batch of encrypted blobs for a user. Idempotent: re-uploading the same
-   * clientBlobId replaces iv and ciphertext.
+   * Upserts a batch of encrypted blobs for a user. Idempotent: re-uploading the same clientBlobId
+   * replaces iv and ciphertext.
    *
    * @param userId the user ID
-   * @param dtos the blobs to upsert
+   * @param dtos   the blobs to upsert
    */
   @Transactional
   public void upsertBlobs(final UUID userId, final List<EncryptedBlobDto> dtos) {
     final AppUser user = userRepository.findById(userId)
-        .orElseThrow(() -> new NoSuchElementException("User not found: " + userId));
+      .orElseThrow(() -> new NoSuchElementException("User not found: " + userId));
     for (final EncryptedBlobDto dto : dtos) {
       final EncryptedBlob blob = blobRepository
-          .findByUserIdAndClientBlobId(userId, dto.clientBlobId())
-          .orElseGet(() -> {
-            final EncryptedBlob newBlob = new EncryptedBlob();
-            newBlob.setUser(user);
-            newBlob.setClientBlobId(dto.clientBlobId());
-            return newBlob;
-          });
+        .findByUserIdAndClientBlobId(userId, dto.clientBlobId())
+        .orElseGet(() -> {
+          final EncryptedBlob newBlob = new EncryptedBlob();
+          newBlob.setUser(user);
+          newBlob.setClientBlobId(dto.clientBlobId());
+          return newBlob;
+        });
       blob.setIv(dto.iv());
       blob.setCiphertext(dto.ciphertext());
       blob.setDeleted(dto.isDeleted());
@@ -94,18 +98,18 @@ public class EncryptedBlobService {
    * Returns blobs updated after the given instant, up to the given limit, for delta pull.
    *
    * @param userId the user ID
-   * @param since the cutoff timestamp (exclusive)
-   * @param limit maximum number of blobs to return
+   * @param since  the cutoff timestamp (exclusive)
+   * @param limit  maximum number of blobs to return
    * @return list of blob DTOs ordered by updatedAt ascending
    */
   public List<EncryptedBlobDto> getBlobsSince(
-      final UUID userId, final Instant since, final int limit) {
+    final UUID userId, final Instant since, final int limit) {
     return blobRepository
-        .findByUserIdAndUpdatedAtAfterOrderByUpdatedAtAsc(userId, since)
-        .stream()
-        .limit(limit)
-        .map(this::toDto)
-        .toList();
+      .findByUserIdAndUpdatedAtAfterOrderByUpdatedAtAsc(userId, since)
+      .stream()
+      .limit(limit)
+      .map(this::toDto)
+      .toList();
   }
 
   /**
@@ -120,11 +124,11 @@ public class EncryptedBlobService {
 
   private EncryptedBlobDto toDto(final EncryptedBlob blob) {
     return new EncryptedBlobDto(
-        blob.getClientBlobId(),
-        blob.getIv(),
-        blob.getCiphertext(),
-        blob.getUpdatedAt(),
-        blob.isDeleted()
+      blob.getClientBlobId(),
+      blob.getIv(),
+      blob.getCiphertext(),
+      blob.getUpdatedAt(),
+      blob.isDeleted()
     );
   }
 }

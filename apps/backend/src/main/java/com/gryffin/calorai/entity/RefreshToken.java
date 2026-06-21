@@ -10,23 +10,22 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** JPA entity representing a stored refresh token JTI for single-use rotation. */
+/**
+ * JPA entity representing a stored refresh token JTI for single-use rotation.
+ */
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken {
 
+  @Column(nullable = false, updatable = false)
+  private final Instant createdAt = Instant.now();
   @Id
   private UUID jti;
-
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private AppUser user;
-
   @Column(nullable = false)
   private Instant expiresAt;
-
-  @Column(nullable = false, updatable = false)
-  private final Instant createdAt = Instant.now();
 
   public UUID getJti() {
     return jti;

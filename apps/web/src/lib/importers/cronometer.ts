@@ -1,5 +1,5 @@
-import { parseNum, splitCsvRow } from "./utils";
 import type { ImportedFoodEntry, ParseResult } from "./utils";
+import { parseNum, splitCsvRow } from "./utils";
 
 /**
  * Parses a Cronometer food diary CSV export.

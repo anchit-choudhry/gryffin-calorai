@@ -11,9 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Verifies Google ID tokens locally using JWKS-based JWT signature verification.
- * Uses the Google public key set at googleapis.com to avoid a round-trip to the tokeninfo
- * endpoint on every request.
+ * Verifies Google ID tokens locally using JWKS-based JWT signature verification. Uses the Google
+ * public key set at googleapis.com to avoid a round-trip to the tokeninfo endpoint on every
+ * request.
  */
 @Component("googleOidcVerifier")
 public class GoogleOidcVerifier implements OidcTokenVerifier {
@@ -23,15 +23,17 @@ public class GoogleOidcVerifier implements OidcTokenVerifier {
   private final String clientId;
   private final DefaultJWTProcessor<SecurityContext> jwtProcessor;
 
-  /** Creates a verifier using the provided client ID and JWK source. */
+  /**
+   * Creates a verifier using the provided client ID and JWK source.
+   */
   public GoogleOidcVerifier(
-      @Value("${app.oauth2.google.client-id}") String clientId,
-      @Qualifier("googleJwkSource") JWKSource<SecurityContext> jwkSource
+    @Value("${app.oauth2.google.client-id}") String clientId,
+    @Qualifier("googleJwkSource") JWKSource<SecurityContext> jwkSource
   ) {
     this.clientId = clientId;
     this.jwtProcessor = new DefaultJWTProcessor<>();
     this.jwtProcessor.setJWSKeySelector(
-        new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource)
+      new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource)
     );
   }
 
@@ -57,10 +59,10 @@ public class GoogleOidcVerifier implements OidcTokenVerifier {
       final String name = nameObj instanceof String s ? s : "";
 
       return new OidcClaims(
-          claims.getSubject(),
-          claims.getStringClaim("email"),
-          name,
-          "google"
+        claims.getSubject(),
+        claims.getStringClaim("email"),
+        name,
+        "google"
       );
     } catch (OidcVerificationException e) {
       throw e;

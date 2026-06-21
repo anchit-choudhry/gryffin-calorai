@@ -5,16 +5,18 @@ import org.flywaydb.core.Flyway;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Flyway database migration configuration. */
+/**
+ * Flyway database migration configuration.
+ */
 @Configuration
 public class FlywayConfig {
 
   @Bean
   public Flyway flyway(DataSource dataSource) {
     Flyway flyway = Flyway.configure()
-        .dataSource(dataSource)
-        .locations("classpath:db/migration")
-        .load();
+      .dataSource(dataSource)
+      .locations("classpath:db/migration")
+      .load();
     flyway.migrate();
     return flyway;
   }

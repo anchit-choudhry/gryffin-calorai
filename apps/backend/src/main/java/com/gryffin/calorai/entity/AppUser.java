@@ -12,32 +12,28 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 import java.util.UUID;
 
-/** JPA entity representing an authenticated application user. */
+/**
+ * JPA entity representing an authenticated application user.
+ */
 @Entity
 @Table(name = "app_users")
 public class AppUser {
 
+  @Column(nullable = false, updatable = false)
+  private final Instant createdAt = Instant.now();
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
-
   @NotBlank
   @Column(nullable = false)
   private String displayName;
-
   @Email
   @Column(unique = true)
   private String email;
-
   @Column(nullable = false)
   private String provider; // "google" | "apple" | "local"
-
   @Column(unique = true)
   private String providerSubject; // OAuth2 sub claim
-
-  @Column(nullable = false, updatable = false)
-  private final Instant createdAt = Instant.now();
-
   private Instant updatedAt = Instant.now();
 
   @PreUpdate
@@ -49,7 +45,9 @@ public class AppUser {
     return id;
   }
 
-  /** Sets the entity ID (used in tests and batch operations). */
+  /**
+   * Sets the entity ID (used in tests and batch operations).
+   */
   public void setId(UUID id) {
     this.id = id;
   }

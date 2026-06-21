@@ -11,33 +11,33 @@ import java.time.LocalDate;
  */
 @Schema(description = "Water intake log entry")
 public record WaterLogDto(
-    @Schema(
-        description = "Unique ID (UUID)",
-        accessMode = Schema.AccessMode.READ_ONLY
-    ) String id,
+  @Schema(
+    description = "Unique ID (UUID)",
+    accessMode = Schema.AccessMode.READ_ONLY
+  ) String id,
 
-    @DecimalMin("0")
-    @Schema(description = "Amount in millilitres") double amount,
+  @DecimalMin("0")
+  @Schema(description = "Amount in millilitres") double amount,
 
-    @NotNull LocalDate dateLogged,
+  @NotNull LocalDate dateLogged,
 
-    @Schema(
-        description = "Time the entry was originally logged",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    Instant loggedAt,
+  @Schema(
+    description = "Time the entry was originally logged",
+    accessMode = Schema.AccessMode.READ_ONLY
+  )
+  Instant loggedAt,
 
-    @Schema(
-        description = "Last updated timestamp (server-managed)",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    Instant updatedAt,
+  @Schema(
+    description = "Last updated timestamp (server-managed)",
+    accessMode = Schema.AccessMode.READ_ONLY
+  )
+  Instant updatedAt,
 
-    @Schema(
-        description = "Soft-delete timestamp; non-null means deleted",
-        accessMode = Schema.AccessMode.READ_ONLY
-    )
-    Instant deletedAt
+  @Schema(
+    description = "Soft-delete timestamp; non-null means deleted",
+    accessMode = Schema.AccessMode.READ_ONLY
+  )
+  Instant deletedAt
 ) {
 
 }

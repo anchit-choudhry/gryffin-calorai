@@ -1,5 +1,5 @@
-import { normalizeMealType, parseNum, splitCsvRow } from "./utils";
 import type { ImportedFoodEntry, ParseResult } from "./utils";
+import { normalizeMealType, parseNum, splitCsvRow } from "./utils";
 
 /**
  * Parses a Lose It! food diary CSV export.

@@ -53,7 +53,7 @@ class WaterLogServiceTest {
     final var log = buildLog(250.0, LocalDate.now());
     BDDMockito.given(
         waterLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(List.of(log));
+      .willReturn(List.of(log));
 
     final var result = waterLogService.getDailyLogs(userId, LocalDate.now());
 
@@ -66,7 +66,7 @@ class WaterLogServiceTest {
     final var since = Instant.now().minusSeconds(3600);
     final var log = buildLog(300.0, LocalDate.now());
     BDDMockito.given(waterLogRepository.findByUserIdAndUpdatedAtAfter(userId, since))
-        .willReturn(List.of(log));
+      .willReturn(List.of(log));
 
     final var result = waterLogService.getChangesSince(userId, since);
 
@@ -92,7 +92,7 @@ class WaterLogServiceTest {
 
     final var dto = new WaterLogDto(null, 200.0, LocalDate.now(), null, null, null);
     Assertions.assertThatThrownBy(() -> waterLogService.create(userId, dto))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
@@ -145,7 +145,7 @@ class WaterLogServiceTest {
     BDDMockito.given(waterLogRepository.findById(logId)).willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> waterLogService.delete(userId, logId))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private WaterLog buildLog(final double amount, final LocalDate date) {

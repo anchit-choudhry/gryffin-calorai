@@ -1,5 +1,5 @@
 import type { BodyMeasurement } from "@/db/dbService";
-import { shiftISODate, type ISODate } from "@/types";
+import { type ISODate, shiftISODate } from "@/types";
 
 type FoodLogEntry = { calories: number; dateLogged: string };
 

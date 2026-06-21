@@ -518,14 +518,32 @@ input[type='range'] {
    ───────────────────────────────────────────────────────────── */
 @media print {
   /* Hide all app chrome */
-  body > *:not(#root) { display: none !important; }
-  nav, footer, .no-print { display: none !important; }
-  #root > * { display: none !important; }
-  #root #print-root { display: block !important; }
+  body > *:not(#root) {
+    display: none !important;
+  }
 
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  nav, footer, .no-print {
+    display: none !important;
+  }
 
-  body { background: white; color: black; font-size: 10pt; }
+  #root > * {
+    display: none !important;
+  }
+
+  #root #print-root {
+    display: block !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    background: white;
+    color: black;
+    font-size: 10pt;
+  }
 }
 
 /* ─── Print page scaffold ─────────────────────────────────── */
@@ -548,7 +566,9 @@ input[type='range'] {
 }
 
 /* ─── Print header ─────────────────────────────────────────── */
-.print-header { margin-bottom: 20px; }
+.print-header {
+  margin-bottom: 20px;
+}
 
 .print-brand {
   font-family: 'Spectral', Georgia, serif;
@@ -602,11 +622,22 @@ input[type='range'] {
   text-align: left;
 }
 
-.print-th-day { width: 18%; }
-.print-th-meal { width: 18%; }
-.print-th-total { width: 10%; text-align: right; }
+.print-th-day {
+  width: 18%;
+}
 
-.print-row { border-bottom: 1px solid oklch(0.92 0.010 78); }
+.print-th-meal {
+  width: 18%;
+}
+
+.print-th-total {
+  width: 10%;
+  text-align: right;
+}
+
+.print-row {
+  border-bottom: 1px solid oklch(0.92 0.010 78);
+}
 
 .print-td-day {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -674,7 +705,9 @@ input[type='range'] {
 }
 
 /* ─── Notes section ────────────────────────────────────────── */
-.print-notes-section { margin-top: 24px; }
+.print-notes-section {
+  margin-top: 24px;
+}
 
 .print-notes-label {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -706,7 +739,9 @@ input[type='range'] {
   border-bottom: 1px solid oklch(0.85 0.015 75);
 }
 
-.print-month-tile:nth-child(4n) { border-right: none; }
+.print-month-tile:nth-child(4n) {
+  border-right: none;
+}
 
 .print-month-label {
   font-family: 'JetBrains Mono', 'Courier New', monospace;

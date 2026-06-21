@@ -16,10 +16,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** JPA entity representing an intermittent fasting session. */
+/**
+ * JPA entity representing an intermittent fasting session.
+ */
 @Entity
 @Table(name = "fasting_sessions", indexes = {
-    @Index(name = "idx_fasting_user_date", columnList = "user_id, date_logged")
+  @Index(name = "idx_fasting_user_date", columnList = "user_id, date_logged")
 })
 public class FastingSession {
 
@@ -51,7 +53,9 @@ public class FastingSession {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /** Sets updated_at before every insert and update. */
+  /**
+   * Sets updated_at before every insert and update.
+   */
   @PrePersist
   @PreUpdate
   protected void onSave() {

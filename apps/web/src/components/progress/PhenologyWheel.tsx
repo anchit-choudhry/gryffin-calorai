@@ -1,8 +1,6 @@
-import { useMemo } from "react";
 import type { FC } from "react";
-import type { FoodItem } from "@/db/dbService";
-import type { UserAchievement } from "@/db/dbService";
-import type { BodyMeasurement } from "@/db/dbService";
+import { useMemo } from "react";
+import type { BodyMeasurement, FoodItem, UserAchievement } from "@/db/dbService";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 
 const SIZE = 480;

@@ -9,7 +9,9 @@ import java.net.URI;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** Configures the Google JWKS source for local OIDC token verification. */
+/**
+ * Configures the Google JWKS source for local OIDC token verification.
+ */
 @Configuration
 public class GoogleOidcConfig {
 
@@ -25,7 +27,7 @@ public class GoogleOidcConfig {
   public JWKSource<SecurityContext> googleJwkSource() throws MalformedURLException {
     final var retriever = new DefaultResourceRetriever(5_000, 5_000);
     return JWKSourceBuilder
-        .create(URI.create(GOOGLE_JWKS_URL).toURL(), retriever)
-        .build();
+      .create(URI.create(GOOGLE_JWKS_URL).toURL(), retriever)
+      .build();
   }
 }

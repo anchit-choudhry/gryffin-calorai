@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useAppState } from "@/state/AppState";
 import { computeAllCorrelations } from "@/lib/correlations";
 import type { FoodItem } from "@/db/dbService";

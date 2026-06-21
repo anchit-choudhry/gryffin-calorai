@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** JWT signing key configuration. */
+/**
+ * JWT signing key configuration.
+ */
 @Configuration
 public class JwtConfig {
 
@@ -15,7 +17,7 @@ public class JwtConfig {
   public SecretKey jwtSigningKey(@Value("${app.jwt.secret}") String secret) {
     if (secret.startsWith("change-this")) {
       throw new IllegalStateException(
-          "JWT_SECRET must be set to a secure random value; the placeholder default must not be used"
+        "JWT_SECRET must be set to a secure random value; the placeholder default must not be used"
       );
     }
     return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for daily step count tracking. */
+/**
+ * REST controller for daily step count tracking.
+ */
 @Tag(name = "Step Logs", description = "Step count tracking (one entry per day per user)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -45,19 +47,19 @@ public class StepLogController {
   @Operation(summary = "Get step count for a specific date")
   @GetMapping("/{date}")
   public ResponseEntity<StepLogDto> getByDate(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
   ) {
     return stepLogService.getByDate(UUID.fromString(jwt.getSubject()), date)
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+      .map(ResponseEntity::ok)
+      .orElse(ResponseEntity.notFound().build());
   }
 
   @Operation(summary = "Get all changes since a timestamp (for delta sync)")
   @GetMapping("/changes")
   public List<StepLogDto> getChanges(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam final Instant since
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam final Instant since
   ) {
     return stepLogService.getChangesSince(UUID.fromString(jwt.getSubject()), since);
   }
@@ -65,8 +67,8 @@ public class StepLogController {
   @Operation(summary = "Upsert step count for a date (one record per day)")
   @PutMapping
   public StepLogDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final StepLogDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final StepLogDto dto
   ) {
     return stepLogService.upsertByDate(UUID.fromString(jwt.getSubject()), dto);
   }
@@ -74,8 +76,8 @@ public class StepLogController {
   @Operation(summary = "Soft-delete the step log for a given date")
   @DeleteMapping("/{date}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
   ) {
     stepLogService.deleteByDate(UUID.fromString(jwt.getSubject()), date);
     return ResponseEntity.noContent().build();

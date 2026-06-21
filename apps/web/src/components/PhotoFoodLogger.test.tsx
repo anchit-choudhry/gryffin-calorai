@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PhotoFoodLogger from "./PhotoFoodLogger";
 import { useAppState } from "@/state/AppState";
-import { UserId, todayISO } from "@/types";
+import { todayISO, UserId } from "@/types";
 
 const TEST_USER = UserId("photo-test-user");
 

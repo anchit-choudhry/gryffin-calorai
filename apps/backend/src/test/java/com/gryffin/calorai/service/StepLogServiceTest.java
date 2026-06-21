@@ -53,7 +53,7 @@ class StepLogServiceTest {
     final var log = buildStepLog(8000, LocalDate.now());
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDeletedAtIsNullOrderByDateLoggedDesc(userId))
-        .willReturn(List.of(log));
+      .willReturn(List.of(log));
 
     final var result = stepLogService.getAll(userId);
 
@@ -66,7 +66,7 @@ class StepLogServiceTest {
     final var log = buildStepLog(10000, LocalDate.now());
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.of(log));
+      .willReturn(Optional.of(log));
 
     final var result = stepLogService.getByDate(userId, LocalDate.now());
 
@@ -78,7 +78,7 @@ class StepLogServiceTest {
   void getByDateReturnsEmptyWhenNoLog() {
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
 
     final var result = stepLogService.getByDate(userId, LocalDate.now());
 
@@ -89,7 +89,7 @@ class StepLogServiceTest {
   void getChangesSinceReturnsLogsUpdatedAfterTimestamp() {
     final var since = Instant.now().minusSeconds(3600);
     BDDMockito.given(stepLogRepository.findByUserIdAndUpdatedAtAfter(userId, since))
-        .willReturn(List.of(buildStepLog(5000, LocalDate.now())));
+      .willReturn(List.of(buildStepLog(5000, LocalDate.now())));
 
     final var result = stepLogService.getChangesSince(userId, since);
 
@@ -101,7 +101,7 @@ class StepLogServiceTest {
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.of(user));
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
     final var saved = buildStepLog(7500, LocalDate.now());
     BDDMockito.given(stepLogRepository.save(ArgumentMatchers.any())).willReturn(saved);
 
@@ -117,7 +117,7 @@ class StepLogServiceTest {
     final var existing = buildStepLog(5000, LocalDate.now());
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.of(existing));
+      .willReturn(Optional.of(existing));
     BDDMockito.given(stepLogRepository.save(ArgumentMatchers.any())).willReturn(existing);
 
     final var dto = new StepLogDto(null, 12000, LocalDate.now(), null, null);
@@ -133,7 +133,7 @@ class StepLogServiceTest {
     final var log = buildStepLog(6000, LocalDate.now());
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.of(log));
+      .willReturn(Optional.of(log));
 
     stepLogService.deleteByDate(userId, LocalDate.now());
 
@@ -146,10 +146,10 @@ class StepLogServiceTest {
   void deleteByDateThrowsWhenNotFound() {
     BDDMockito.given(
         stepLogRepository.findByUserIdAndDateLoggedAndDeletedAtIsNull(userId, LocalDate.now()))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> stepLogService.deleteByDate(userId, LocalDate.now()))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private StepLog buildStepLog(final int steps, final LocalDate date) {

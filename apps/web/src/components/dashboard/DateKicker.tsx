@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
 import type { FC } from "react";
+import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppState } from "@/state/AppState";

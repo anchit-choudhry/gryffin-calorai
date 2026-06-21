@@ -17,10 +17,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** JPA entity representing a single water intake log entry. */
+/**
+ * JPA entity representing a single water intake log entry.
+ */
 @Entity
 @Table(name = "water_logs", indexes = {
-    @Index(name = "idx_water_user_date", columnList = "user_id, date_logged")
+  @Index(name = "idx_water_user_date", columnList = "user_id, date_logged")
 })
 public class WaterLog {
 
@@ -48,7 +50,9 @@ public class WaterLog {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /** Sets updated_at before every insert and update. */
+  /**
+   * Sets updated_at before every insert and update.
+   */
   @PrePersist
   @PreUpdate
   protected void onSave() {

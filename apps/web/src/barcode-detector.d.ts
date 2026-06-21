@@ -15,6 +15,9 @@ interface BarcodeDetectorOptions {
 
 declare class BarcodeDetector {
   constructor(options?: BarcodeDetectorOptions);
+
+  static getSupportedFormats(): Promise<string[]>;
+
   detect(
     image:
       | HTMLVideoElement
@@ -24,5 +27,4 @@ declare class BarcodeDetector {
       | ImageData
       | SVGImageElement,
   ): Promise<DetectedBarcode[]>;
-  static getSupportedFormats(): Promise<string[]>;
 }

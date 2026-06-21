@@ -5,8 +5,8 @@ import RecurringMeals from "./RecurringMeals";
 import * as appStateModule from "@/state/AppState";
 import * as recurringMealFormHook from "@/hooks/useRecurringMealForm";
 import type { RecurringMeal } from "@/db/dbService";
-import { RecurringMealId } from "@/types";
 import type { UserId } from "@/types";
+import { RecurringMealId } from "@/types";
 
 vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,

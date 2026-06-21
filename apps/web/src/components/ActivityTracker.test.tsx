@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import ActivityTracker from "./ActivityTracker";
 import * as appStateModule from "@/state/AppState";
 import type { ActivityLog } from "@/db/dbService";
-import { ActivityLogId } from "@/types";
 import type { ISODate, UserId } from "@/types";
+import { ActivityLogId } from "@/types";
 
 vi.mock("@/state/AppState");
 vi.mock("lucide-react", () => ({

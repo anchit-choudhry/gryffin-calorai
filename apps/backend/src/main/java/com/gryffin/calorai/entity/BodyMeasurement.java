@@ -17,10 +17,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** JPA entity representing a body weight or composition measurement. */
+/**
+ * JPA entity representing a body weight or composition measurement.
+ */
 @Entity
 @Table(name = "body_measurements", indexes = {
-    @Index(name = "idx_body_user_date", columnList = "user_id, date_logged")
+  @Index(name = "idx_body_user_date", columnList = "user_id, date_logged")
 })
 public class BodyMeasurement {
 
@@ -52,7 +54,9 @@ public class BodyMeasurement {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /** Sets updated_at before every insert and update. */
+  /**
+   * Sets updated_at before every insert and update.
+   */
   @PrePersist
   @PreUpdate
   protected void onSave() {

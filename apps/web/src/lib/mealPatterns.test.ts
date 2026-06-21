@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { getMealPatterns, getMealSuggestions, getCurrentMealType } from "./mealPatterns";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getCurrentMealType, getMealPatterns, getMealSuggestions } from "./mealPatterns";
 import type { FoodItem } from "@/db/dbService";
 import type { UserId } from "@/types";
 import { ISODate } from "@/types";

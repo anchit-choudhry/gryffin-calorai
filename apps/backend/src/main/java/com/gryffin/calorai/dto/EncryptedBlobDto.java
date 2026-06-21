@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
 
 /**
- * Single encrypted sync blob for upload or download. The server stores and returns the
- * ciphertext field opaquely and never parses its contents.
+ * Single encrypted sync blob for upload or download. The server stores and returns the ciphertext
+ * field opaquely and never parses its contents.
  */
 public record EncryptedBlobDto(
 
@@ -34,4 +34,6 @@ public record EncryptedBlobDto(
   )
   boolean isDeleted
 
-) {}
+) {
+
+}

@@ -14,7 +14,9 @@ import java.time.Duration;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/** Servlet filter that enforces per-IP token-bucket rate limits on auth endpoints. */
+/**
+ * Servlet filter that enforces per-IP token-bucket rate limits on auth endpoints.
+ */
 public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final String TOKEN_PATH = "/v1/auth/token";
@@ -27,34 +29,34 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private final BucketConfiguration refreshConfig;
 
   public RateLimitFilter(
-      final ProxyManager<String> proxyManager,
-      final long tokenCapacity,
-      final long tokenRefillSeconds,
-      final long refreshCapacity,
-      final long refreshRefillSeconds
+    final ProxyManager<String> proxyManager,
+    final long tokenCapacity,
+    final long tokenRefillSeconds,
+    final long refreshCapacity,
+    final long refreshRefillSeconds
   ) {
     this.proxyManager = proxyManager;
     this.tokenCapacity = tokenCapacity;
     this.refreshCapacity = refreshCapacity;
     this.tokenConfig = BucketConfiguration.builder()
-        .addLimit(Bandwidth.builder()
-            .capacity(tokenCapacity)
-            .refillIntervally(tokenCapacity, Duration.ofSeconds(tokenRefillSeconds))
-            .build())
-        .build();
+      .addLimit(Bandwidth.builder()
+        .capacity(tokenCapacity)
+        .refillIntervally(tokenCapacity, Duration.ofSeconds(tokenRefillSeconds))
+        .build())
+      .build();
     this.refreshConfig = BucketConfiguration.builder()
-        .addLimit(Bandwidth.builder()
-            .capacity(refreshCapacity)
-            .refillIntervally(refreshCapacity, Duration.ofSeconds(refreshRefillSeconds))
-            .build())
-        .build();
+      .addLimit(Bandwidth.builder()
+        .capacity(refreshCapacity)
+        .refillIntervally(refreshCapacity, Duration.ofSeconds(refreshRefillSeconds))
+        .build())
+      .build();
   }
 
   @Override
   protected void doFilterInternal(
-      final HttpServletRequest request,
-      final HttpServletResponse response,
-      final FilterChain chain
+    final HttpServletRequest request,
+    final HttpServletResponse response,
+    final FilterChain chain
   ) throws ServletException, IOException {
     final String contextPath = request.getContextPath();
     final String path = request.getRequestURI().substring(contextPath.length());
@@ -75,7 +77,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     response.setHeader("X-RateLimit-Limit", String.valueOf(capacity));
     response.setHeader(
-        "X-RateLimit-Remaining", String.valueOf(Math.max(0, probe.getRemainingTokens())));
+      "X-RateLimit-Remaining", String.valueOf(Math.max(0, probe.getRemainingTokens())));
 
     if (probe.isConsumed()) {
       chain.doFilter(request, response);
@@ -85,7 +87,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       response.setStatus(429);
       response.setContentType(MediaType.APPLICATION_JSON_VALUE);
       response.getWriter().write(
-          "{\"error\":\"Too many requests\",\"retryAfter\":" + retryAfterSeconds + "}"
+        "{\"error\":\"Too many requests\",\"retryAfter\":" + retryAfterSeconds + "}"
       );
     }
   }
@@ -107,11 +109,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private boolean isTrustedProxy(final String addr) {
     return addr.startsWith("127.")
-        || addr.startsWith("10.")
-        || addr.startsWith("172.16.") || addr.startsWith("172.17.") || addr.startsWith("172.18.")
-        || addr.startsWith("172.19.") || addr.startsWith("172.2") || addr.startsWith("172.30.")
-        || addr.startsWith("172.31.")
-        || addr.startsWith("192.168.")
-        || addr.equals("0:0:0:0:0:0:0:1") || addr.equals("::1");
+      || addr.startsWith("10.")
+      || addr.startsWith("172.16.") || addr.startsWith("172.17.") || addr.startsWith("172.18.")
+      || addr.startsWith("172.19.") || addr.startsWith("172.2") || addr.startsWith("172.30.")
+      || addr.startsWith("172.31.")
+      || addr.startsWith("192.168.")
+      || addr.equals("0:0:0:0:0:0:0:1") || addr.equals("::1");
   }
 }

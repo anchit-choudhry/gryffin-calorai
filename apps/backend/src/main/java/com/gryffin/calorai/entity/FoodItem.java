@@ -20,10 +20,12 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** JPA entity representing a logged food item with macro nutrition data. */
+/**
+ * JPA entity representing a logged food item with macro nutrition data.
+ */
 @Entity
 @Table(name = "food_items", indexes = {
-    @Index(name = "idx_food_user_date", columnList = "user_id, date_logged")
+  @Index(name = "idx_food_user_date", columnList = "user_id, date_logged")
 })
 public class FoodItem {
 
@@ -73,7 +75,9 @@ public class FoodItem {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /** Sets updated_at before every insert and update. */
+  /**
+   * Sets updated_at before every insert and update.
+   */
   @PrePersist
   @PreUpdate
   protected void onSave() {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderStreakCard, renderHarvestCard, shareOrDownloadCard } from "./shareCard";
-import type { StreakCardData, HarvestCardData } from "./shareCard";
+import type { HarvestCardData, StreakCardData } from "./shareCard";
+import { renderHarvestCard, renderStreakCard, shareOrDownloadCard } from "./shareCard";
 
 const mockBlob = new Blob(["png"], { type: "image/png" });
 

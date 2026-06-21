@@ -8,9 +8,9 @@ test file.
 
 ## Two hook variants
 
-| Variant | Use when | Examples |
-|---|---|---|
-| **Form hook** | Wraps a user-facing form with submission and validation | `useWaterForm`, `useFoodForm` |
+| Variant       | Use when                                                | Examples                              |
+|---------------|---------------------------------------------------------|---------------------------------------|
+| **Form hook** | Wraps a user-facing form with submission and validation | `useWaterForm`, `useFoodForm`         |
 | **Data hook** | Reads/transforms Zustand or Dexie state for a component | `useProgressData`, `useWeeklyHarvest` |
 
 ## Placement and naming

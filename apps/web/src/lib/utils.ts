@@ -43,8 +43,8 @@ const VALID_HASHES = new Set([
 export type ValidHash = "#dashboard" | "#recipes" | "#progress" | "#settings" | "#print";
 
 export function normalizeHash(raw: string): ValidHash {
-  const h = raw.toLowerCase();
-  return (VALID_HASHES.has(h as ValidHash) ? h : "#dashboard") as ValidHash;
+  const base = raw.toLowerCase().split("?")[0];
+  return (VALID_HASHES.has(base as ValidHash) ? base : "#dashboard") as ValidHash;
 }
 
 export function stripHtml(html: string): string {

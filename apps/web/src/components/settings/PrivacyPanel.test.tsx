@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { PrivacyPanel } from "./PrivacyPanel";
+import { db } from "@/db/dbService";
+import { toast } from "sonner";
+import { isAuthenticated } from "@/lib/apiClient";
 
 const mockDownloadJSON = vi.fn().mockResolvedValue(undefined);
 
@@ -22,10 +25,6 @@ vi.mock("../../hooks/useDataExport", () => ({
 vi.mock("@/lib/apiClient", () => ({
   isAuthenticated: vi.fn().mockReturnValue(false),
 }));
-
-import { db } from "@/db/dbService";
-import { toast } from "sonner";
-import { isAuthenticated } from "@/lib/apiClient";
 
 const mockDb = db as unknown as { delete: ReturnType<typeof vi.fn> };
 const mockToast = toast as unknown as {

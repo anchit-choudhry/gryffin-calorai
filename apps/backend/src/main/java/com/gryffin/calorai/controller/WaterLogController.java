@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for daily water intake log entries. */
+/**
+ * REST controller for daily water intake log entries.
+ */
 @Tag(name = "Water Logs", description = "CRUD for daily water intake entries")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -41,8 +43,8 @@ public class WaterLogController {
   @Operation(summary = "List water logs for a given date")
   @GetMapping
   public List<WaterLogDto> getByDate(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
   ) {
     return waterLogService.getDailyLogs(UUID.fromString(jwt.getSubject()), date);
   }
@@ -50,8 +52,8 @@ public class WaterLogController {
   @Operation(summary = "Get all changes since a timestamp (for delta sync)")
   @GetMapping("/changes")
   public List<WaterLogDto> getChanges(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam final Instant since
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam final Instant since
   ) {
     return waterLogService.getChangesSince(UUID.fromString(jwt.getSubject()), since);
   }
@@ -59,8 +61,8 @@ public class WaterLogController {
   @Operation(summary = "Log a water intake entry")
   @PostMapping
   public ResponseEntity<WaterLogDto> create(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final WaterLogDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final WaterLogDto dto
   ) {
     final WaterLogDto created = waterLogService.create(UUID.fromString(jwt.getSubject()), dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
@@ -69,9 +71,9 @@ public class WaterLogController {
   @Operation(summary = "Upsert a water log by ID (creates if not found, updates if found)")
   @PutMapping("/{id}")
   public WaterLogDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id,
-      @Valid @RequestBody final WaterLogDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id,
+    @Valid @RequestBody final WaterLogDto dto
   ) {
     return waterLogService.upsert(UUID.fromString(jwt.getSubject()), id, dto);
   }
@@ -79,8 +81,8 @@ public class WaterLogController {
   @Operation(summary = "Soft-delete a water log")
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id
   ) {
     waterLogService.delete(UUID.fromString(jwt.getSubject()), id);
     return ResponseEntity.noContent().build();

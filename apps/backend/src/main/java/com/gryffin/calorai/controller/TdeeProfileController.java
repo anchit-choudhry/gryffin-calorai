@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for the user's TDEE and calorie goal profile. */
+/**
+ * REST controller for the user's TDEE and calorie goal profile.
+ */
 @Tag(name = "TDEE Profile", description = "User TDEE / calorie goal profile (one per user)")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -33,15 +35,15 @@ public class TdeeProfileController {
   @GetMapping
   public ResponseEntity<TdeeProfileDto> get(@AuthenticationPrincipal final Jwt jwt) {
     return tdeeProfileService.get(UUID.fromString(jwt.getSubject()))
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+      .map(ResponseEntity::ok)
+      .orElse(ResponseEntity.notFound().build());
   }
 
   @Operation(summary = "Create or update the current user's TDEE profile")
   @PutMapping
   public TdeeProfileDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final TdeeProfileDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final TdeeProfileDto dto
   ) {
     return tdeeProfileService.upsert(UUID.fromString(jwt.getSubject()), dto);
   }

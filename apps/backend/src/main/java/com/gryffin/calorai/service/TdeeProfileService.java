@@ -11,7 +11,9 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Service for TDEE profile upsert and retrieval. */
+/**
+ * Service for TDEE profile upsert and retrieval.
+ */
 @Service
 public class TdeeProfileService {
 
@@ -19,7 +21,7 @@ public class TdeeProfileService {
   private final UserRepository userRepository;
 
   public TdeeProfileService(final TdeeProfileRepository tdeeProfileRepository,
-      final UserRepository userRepository) {
+    final UserRepository userRepository) {
     this.tdeeProfileRepository = tdeeProfileRepository;
     this.userRepository = userRepository;
   }
@@ -31,14 +33,14 @@ public class TdeeProfileService {
   @Transactional
   public TdeeProfileDto upsert(final UUID userId, final TdeeProfileDto dto) {
     final AppUser user = userRepository.findById(userId)
-        .orElseThrow(() -> new NoSuchElementException("User not found"));
+      .orElseThrow(() -> new NoSuchElementException("User not found"));
 
     final TdeeProfile profile = tdeeProfileRepository.findByUserId(userId)
-        .orElseGet(() -> {
-          final var newProfile = new TdeeProfile();
-          newProfile.setUser(user);
-          return newProfile;
-        });
+      .orElseGet(() -> {
+        final var newProfile = new TdeeProfile();
+        newProfile.setUser(user);
+        return newProfile;
+      });
 
     profile.setAge(dto.age());
     profile.setSex(dto.sex());
@@ -62,14 +64,14 @@ public class TdeeProfileService {
 
   private TdeeProfileDto toDto(final TdeeProfile profile) {
     return new TdeeProfileDto(
-        profile.getId().toString(),
-        profile.getAge(),
-        profile.getSex(),
-        profile.getHeightCm(),
-        profile.getWeightKg(),
-        profile.getActivityLevel(),
-        profile.getGoal(),
-        profile.getUpdatedAt()
+      profile.getId().toString(),
+      profile.getAge(),
+      profile.getSex(),
+      profile.getHeightCm(),
+      profile.getWeightKg(),
+      profile.getActivityLevel(),
+      profile.getGoal(),
+      profile.getUpdatedAt()
     );
   }
 }

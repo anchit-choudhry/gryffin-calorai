@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAppState } from "../state/AppState";
-import { getAllFoodLogs } from "../db/dbService";
 import type { FoodItem } from "../db/dbService";
+import { getAllFoodLogs } from "../db/dbService";
 import { DEFAULT_MEAL_TYPE, ISODate, MEAL_TYPES, type MealType } from "@/types";
 
 interface MealTypeData {

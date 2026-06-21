@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from "react";
 import type { ReactNode } from "react";
+import { lazy, Suspense, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Search } from "lucide-react";
 import { pageVariants, useSectionMotion } from "../lib/motionVariants";

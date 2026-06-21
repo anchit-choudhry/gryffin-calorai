@@ -7,7 +7,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for system liveness and status endpoints. */
+/**
+ * REST controller for system liveness and status endpoints.
+ */
 @Tag(name = "System", description = "System status endpoints")
 @RestController
 @RequestMapping("/v1")

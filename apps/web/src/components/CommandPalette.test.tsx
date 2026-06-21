@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CommandPalette } from "./CommandPalette";
 import { useAppState } from "@/state/AppState";
 import { FoodItemId, ISODate, RecipeId, todayISO, UserId } from "@/types";

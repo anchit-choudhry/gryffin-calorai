@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import Settings from "./Settings";
-import * as appState from "../state/AppState";
 import type { AppState } from "../state/AppState";
+import * as appState from "../state/AppState";
 import { UserId } from "@/types";
 
 const mockUseReducedMotion = vi.hoisted(() => vi.fn(() => true));

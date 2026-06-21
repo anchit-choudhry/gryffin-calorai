@@ -71,6 +71,7 @@ function NavLink({ hash, label, isActive }: NavLinkProps) {
     </a>
   );
 }
+
 type BottomNavHash = (typeof BOTTOM_NAV_HASHES)[number];
 
 function App() {

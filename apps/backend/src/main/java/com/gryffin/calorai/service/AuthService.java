@@ -15,7 +15,9 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Service for OAuth2 authentication, JWT issuance, refresh, and logout. */
+/**
+ * Service for OAuth2 authentication, JWT issuance, refresh, and logout.
+ */
 @Service
 public class AuthService {
 
@@ -27,10 +29,10 @@ public class AuthService {
   private final JwtService jwtService;
 
   public AuthService(
-      Map<String, OidcTokenVerifier> verifiers,
-      UserRepository userRepository,
-      RefreshTokenRepository refreshTokenRepository,
-      JwtService jwtService
+    Map<String, OidcTokenVerifier> verifiers,
+    UserRepository userRepository,
+    RefreshTokenRepository refreshTokenRepository,
+    JwtService jwtService
   ) {
     this.verifiers = verifiers;
     this.userRepository = userRepository;
@@ -51,8 +53,8 @@ public class AuthService {
 
     OidcClaims claims = verifier.verify(request.idToken());
     AppUser user = userRepository
-        .findByProviderAndProviderSubject(claims.provider(), claims.sub())
-        .orElseGet(() -> createUser(claims));
+      .findByProviderAndProviderSubject(claims.provider(), claims.sub())
+      .orElseGet(() -> createUser(claims));
 
     String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
     String refreshToken = jwtService.generateRefreshToken(user.getId());
@@ -75,7 +77,7 @@ public class AuthService {
 
     var userId = jwtService.extractUserId(refreshTokenStr);
     var user = userRepository.findById(userId)
-        .orElseThrow(() -> new SecurityException("Authentication failed"));
+      .orElseThrow(() -> new SecurityException("Authentication failed"));
 
     String newAccess = jwtService.generateAccessToken(user.getId(), user.getEmail());
     String newRefresh = jwtService.generateRefreshToken(user.getId());

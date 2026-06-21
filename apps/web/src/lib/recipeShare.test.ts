@@ -1,22 +1,21 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildShareableRecipe,
-  encodeSharePayload,
-  decodeSharePayload,
   buildShareUrl,
+  decodeSharePayload,
+  encodeSharePayload,
   importSharedRecipe,
   RECIPE_SHARE_SCHEMA_VERSION,
   type ShareableRecipe,
 } from "./recipeShare";
-import type { Recipe, FoodItem } from "@/db/dbService";
+import type { FoodItem, Recipe } from "@/db/dbService";
+import { addFoodItemLog, saveRecipe } from "@/db/dbService";
 import type { UserId } from "@/types";
 
 vi.mock("@/db/dbService", () => ({
   addFoodItemLog: vi.fn().mockResolvedValue("new-food-id"),
   saveRecipe: vi.fn().mockResolvedValue("new-recipe-id"),
 }));
-
-import { addFoodItemLog, saveRecipe } from "@/db/dbService";
 
 const mockAddFoodItemLog = addFoodItemLog as ReturnType<typeof vi.fn>;
 const mockSaveRecipe = saveRecipe as ReturnType<typeof vi.fn>;

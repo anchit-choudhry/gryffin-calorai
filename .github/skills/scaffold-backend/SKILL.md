@@ -10,13 +10,13 @@ Follow the scaffold process documented in those files to generate a complete Spr
 
 Base package: `com.gryffin.calorai`
 
-| Layer | Location |
-|---|---|
-| Controller | `apps/backend/src/main/java/com/gryffin/calorai/<resource>/` |
-| Service | same package |
-| Repository | same package |
-| DTO | same package |
-| Migration | `apps/backend/src/main/resources/db/migration/V{N}__add_<resource>.sql` |
+| Layer      | Location                                                                |
+|------------|-------------------------------------------------------------------------|
+| Controller | `apps/backend/src/main/java/com/gryffin/calorai/<resource>/`            |
+| Service    | same package                                                            |
+| Repository | same package                                                            |
+| DTO        | same package                                                            |
+| Migration  | `apps/backend/src/main/resources/db/migration/V{N}__add_<resource>.sql` |
 
 ## Required conventions (enforced by Checkstyle)
 

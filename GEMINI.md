@@ -183,7 +183,8 @@ For persistent cross-session context, read @@project-knowledge/AGENTS.md first, 
 @@project-knowledge/index.md (canonical session-start artifact; update at session end).
 For automation, check `.gemini/agents/` (migration-safety-reviewer, backend-code-reviewer,
 a11y-reviewer, web-bundle-analysis, web-dead-code-finder, web-test-coverage-gap-finder) and
-`.gemini/skills/` (dexie-migration, flyway-migration, scaffold-backend, scaffold-new-react-component,
+`.gemini/skills/` (dexie-migration, flyway-migration, scaffold-backend,
+scaffold-new-react-component,
 scaffold-new-react-hook, scaffold-zustand-slice, generate-vitest) before implementing manually.
 For architecture details, see @@docs/gryffin-calorai-specifications.md
 For security guidelines, see @@.gemini/skills/owasp-security-audit/SKILL.md
@@ -198,40 +199,40 @@ For quick dev commands, see @@README.md
 
 ## Critical File Locations
 
-| Category | File | Key Info |
-|---|---|---|
-| **State** | `apps/web/src/state/AppState.ts` | Single Zustand store; all mutations here |
-| **DB** | `apps/web/src/db/dbService.ts` | Dexie schema v20, CRUD, compound indices; `syncQueue` + `SyncQueueEntry`; `syncId` on 6 entities; `photos` table + `FoodPhotoId` branded type |
-| **Types** | `apps/web/src/types/index.ts` | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS, DietPreset, RestrictionFlag, ReminderId, REMINDER_LABELS, `shiftISODate(date, n)` - always use for date arithmetic |
-| **Pages** | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx` | Main views (lazy-loaded); Settings at `#/settings` |
-| **Components** | `apps/web/src/components/` | Sub-folders: `dashboard/`, `illustrations/`, `icons/almanac/`, `settings/`, `progress/`, `recipes/`, `charts/`, `tour/` |
-| **Dashboard** | `apps/web/src/components/dashboard/` | AlmanacPanel (lazy), DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks; `SeasonalOrnament` (in `icons/almanac/`) is reused in App.tsx nav head - do not inline seasonal logic |
-| **Progress** | `apps/web/src/components/progress/` | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal) |
-| **Settings** | `apps/web/src/components/settings/` | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel |
-| **Tour** | `apps/web/src/components/tour/` | ProductTourOverlay, CoachmarkCard, tourSteps, useSpotlightRect |
-| **Hooks** | `apps/web/src/hooks/` | `useSyncService` (cloud sync), `useProgressData` (7-day avg), `useWeeklyHarvestTrigger`, `useFastingTimer`, `useReminders` |
-| **Forms** | `apps/web/src/forms/schemas.ts` | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup, diet profile, recurring meal |
-| **Motion** | `apps/web/src/lib/motionVariants.ts` | `counterPopVariants` (spring pop), `useSectionMotion()` (crossfade), `easeSpring` |
-| **a11y lib** | `apps/web/src/lib/a11y.ts` | `MAIN_CONTENT_ID`, `liveRegionProps`, `assertiveRegionProps`, `visuallyHiddenProps`, `useMotionPreset(name)` |
-| **E2E crypto** | `apps/web/src/lib/e2eEncryption.ts` | PBKDF2 (600k iterations) + AES-GCM-256: `deriveKey`, `encryptData`, `decryptData`, `exportSalt` pure async functions |
-| **E2E key store** | `apps/web/src/lib/e2eKeyStore.ts` | In-memory `CryptoKey` singleton; never persisted; `setKey`, `getKey`, `clearKey` |
-| **OFF API** | `apps/web/src/lib/offProductApi.ts` | `searchOff(q)` FTS search + `lookupBarcode(code)` exact match; converts g/100g nutrients to `FoodItem` prefill; 300ms debounce fallback in FoodSearchCombobox |
-| **API client** | `apps/web/src/lib/apiClient.ts` | JWT-aware HTTP; auto-refresh 60s before expiry; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()` |
-| **TDEE lib** | `apps/web/src/lib/tdee.ts` | `mifflinStJeorBMR`, `computeTDEE`, `computeCalorieGoal`, `computeMacroTargets`, `applyPeriodization` |
-| **Adaptive TDEE** | `apps/web/src/lib/adaptiveTdee.ts` | `computeAdaptiveTdee`, `detectPlateau`, `computeWeeklyForecast`; EMA smoothing; uses `FoodLogEntry` structural type (not full `FoodItem`) |
-| **Correlations** | `apps/web/src/lib/correlations.ts` | Pearson-r insights: sodium/weight, training/adherence, fasting/intake |
-| **Meal patterns** | `apps/web/src/lib/mealPatterns.ts` | `analyzeMealPatterns()` - timing and consistency suggestions |
-| **Importers** | `apps/web/src/lib/importers/` | MFP, Cronometer, Lose It CSV + Apple Health XML parsers; `isISODate()` type guard in `utils.ts` validates dates before DB write |
-| **Haptics lib** | `apps/web/src/lib/haptics.ts` | `triggerHaptic(pattern)` - Vibration API; patterns: `"success"`, `"achievement"`, `"error"` |
-| **Solar lib** | `apps/web/src/lib/solar.ts` | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel |
-| **Charts lib** | `apps/web/src/lib/chartTheme.ts` | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber) |
-| **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts` | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel |
-| **Tests** | `apps/web/src/**/*.test.{ts,tsx}` (139+ files, 2594+ tests) | Vitest + jsdom + fake-indexeddb + coverage |
-| **Config** | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup |
-| **Backend** | `apps/backend/src/main/java/com/gryffin/calorai/` | Spring Boot 4.0 + Java 25 |
-| **DB migrate** | `apps/backend/src/main/resources/db/migration/` | Flyway SQL migrations |
-| **Codegen** | `apps/backend/openapi-codegen/` | OpenAPI generator configs + `generate.sh` for TS/Kotlin/Swift SDKs |
-| **OFF ops** | `apps/backend/OFF-IMPORT.md` | Runbook: initial import + monthly refresh for 4.5M-row `off_products` table |
+| Category          | File                                                           | Key Info                                                                                                                                                                                                                               |
+|-------------------|----------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **State**         | `apps/web/src/state/AppState.ts`                               | Single Zustand store; all mutations here                                                                                                                                                                                               |
+| **DB**            | `apps/web/src/db/dbService.ts`                                 | Dexie schema v20, CRUD, compound indices; `syncQueue` + `SyncQueueEntry`; `syncId` on 6 entities; `photos` table + `FoodPhotoId` branded type                                                                                          |
+| **Types**         | `apps/web/src/types/index.ts`                                  | Branded types, type guards, sanitizers, fuzzy match, FASTING_PRESETS, DietPreset, RestrictionFlag, ReminderId, REMINDER_LABELS, `shiftISODate(date, n)` - always use for date arithmetic                                               |
+| **Pages**         | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx` | Main views (lazy-loaded); Settings at `#/settings`                                                                                                                                                                                     |
+| **Components**    | `apps/web/src/components/`                                     | Sub-folders: `dashboard/`, `illustrations/`, `icons/almanac/`, `settings/`, `progress/`, `recipes/`, `charts/`, `tour/`                                                                                                                |
+| **Dashboard**     | `apps/web/src/components/dashboard/`                           | AlmanacPanel (lazy), DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks; `SeasonalOrnament` (in `icons/almanac/`) is reused in App.tsx nav head - do not inline seasonal logic |
+| **Progress**      | `apps/web/src/components/progress/`                            | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal)                            |
+| **Settings**      | `apps/web/src/components/settings/`                            | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel                                                                                                                            |
+| **Tour**          | `apps/web/src/components/tour/`                                | ProductTourOverlay, CoachmarkCard, tourSteps, useSpotlightRect                                                                                                                                                                         |
+| **Hooks**         | `apps/web/src/hooks/`                                          | `useSyncService` (cloud sync), `useProgressData` (7-day avg), `useWeeklyHarvestTrigger`, `useFastingTimer`, `useReminders`                                                                                                             |
+| **Forms**         | `apps/web/src/forms/schemas.ts`                                | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup, diet profile, recurring meal                                                                                                                             |
+| **Motion**        | `apps/web/src/lib/motionVariants.ts`                           | `counterPopVariants` (spring pop), `useSectionMotion()` (crossfade), `easeSpring`                                                                                                                                                      |
+| **a11y lib**      | `apps/web/src/lib/a11y.ts`                                     | `MAIN_CONTENT_ID`, `liveRegionProps`, `assertiveRegionProps`, `visuallyHiddenProps`, `useMotionPreset(name)`                                                                                                                           |
+| **E2E crypto**    | `apps/web/src/lib/e2eEncryption.ts`                            | PBKDF2 (600k iterations) + AES-GCM-256: `deriveKey`, `encryptData`, `decryptData`, `exportSalt` pure async functions                                                                                                                   |
+| **E2E key store** | `apps/web/src/lib/e2eKeyStore.ts`                              | In-memory `CryptoKey` singleton; never persisted; `setKey`, `getKey`, `clearKey`                                                                                                                                                       |
+| **OFF API**       | `apps/web/src/lib/offProductApi.ts`                            | `searchOff(q)` FTS search + `lookupBarcode(code)` exact match; converts g/100g nutrients to `FoodItem` prefill; 300ms debounce fallback in FoodSearchCombobox                                                                          |
+| **API client**    | `apps/web/src/lib/apiClient.ts`                                | JWT-aware HTTP; auto-refresh 60s before expiry; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()`                                                                                                        |
+| **TDEE lib**      | `apps/web/src/lib/tdee.ts`                                     | `mifflinStJeorBMR`, `computeTDEE`, `computeCalorieGoal`, `computeMacroTargets`, `applyPeriodization`                                                                                                                                   |
+| **Adaptive TDEE** | `apps/web/src/lib/adaptiveTdee.ts`                             | `computeAdaptiveTdee`, `detectPlateau`, `computeWeeklyForecast`; EMA smoothing; uses `FoodLogEntry` structural type (not full `FoodItem`)                                                                                              |
+| **Correlations**  | `apps/web/src/lib/correlations.ts`                             | Pearson-r insights: sodium/weight, training/adherence, fasting/intake                                                                                                                                                                  |
+| **Meal patterns** | `apps/web/src/lib/mealPatterns.ts`                             | `analyzeMealPatterns()` - timing and consistency suggestions                                                                                                                                                                           |
+| **Importers**     | `apps/web/src/lib/importers/`                                  | MFP, Cronometer, Lose It CSV + Apple Health XML parsers; `isISODate()` type guard in `utils.ts` validates dates before DB write                                                                                                        |
+| **Haptics lib**   | `apps/web/src/lib/haptics.ts`                                  | `triggerHaptic(pattern)` - Vibration API; patterns: `"success"`, `"achievement"`, `"error"`                                                                                                                                            |
+| **Solar lib**     | `apps/web/src/lib/solar.ts`                                    | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel                                                                                                                                           |
+| **Charts lib**    | `apps/web/src/lib/chartTheme.ts`                               | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber)                                                                                                                                                             |
+| **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts`                         | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel                                                                                                                                                                     |
+| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (139+ files, 2594+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
+| **Config**        | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup                                                                                                                                                                                                          |
+| **Backend**       | `apps/backend/src/main/java/com/gryffin/calorai/`              | Spring Boot 4.0 + Java 25                                                                                                                                                                                                              |
+| **DB migrate**    | `apps/backend/src/main/resources/db/migration/`                | Flyway SQL migrations                                                                                                                                                                                                                  |
+| **Codegen**       | `apps/backend/openapi-codegen/`                                | OpenAPI generator configs + `generate.sh` for TS/Kotlin/Swift SDKs                                                                                                                                                                     |
+| **OFF ops**       | `apps/backend/OFF-IMPORT.md`                                   | Runbook: initial import + monthly refresh for 4.5M-row `off_products` table                                                                                                                                                            |
 
 ---
 

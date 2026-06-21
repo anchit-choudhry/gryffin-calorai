@@ -53,7 +53,7 @@ class BodyMeasurementServiceTest {
     final var bm = buildMeasurement(75.0, 18.5, LocalDate.now());
     BDDMockito.given(
         bodyMeasurementRepository.findByUserIdAndDeletedAtIsNullOrderByDateLoggedDesc(userId))
-        .willReturn(List.of(bm));
+      .willReturn(List.of(bm));
 
     final var result = bodyMeasurementService.getAll(userId);
 
@@ -66,7 +66,7 @@ class BodyMeasurementServiceTest {
     final var since = Instant.now().minusSeconds(3600);
     final var bm = buildMeasurement(76.0, null, LocalDate.now().minusDays(1));
     BDDMockito.given(bodyMeasurementRepository.findByUserIdAndUpdatedAtAfter(userId, since))
-        .willReturn(List.of(bm));
+      .willReturn(List.of(bm));
 
     final var result = bodyMeasurementService.getChangesSince(userId, since);
 
@@ -93,7 +93,7 @@ class BodyMeasurementServiceTest {
 
     final var dto = new BodyMeasurementDto(null, 70.0, null, LocalDate.now(), null, null, null);
     Assertions.assertThatThrownBy(() -> bodyMeasurementService.create(userId, dto))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   @Test
@@ -102,11 +102,11 @@ class BodyMeasurementServiceTest {
     final var existing = buildMeasurement(74.0, 19.0, LocalDate.now());
     BDDMockito.given(userRepository.findById(userId)).willReturn(Optional.of(user));
     BDDMockito.given(bodyMeasurementRepository.findById(measurementId))
-        .willReturn(Optional.of(existing));
+      .willReturn(Optional.of(existing));
     BDDMockito.given(bodyMeasurementRepository.save(ArgumentMatchers.any())).willReturn(existing);
 
     final var dto = new BodyMeasurementDto(
-        measurementId.toString(), 75.0, 19.5, LocalDate.now(), null, null, null
+      measurementId.toString(), 75.0, 19.5, LocalDate.now(), null, null, null
     );
     bodyMeasurementService.upsert(userId, measurementId, dto);
 
@@ -120,7 +120,7 @@ class BodyMeasurementServiceTest {
     final var measurementId = UUID.randomUUID();
     final var bm = buildMeasurement(72.0, null, LocalDate.now());
     BDDMockito.given(bodyMeasurementRepository.findById(measurementId))
-        .willReturn(Optional.of(bm));
+      .willReturn(Optional.of(bm));
 
     bodyMeasurementService.delete(userId, measurementId);
 
@@ -133,14 +133,14 @@ class BodyMeasurementServiceTest {
   void deleteThrowsWhenNotFound() {
     final var measurementId = UUID.randomUUID();
     BDDMockito.given(bodyMeasurementRepository.findById(measurementId))
-        .willReturn(Optional.empty());
+      .willReturn(Optional.empty());
 
     Assertions.assertThatThrownBy(() -> bodyMeasurementService.delete(userId, measurementId))
-        .isInstanceOf(NoSuchElementException.class);
+      .isInstanceOf(NoSuchElementException.class);
   }
 
   private BodyMeasurement buildMeasurement(final Double weightKg, final Double bodyFatPct,
-      final LocalDate date) {
+    final LocalDate date) {
     final var bm = new BodyMeasurement();
     bm.setId(UUID.randomUUID());
     bm.setUser(user);

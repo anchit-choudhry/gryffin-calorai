@@ -1,5 +1,5 @@
-import { X, Share2 } from "lucide-react";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { Share2, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useWeeklySummary } from "@/hooks/useWeeklySummary";
 import { useStreaks } from "@/hooks/useStreaks";
 import { LABEL_MONO_CLS } from "@/lib/utils";

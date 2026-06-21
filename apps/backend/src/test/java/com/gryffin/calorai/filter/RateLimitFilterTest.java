@@ -37,7 +37,7 @@ class RateLimitFilterTest {
   void setUp() {
     filter = new RateLimitFilter(proxyManager, 10, 60, 20, 60);
     BDDMockito.given(proxyManager.getProxy(ArgumentMatchers.anyString(), ArgumentMatchers.any()))
-        .willReturn(bucket);
+      .willReturn(bucket);
   }
 
   @Test
@@ -54,7 +54,7 @@ class RateLimitFilterTest {
   @Test
   void tokenPathUnderLimitAllowsRequest() throws Exception {
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.consumed(9, 0));
+      .willReturn(ConsumptionProbe.consumed(9, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/token");
     final var response = new MockHttpServletResponse();
@@ -71,7 +71,7 @@ class RateLimitFilterTest {
   void tokenPathOverLimitReturns429WithHeaders() throws Exception {
     final long nanosToWait = Duration.ofSeconds(30).toNanos();
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
+      .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/token");
     final var response = new MockHttpServletResponse();
@@ -88,7 +88,7 @@ class RateLimitFilterTest {
   @Test
   void refreshPathUnderLimitUsesRefreshCapacity() throws Exception {
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.consumed(19, 0));
+      .willReturn(ConsumptionProbe.consumed(19, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/refresh");
     final var response = new MockHttpServletResponse();
@@ -104,7 +104,7 @@ class RateLimitFilterTest {
   void refreshPathOverLimitReturns429WithRetryAfter() throws Exception {
     final long nanosToWait = Duration.ofSeconds(45).toNanos();
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
+      .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/refresh");
     final var response = new MockHttpServletResponse();
@@ -118,7 +118,7 @@ class RateLimitFilterTest {
   @Test
   void xForwardedForFirstIpUsedAsClientKey() throws Exception {
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.consumed(9, 0));
+      .willReturn(ConsumptionProbe.consumed(9, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/token");
     request.addHeader("X-Forwarded-For", "203.0.113.1, 10.0.0.1");
@@ -127,13 +127,13 @@ class RateLimitFilterTest {
     filter.doFilterInternal(request, response, chain);
 
     BDDMockito.then(proxyManager).should()
-        .getProxy(ArgumentMatchers.contains("203.0.113.1"), ArgumentMatchers.any());
+      .getProxy(ArgumentMatchers.contains("203.0.113.1"), ArgumentMatchers.any());
   }
 
   @Test
   void xForwardedForIgnoredWhenDirectConnectionFromPublicIp() throws Exception {
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.consumed(9, 0));
+      .willReturn(ConsumptionProbe.consumed(9, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/token");
     request.setRemoteAddr("203.0.113.99");
@@ -144,16 +144,16 @@ class RateLimitFilterTest {
 
     // Rate-limit key must use the real remoteAddr, not the spoofed X-Forwarded-For value
     BDDMockito.then(proxyManager).should()
-        .getProxy(ArgumentMatchers.contains("203.0.113.99"), ArgumentMatchers.any());
+      .getProxy(ArgumentMatchers.contains("203.0.113.99"), ArgumentMatchers.any());
     BDDMockito.then(proxyManager).should(BDDMockito.never())
-        .getProxy(ArgumentMatchers.contains("1.2.3.4"), ArgumentMatchers.any());
+      .getProxy(ArgumentMatchers.contains("1.2.3.4"), ArgumentMatchers.any());
   }
 
   @Test
   void tokenPathExhaustedTokensResponseBodyIsJson() throws Exception {
     final long nanosToWait = Duration.ofSeconds(10).toNanos();
     BDDMockito.given(bucket.tryConsumeAndReturnRemaining(1))
-        .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
+      .willReturn(ConsumptionProbe.rejected(0, nanosToWait, 0));
 
     final var request = new MockHttpServletRequest("POST", "/v1/auth/token");
     final var response = new MockHttpServletResponse();

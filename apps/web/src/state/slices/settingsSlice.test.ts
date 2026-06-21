@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { create, type StateCreator } from "zustand";
 import { createSettingsSlice, type CustomMacroGoals, type SettingsSlice } from "./settingsSlice";
 import type {
+  DietProfile,
   ImportableBackup,
   MealPlan,
   RecurringMeal,
   TdeeProfile,
-  DietProfile,
 } from "../../db/dbService";
 import type { DietPreset, ISODate, MealPlanId, RecurringMealId, UserId } from "@/types";
 

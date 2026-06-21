@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useAppState } from "../state/AppState";
-import { getAllFoodLogs, getAllBodyMeasurements, type FoodItem } from "../db/dbService";
 import type { BodyMeasurement } from "../db/dbService";
+import { type FoodItem, getAllBodyMeasurements, getAllFoodLogs } from "../db/dbService";
 import { LABEL_MONO_CLS } from "@/lib/utils";
 
 const MEAL_ORDER = ["Breakfast", "Lunch", "Snacks", "Dinner"] as const;
@@ -90,7 +90,14 @@ function buildWeekEntries(logs: FoodItem[], weekDates: string[]): DayEntry[] {
 
 function WeeklyJournalPage({ entries, calorieGoal }: { entries: DayEntry[]; calorieGoal: number }) {
   const now = new Date();
-  const weekLabel = `Week of ${new Date(entries[0]!.date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+  const weekLabel = `Week of ${new Date(entries[0]!.date + "T00:00:00").toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  )}`;
 
   return (
     <section className="print-page">

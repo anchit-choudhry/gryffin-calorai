@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, Database, Trash2, AlertTriangle, Download, Cloud, HardDrive } from "lucide-react";
+import { AlertTriangle, Cloud, Database, Download, HardDrive, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { db } from "@/db/dbService";

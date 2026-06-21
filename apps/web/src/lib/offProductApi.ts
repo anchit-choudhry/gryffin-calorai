@@ -1,6 +1,6 @@
 import type { FoodItem } from "../db/dbService";
 import type { ISODate, UserId } from "../types";
-import { ApiError, api } from "./apiClient";
+import { api, ApiError } from "./apiClient";
 
 /** Shape of the OFF product response from the backend. All nutrient values are per 100g. */
 export interface OffProductResponse {

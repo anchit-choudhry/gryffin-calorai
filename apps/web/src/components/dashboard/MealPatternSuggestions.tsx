@@ -2,8 +2,8 @@ import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAppState } from "@/state/AppState";
 import { todayISO } from "@/types";
-import { getCurrentMealType, getMealSuggestions } from "@/lib/mealPatterns";
 import type { MealPattern } from "@/lib/mealPatterns";
+import { getCurrentMealType, getMealSuggestions } from "@/lib/mealPatterns";
 import { cn, LABEL_MONO_CLS } from "@/lib/utils";
 
 const MAX_SUGGESTIONS = 4;

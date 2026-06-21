@@ -47,7 +47,7 @@ class AuthServiceLogoutTest {
   @Test
   void logoutMalformedTokenNoExceptionAndNoDelete() {
     BDDMockito.given(jwtService.isRefreshToken("bad-token"))
-        .willThrow(new JwtException("malformed"));
+      .willThrow(new JwtException("malformed"));
 
     Assertions.assertThatNoException().isThrownBy(() -> authService.logout("bad-token"));
     BDDMockito.then(refreshTokenRepository).shouldHaveNoInteractions();

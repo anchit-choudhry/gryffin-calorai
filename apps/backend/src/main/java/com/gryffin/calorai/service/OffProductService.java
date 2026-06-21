@@ -12,8 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Service for Open Food Facts product lookups.
  *
  * <p>Handles barcode normalization (matching the logic in {@code refresh-off-products.sh}:
- * numeric codes of 8-13 digits are zero-padded to 13 digits) and full-text search
- * with a configurable result cap.
+ * numeric codes of 8-13 digits are zero-padded to 13 digits) and full-text search with a
+ * configurable result cap.
  */
 @Service
 @Transactional(readOnly = true)
@@ -24,7 +24,9 @@ public class OffProductService {
 
   private final OffProductRepository offProductRepository;
 
-  /** Constructs the service with its repository dependency. */
+  /**
+   * Constructs the service with its repository dependency.
+   */
   public OffProductService(OffProductRepository offProductRepository) {
     this.offProductRepository = offProductRepository;
   }
@@ -56,9 +58,9 @@ public class OffProductService {
       throw new IllegalArgumentException("Search query must not be blank");
     }
     return offProductRepository.searchByFts(query.trim(), limit)
-        .stream()
-        .map(this::toDto)
-        .toList();
+      .stream()
+      .map(this::toDto)
+      .toList();
   }
 
   /**
@@ -85,51 +87,51 @@ public class OffProductService {
 
   private OffProductDto toDto(OffProduct p) {
     return new OffProductDto(
-        p.getCode(),
-        p.getProductName(),
-        p.getBrands(),
-        p.getServingSize(),
-        p.getServingSizeG(),
-        p.getNutritionGrade(),
-        p.getMainCategory(),
-        p.getImageSmallUrl(),
-        p.getAllergensTags(),
-        p.getTracesTags(),
-        p.getEnergyKcal100g(),
-        p.getEnergyKj100g(),
-        p.getProteins100g(),
-        p.getCarbohydrates100g(),
-        p.getSugars100g(),
-        p.getFat100g(),
-        p.getSaturatedFat100g(),
-        p.getTransFat100g(),
-        p.getMonounsaturatedFat100g(),
-        p.getPolyunsaturatedFat100g(),
-        p.getOmega3Fat100g(),
-        p.getCholesterol100g(),
-        p.getFiber100g(),
-        p.getSodium100g(),
-        p.getCalcium100g(),
-        p.getIron100g(),
-        p.getPotassium100g(),
-        p.getMagnesium100g(),
-        p.getPhosphorus100g(),
-        p.getZinc100g(),
-        p.getSelenium100g(),
-        p.getCopper100g(),
-        p.getManganese100g(),
-        p.getIodine100g(),
-        p.getVitaminA100g(),
-        p.getVitaminB1100g(),
-        p.getVitaminB2100g(),
-        p.getVitaminB6100g(),
-        p.getVitaminB9100g(),
-        p.getVitaminB12100g(),
-        p.getVitaminC100g(),
-        p.getVitaminD100g(),
-        p.getVitaminE100g(),
-        p.getVitaminK100g(),
-        p.getOffLastModifiedAt()
+      p.getCode(),
+      p.getProductName(),
+      p.getBrands(),
+      p.getServingSize(),
+      p.getServingSizeG(),
+      p.getNutritionGrade(),
+      p.getMainCategory(),
+      p.getImageSmallUrl(),
+      p.getAllergensTags(),
+      p.getTracesTags(),
+      p.getEnergyKcal100g(),
+      p.getEnergyKj100g(),
+      p.getProteins100g(),
+      p.getCarbohydrates100g(),
+      p.getSugars100g(),
+      p.getFat100g(),
+      p.getSaturatedFat100g(),
+      p.getTransFat100g(),
+      p.getMonounsaturatedFat100g(),
+      p.getPolyunsaturatedFat100g(),
+      p.getOmega3Fat100g(),
+      p.getCholesterol100g(),
+      p.getFiber100g(),
+      p.getSodium100g(),
+      p.getCalcium100g(),
+      p.getIron100g(),
+      p.getPotassium100g(),
+      p.getMagnesium100g(),
+      p.getPhosphorus100g(),
+      p.getZinc100g(),
+      p.getSelenium100g(),
+      p.getCopper100g(),
+      p.getManganese100g(),
+      p.getIodine100g(),
+      p.getVitaminA100g(),
+      p.getVitaminB1100g(),
+      p.getVitaminB2100g(),
+      p.getVitaminB6100g(),
+      p.getVitaminB9100g(),
+      p.getVitaminB12100g(),
+      p.getVitaminC100g(),
+      p.getVitaminD100g(),
+      p.getVitaminE100g(),
+      p.getVitaminK100g(),
+      p.getOffLastModifiedAt()
     );
   }
 }

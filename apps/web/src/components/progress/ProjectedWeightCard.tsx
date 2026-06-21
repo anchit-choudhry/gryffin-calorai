@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Target } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import type { TdeeProfile } from "@/db/dbService";
 import { GOAL_LABELS, GOAL_OFFSETS, kgToLb } from "@/types";
 import { projectedDateForWeightChange } from "@/lib/tdee";

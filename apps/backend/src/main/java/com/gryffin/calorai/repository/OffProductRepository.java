@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Repository for Open Food Facts product lookups. Read-only; no mutation methods used. */
+/**
+ * Repository for Open Food Facts product lookups. Read-only; no mutation methods used.
+ */
 public interface OffProductRepository extends JpaRepository<OffProduct, String> {
 
   /**
@@ -30,13 +32,13 @@ public interface OffProductRepository extends JpaRepository<OffProduct, String> 
    * @return matching products ordered by relevance
    */
   @Query(
-      value = """
-          SELECT * FROM off_products
-          WHERE search_vec @@ plainto_tsquery('simple', unaccent(:query))
-          ORDER BY ts_rank(search_vec, plainto_tsquery('simple', unaccent(:query))) DESC
-          LIMIT :limit
-          """,
-      nativeQuery = true
+    value = """
+      SELECT * FROM off_products
+      WHERE search_vec @@ plainto_tsquery('simple', unaccent(:query))
+      ORDER BY ts_rank(search_vec, plainto_tsquery('simple', unaccent(:query))) DESC
+      LIMIT :limit
+      """,
+    nativeQuery = true
   )
   List<OffProduct> searchByFts(@Param("query") String query, @Param("limit") int limit);
 }

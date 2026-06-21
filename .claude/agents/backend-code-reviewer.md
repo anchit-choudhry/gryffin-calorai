@@ -56,7 +56,7 @@ For each changed Java file, apply the following checks:
 - [ ] `@param` tags present for all parameters on multi-param methods
 - [ ] `@return` tag present when return type is not `void`
 - [ ] Records have Javadoc on the record itself; `@Schema` replaces field-level Javadoc
-      in DTOs
+  in DTOs
 
 **Flag:** any public class/record/method missing a Javadoc block.
 
@@ -64,13 +64,13 @@ For each changed Java file, apply the following checks:
 
 Google Java Style = 2 spaces per indent level:
 
-| Context                                    | Spaces |
-|--------------------------------------------|--------|
-| Class body (fields, methods)               | 2      |
-| Record parameters                          | 4      |
-| Method body (first statement)              | 4      |
-| Continuation / builder chain               | 6      |
-| Nested continuation                        | 8      |
+| Context                       | Spaces |
+|-------------------------------|--------|
+| Class body (fields, methods)  | 2      |
+| Record parameters             | 4      |
+| Method body (first statement) | 4      |
+| Continuation / builder chain  | 6      |
+| Nested continuation           | 8      |
 
 **Flag:** any block using 4 spaces at class body level (common mistake from IntelliJ default
 settings), or 2 spaces for method body.
@@ -93,13 +93,13 @@ settings), or 2 spaces for method body.
 For `@RestController` classes:
 
 - [ ] `@Validated` present on the controller class (required for `@Min`/`@Max` on query/path
-      params to actually fire validation)
+  params to actually fire validation)
 - [ ] `@Min`, `@Max`, `@NotNull`, `@NotBlank` applied to query params where appropriate
 - [ ] `@Operation` Swagger annotation present on each endpoint method
 - [ ] `ConstraintViolationException` is handled - check that `GlobalExceptionHandler` has a
-      handler, or note that the controller relies on the existing one
+  handler, or note that the controller relies on the existing one
 - [ ] JWT auth is enforced via `SecurityConfig` (no unauthenticated endpoints should exist
-      without a documented reason)
+  without a documented reason)
 
 ### 3e. Entity patterns
 
@@ -107,9 +107,9 @@ For `@RestController` classes:
 - [ ] All columns have `@Column(name = "...")` with explicit snake_case name
 - [ ] `updated_at` columns have a `@PreUpdate void touch()` method
 - [ ] If the entity maps a read-only table (like `off_products`), `@Immutable` annotation
-      is present from `org.hibernate.annotations`
+  is present from `org.hibernate.annotations`
 - [ ] No `@GeneratedValue(strategy = GenerationType.IDENTITY)` on UUID PKs - use DB default
-      `gen_random_uuid()` and map with `updatable = false`
+  `gen_random_uuid()` and map with `updatable = false`
 
 ### 3f. DTO (record) patterns
 
@@ -139,9 +139,9 @@ Group findings by severity:
 
 ### Critical (will fail Checkstyle or cause runtime errors)
 
-| File | Line | Issue |
-|------|------|-------|
-| `OffProductController.java:42` | Missing `@Validated` on controller | ... |
+| File                           | Line                               | Issue |
+|--------------------------------|------------------------------------|-------|
+| `OffProductController.java:42` | Missing `@Validated` on controller | ...   |
 
 ### Warning (style violations or missing best practices)
 

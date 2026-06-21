@@ -2,18 +2,18 @@ import { useCallback, useEffect, useRef } from "react";
 import { useAppState } from "../state/AppState";
 import { api, ApiError, isAuthenticated } from "../lib/apiClient";
 import {
+  type ActivityLog,
   activityLogs,
+  type BodyMeasurement,
   bodyMeasurements,
+  type FastingSession,
   fastingSessions,
+  type FoodItem,
   foodItems,
   saveTdeeProfile,
+  type StepLog,
   stepLogs,
   syncQueue,
-  type ActivityLog,
-  type BodyMeasurement,
-  type FastingSession,
-  type FoodItem,
-  type StepLog,
   type SyncQueueEntry,
   type TdeeProfile,
   tdeeProfiles,

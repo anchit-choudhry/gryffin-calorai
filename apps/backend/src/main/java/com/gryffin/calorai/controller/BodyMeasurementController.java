@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** REST controller for body weight and composition measurements. */
+/**
+ * REST controller for body weight and composition measurements.
+ */
 @Tag(name = "Body Measurements", description = "CRUD for body weight and composition measurements")
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -45,8 +47,8 @@ public class BodyMeasurementController {
   @Operation(summary = "Get all changes since a timestamp (for delta sync)")
   @GetMapping("/changes")
   public List<BodyMeasurementDto> getChanges(
-      @AuthenticationPrincipal final Jwt jwt,
-      @RequestParam final Instant since
+    @AuthenticationPrincipal final Jwt jwt,
+    @RequestParam final Instant since
   ) {
     return bodyMeasurementService.getChangesSince(UUID.fromString(jwt.getSubject()), since);
   }
@@ -54,20 +56,20 @@ public class BodyMeasurementController {
   @Operation(summary = "Log a body measurement")
   @PostMapping
   public ResponseEntity<BodyMeasurementDto> create(
-      @AuthenticationPrincipal final Jwt jwt,
-      @Valid @RequestBody final BodyMeasurementDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @Valid @RequestBody final BodyMeasurementDto dto
   ) {
     final BodyMeasurementDto created =
-        bodyMeasurementService.create(UUID.fromString(jwt.getSubject()), dto);
+      bodyMeasurementService.create(UUID.fromString(jwt.getSubject()), dto);
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
   @Operation(summary = "Upsert a body measurement by ID (creates if not found, updates if found)")
   @PutMapping("/{id}")
   public BodyMeasurementDto upsert(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id,
-      @Valid @RequestBody final BodyMeasurementDto dto
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id,
+    @Valid @RequestBody final BodyMeasurementDto dto
   ) {
     return bodyMeasurementService.upsert(UUID.fromString(jwt.getSubject()), id, dto);
   }
@@ -75,8 +77,8 @@ public class BodyMeasurementController {
   @Operation(summary = "Soft-delete a body measurement")
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal final Jwt jwt,
-      @PathVariable final UUID id
+    @AuthenticationPrincipal final Jwt jwt,
+    @PathVariable final UUID id
   ) {
     bodyMeasurementService.delete(UUID.fromString(jwt.getSubject()), id);
     return ResponseEntity.noContent().build();
