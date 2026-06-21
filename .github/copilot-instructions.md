@@ -10,7 +10,7 @@ for architecture details, the full file location table, and quick commands.
 
 ## Stack (quick ref)
 
-React 19 + Vite 8 + TypeScript 6 (strict) | Zustand 5 | Dexie.js 4 (schema v19) | Tailwind CSS 4
+React 19 + Vite 8 + TypeScript 6 (strict) | Zustand 5 | Dexie.js 4 (schema v20) | Tailwind CSS 4
 (dark mode: class-based) | shadcn/ui (Radix UI) | react-hook-form 7 + zod/v3 | Vitest 4 + jsdom |
 Recharts 3 | motion 12 (`motion/react`) | sonner | lucide-react | Spring Boot 4.0 + PostgreSQL 18
 
@@ -49,16 +49,25 @@ Recharts 3 | motion 12 (`motion/react`) | sonner | lucide-react | Spring Boot 4.
 
 ## Specialized instructions
 
-| Topic                  | File                                               |
-|------------------------|----------------------------------------------------|
-| React / frontend       | `.github/instructions/frontend.instructions.md`    |
-| TypeScript             | `.github/instructions/typescript.instructions.md`  |
-| Testing / TDD          | `.github/instructions/testing.instructions.md`     |
-| Backend (Java/Spring)  | `.github/instructions/backend.instructions.md`     |
-| Security review        | `.github/agents/security-reviewer.agent.md`        |
-| React expert agent     | `.github/agents/react-expert.agent.md`             |
-| Generate tests skill   | `.github/skills/generate-tests/SKILL.md`           |
-| Webapp testing skill   | `.github/skills/webapp-testing/SKILL.md`           |
-| Update dependencies    | `.github/skills/update-dependencies/SKILL.md`      |
-| Extract specifications | `.github/prompts/extract-specifications/PROMPT.md` |
-| Code review            | `.github/prompts/code-review/PROMPT.md`            |
+| Topic                        | File                                                        |
+|------------------------------|-------------------------------------------------------------|
+| React / frontend             | `.github/instructions/frontend.instructions.md`             |
+| TypeScript                   | `.github/instructions/typescript.instructions.md`           |
+| Testing / TDD                | `.github/instructions/testing.instructions.md`              |
+| Backend (Java/Spring)        | `.github/instructions/backend.instructions.md`              |
+| UX and design system         | `.github/instructions/ux-principles.instructions.md`        |
+| HTML/CSS style               | `.github/instructions/html-css.instructions.md`             |
+| Markdown style               | `.github/instructions/markdown.instructions.md`             |
+| Security review              | `.github/agents/security-reviewer.agent.md`                 |
+| React expert agent           | `.github/agents/react-expert.agent.md`                      |
+| Generate tests skill         | `.github/skills/generate-tests/SKILL.md`                    |
+| Webapp testing skill         | `.github/skills/webapp-testing/SKILL.md`                    |
+| Update dependencies          | `.github/skills/update-dependencies/SKILL.md`               |
+| Scaffold React component     | `.github/skills/scaffold-new-react-component/SKILL.md`      |
+| Scaffold React hook          | `.github/skills/scaffold-new-react-hook/SKILL.md`           |
+| Scaffold Zustand slice       | `.github/skills/scaffold-zustand-slice/SKILL.md`            |
+| Scaffold backend endpoint    | `.github/skills/scaffold-backend/SKILL.md`                  |
+| Dexie schema migration       | `.github/skills/dexie-migration/SKILL.md`                   |
+| Flyway SQL migration         | `.github/skills/flyway-migration/SKILL.md`                  |
+| Extract specifications       | `.github/prompts/extract-specifications/PROMPT.md`          |
+| Code review                  | `.github/prompts/code-review/PROMPT.md`                     |

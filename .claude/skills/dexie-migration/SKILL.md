@@ -24,8 +24,8 @@ Ask the user:
 Read `apps/web/src/db/dbService.ts` and find the highest `db.version(N)` call. The new version is
 N+1.
 
-Current schema is v19 (cloud sync baseline). Update the `DB_SCHEMA_VERSION` constant if one
-exists; otherwise track manually.
+Current schema is v20 (cloud sync + photos baseline). Update the `DB_SCHEMA_VERSION` constant if
+one exists; otherwise track manually.
 
 ## Step 3 - Copy the full stores schema
 
@@ -49,7 +49,7 @@ Copy the full stores object from the previous version block and add your changes
 ```typescript
 // 20. Version 20: <brief description>
 db.version(20).stores({
-  // ... full schema identical to v19, with your additions
+  // ... full schema identical to v20, with your additions
   newTable: "++id, userId, createdAt",
 });
 ```

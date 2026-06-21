@@ -18,7 +18,7 @@ This project's specific security surface:
 
 Frontend:
 
-- IndexedDB (Dexie.js v19); CSP headers in `vite.config.ts` and `public/_headers`
+- IndexedDB (Dexie.js v20); CSP headers in `vite.config.ts` and `public/_headers`
 - JWT stored in localStorage; auto-refresh 60s before expiry via `src/lib/apiClient.ts`
 - External fetch only via CORS proxy (`corsproxy.io`) in `useRecipeImport`
 - Run `pnpm audit` to check for known CVEs (fails on high/critical)
