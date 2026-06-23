@@ -376,4 +376,37 @@ describe("uiSlice", () => {
       expect(localStorage.getItem("gc_broadsheet")).toBe("false");
     });
   });
+
+  describe("captureOpen", () => {
+    it("initializes captureOpen as false", () => {
+      const store = makeStore();
+      expect(store.getState().captureOpen).toBe(false);
+    });
+
+    it("openCapture sets captureOpen to true", () => {
+      const store = makeStore();
+      store.getState().openCapture();
+      expect(store.getState().captureOpen).toBe(true);
+    });
+
+    it("closeCapture sets captureOpen to false", () => {
+      const store = makeStore();
+      store.getState().openCapture();
+      store.getState().closeCapture();
+      expect(store.getState().captureOpen).toBe(false);
+    });
+
+    it("openCapture is idempotent when already open", () => {
+      const store = makeStore();
+      store.getState().openCapture();
+      store.getState().openCapture();
+      expect(store.getState().captureOpen).toBe(true);
+    });
+
+    it("closeCapture is idempotent when already closed", () => {
+      const store = makeStore();
+      store.getState().closeCapture();
+      expect(store.getState().captureOpen).toBe(false);
+    });
+  });
 });

@@ -98,18 +98,15 @@ export function useProgressData(days: 7 | 30 = 7): {
         setData(calorieTotals);
         setRollingAvg(rollingAvgValues);
 
-        // Only build mealTypeData and macroData for 7-day view
+        // macroData is built for all ranges; mealTypeData only for 7-day
+        // (Calorie Distribution uses chartData as fallback for 30-day view)
+        const macros: MacroData = { protein: [], carbs: [], fat: [] };
         if (days === 7) {
           const grouped: MealTypeData = {
             Breakfast: [],
             Lunch: [],
             Snacks: [],
             Dinner: [],
-          };
-          const macros: MacroData = {
-            protein: [],
-            carbs: [],
-            fat: [],
           };
           for (const iso of isoKeys) {
             const dayMap = mealMap.get(iso);
@@ -122,11 +119,16 @@ export function useProgressData(days: 7 | 30 = 7): {
             macros.fat.push(dayMacro?.fat ?? 0);
           }
           setMealTypeData(grouped);
-          setMacroData(macros);
         } else {
+          for (const iso of isoKeys) {
+            const dayMacro = macroMap.get(iso);
+            macros.protein.push(dayMacro?.protein ?? 0);
+            macros.carbs.push(dayMacro?.carbs ?? 0);
+            macros.fat.push(dayMacro?.fat ?? 0);
+          }
           setMealTypeData(null);
-          setMacroData(null);
         }
+        setMacroData(macros);
 
         setIsLoading(false);
       })

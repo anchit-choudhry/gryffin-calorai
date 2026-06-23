@@ -317,6 +317,54 @@ describe("AppState", () => {
       const state = useAppState.getState();
       expect(state.error).toBeDefined();
     });
+
+    it("warns when food matches a diet restriction", async () => {
+      const userId = UserId("test-user");
+      useAppState.setState({
+        userId,
+        dietProfile: {
+          userId,
+          preset: "generic",
+          restrictions: ["gluten"],
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      const food = {
+        userId,
+        name: "Wheat Bread",
+        calories: 120,
+        servingSize: 1,
+        dateLogged: ISODate("2026-06-21"),
+        isFavorite: false,
+        mealType: "Breakfast" as const,
+      };
+      await useAppState.getState().addFoodLog(food);
+      expect(vi.mocked(dbService.addFoodItemLog)).toHaveBeenCalled();
+    });
+
+    it("skips restriction warning when food name has no violations", async () => {
+      const userId = UserId("test-user");
+      useAppState.setState({
+        userId,
+        dietProfile: {
+          userId,
+          preset: "generic",
+          restrictions: ["gluten"],
+          updatedAt: new Date().toISOString(),
+        },
+      });
+      const food = {
+        userId,
+        name: "Apple",
+        calories: 80,
+        servingSize: 1,
+        dateLogged: ISODate("2026-06-21"),
+        isFavorite: false,
+        mealType: "Snacks" as const,
+      };
+      await useAppState.getState().addFoodLog(food);
+      expect(vi.mocked(dbService.addFoodItemLog)).toHaveBeenCalled();
+    });
   });
 
   describe("deleteFoodLog", () => {
@@ -335,6 +383,28 @@ describe("AppState", () => {
       await useAppState.getState().deleteFoodLog(FoodItemId(123));
       const state = useAppState.getState();
       expect(state.error).toBeDefined();
+    });
+
+    it("deleteFoodLog enqueues sync when food item has syncId", async () => {
+      const userId = UserId("test-user");
+      const foodId = FoodItemId(321);
+      useAppState.setState({
+        userId,
+        dailyLogs: [
+          {
+            id: foodId,
+            userId,
+            name: "Banana",
+            calories: 89,
+            servingSize: 1,
+            dateLogged: ISODate("2026-06-21"),
+            isFavorite: false,
+            syncId: "food-delete-sync-xyz",
+          },
+        ],
+      });
+      await useAppState.getState().deleteFoodLog(foodId);
+      expect(vi.mocked(dbService.deleteFoodItem)).toHaveBeenCalledWith(foodId, userId);
     });
   });
 
@@ -507,6 +577,92 @@ describe("AppState", () => {
       await useAppState.getState().toggleFavorite(foodId, true);
       expect(useAppState.getState().error).toBeDefined();
     });
+
+    it("toggleFavorite enqueues sync when food item has syncId", async () => {
+      const userId = UserId("test-user");
+      const foodId = FoodItemId(999);
+      useAppState.setState({
+        userId,
+        allFoodItems: [
+          {
+            id: foodId,
+            userId,
+            name: "Banana",
+            calories: 89,
+            servingSize: 1,
+            dateLogged: ISODate("2026-06-21"),
+            isFavorite: false,
+            syncId: "food-sync-xyz",
+          },
+        ],
+      });
+      await useAppState.getState().toggleFavorite(foodId, true);
+      expect(vi.mocked(dbService).toggleFavoriteFoodItem).toHaveBeenCalledWith(
+        foodId,
+        true,
+        userId,
+      );
+    });
+
+    it("toggleFavorite with isFavorite=false removes from favoriteFoods", async () => {
+      const userId = UserId("test-user");
+      const foodId = FoodItemId(888);
+      useAppState.setState({
+        userId,
+        allFoodItems: [
+          {
+            id: foodId,
+            userId,
+            name: "Grape",
+            calories: 60,
+            servingSize: 1,
+            dateLogged: ISODate("2026-06-21"),
+            isFavorite: true,
+          },
+        ],
+        favoriteFoods: [
+          {
+            id: foodId,
+            userId,
+            name: "Grape",
+            calories: 60,
+            servingSize: 1,
+            dateLogged: ISODate("2026-06-21"),
+            isFavorite: true,
+          },
+        ],
+      });
+      await useAppState.getState().toggleFavorite(foodId, false);
+      expect(vi.mocked(dbService).toggleFavoriteFoodItem).toHaveBeenCalledWith(
+        foodId,
+        false,
+        userId,
+      );
+      expect(useAppState.getState().favoriteFoods.some((f) => f.id === foodId)).toBe(false);
+    });
+  });
+
+  describe("copyYesterdayLogs", () => {
+    it("copies yesterday's food logs when userId is set", async () => {
+      const userId = UserId("test-user");
+      useAppState.setState({ userId });
+      await useAppState.getState().copyYesterdayLogs();
+      expect(vi.mocked(dbService.copyFoodLogs)).toHaveBeenCalled();
+    });
+
+    it("returns early when userId is null", async () => {
+      useAppState.setState({ userId: null });
+      await useAppState.getState().copyYesterdayLogs();
+      expect(vi.mocked(dbService.copyFoodLogs)).not.toHaveBeenCalled();
+    });
+
+    it("sets error state when copyFoodLogs throws", async () => {
+      const userId = UserId("test-user");
+      useAppState.setState({ userId });
+      vi.mocked(dbService.copyFoodLogs).mockRejectedValueOnce(new Error("DB error"));
+      await useAppState.getState().copyYesterdayLogs();
+      expect(useAppState.getState().error).toBeDefined();
+    });
   });
 
   describe("updateFoodLog", () => {
@@ -517,6 +673,32 @@ describe("AppState", () => {
       const updates = { name: "Updated Food", calories: 200 };
       await useAppState.getState().updateFoodLog(foodId, updates);
       expect(vi.mocked(dbService).updateFoodItem).toHaveBeenCalledWith(foodId, updates, userId);
+    });
+
+    it("updateFoodLog enqueues sync when food item has syncId", async () => {
+      const userId = UserId("test-user");
+      const foodId = FoodItemId(456);
+      useAppState.setState({
+        userId,
+        allFoodItems: [
+          {
+            id: foodId,
+            userId,
+            name: "Apple",
+            calories: 95,
+            servingSize: 1,
+            dateLogged: ISODate("2026-06-21"),
+            isFavorite: false,
+            syncId: "food-update-sync-xyz",
+          },
+        ],
+      });
+      await useAppState.getState().updateFoodLog(foodId, { calories: 100 });
+      expect(vi.mocked(dbService).updateFoodItem).toHaveBeenCalledWith(
+        foodId,
+        { calories: 100 },
+        userId,
+      );
     });
   });
 
@@ -541,6 +723,26 @@ describe("AppState", () => {
       await useAppState.getState().deleteWaterLog(logId);
       expect(vi.mocked(dbService).deleteWaterLog).toHaveBeenCalledWith(logId, userId);
     });
+
+    it("deleteWaterLog enqueues sync when record has syncId", async () => {
+      const userId = UserId("test-user");
+      const logId = WaterLogId(456);
+      useAppState.setState({
+        userId,
+        dailyWaterLogs: [
+          {
+            id: logId,
+            userId,
+            amount: 250,
+            dateLogged: ISODate("2026-06-21"),
+            loggedAt: new Date().toISOString(),
+            syncId: "water-sync-abc",
+          },
+        ],
+      });
+      await useAppState.getState().deleteWaterLog(logId);
+      expect(vi.mocked(dbService).deleteWaterLog).toHaveBeenCalledWith(logId, userId);
+    });
   });
 
   describe("Step Logs", () => {
@@ -561,6 +763,26 @@ describe("AppState", () => {
       const userId = UserId("test-user");
       useAppState.setState({ userId });
       const logId = StepLogId(123);
+      await useAppState.getState().deleteStepLog(logId);
+      expect(vi.mocked(dbService).deleteStepLog).toHaveBeenCalledWith(logId, userId);
+    });
+
+    it("deleteStepLog enqueues sync when record has syncId", async () => {
+      const userId = UserId("test-user");
+      const logId = StepLogId(456);
+      useAppState.setState({
+        userId,
+        dailyStepLogs: [
+          {
+            id: logId,
+            userId,
+            steps: 2000,
+            dateLogged: ISODate("2026-06-21"),
+            loggedAt: new Date().toISOString(),
+            syncId: "step-sync-abc",
+          },
+        ],
+      });
       await useAppState.getState().deleteStepLog(logId);
       expect(vi.mocked(dbService).deleteStepLog).toHaveBeenCalledWith(logId, userId);
     });
@@ -608,6 +830,28 @@ describe("AppState", () => {
       );
     });
 
+    it("deleteBodyMeasurement enqueues sync when record has syncId", async () => {
+      const userId = UserId("test-user");
+      const measurementId = BodyMeasurementId(456);
+      useAppState.setState({
+        userId,
+        bodyMeasurements: [
+          {
+            id: measurementId,
+            userId,
+            measuredAt: ISODate("2026-06-21"),
+            weight: 70,
+            syncId: "body-sync-abc",
+          },
+        ],
+      });
+      await useAppState.getState().deleteBodyMeasurement(measurementId);
+      expect(vi.mocked(dbService).deleteBodyMeasurement).toHaveBeenCalledWith(
+        measurementId,
+        userId,
+      );
+    });
+
     it("should update body measurement", async () => {
       const userId = UserId("test-user");
       useAppState.setState({ userId });
@@ -617,6 +861,29 @@ describe("AppState", () => {
         measurementId,
         userId,
         { weight: 72 },
+      );
+    });
+
+    it("updateBodyMeasurement enqueues sync when record has syncId", async () => {
+      const userId = UserId("test-user");
+      const measurementId = BodyMeasurementId(789);
+      useAppState.setState({
+        userId,
+        bodyMeasurements: [
+          {
+            id: measurementId,
+            userId,
+            measuredAt: ISODate("2026-06-21"),
+            weight: 68,
+            syncId: "body-update-sync-abc",
+          },
+        ],
+      });
+      await useAppState.getState().updateBodyMeasurement(measurementId, { weight: 69 });
+      expect(vi.mocked(dbService).updateBodyMeasurement).toHaveBeenCalledWith(
+        measurementId,
+        userId,
+        { weight: 69 },
       );
     });
   });

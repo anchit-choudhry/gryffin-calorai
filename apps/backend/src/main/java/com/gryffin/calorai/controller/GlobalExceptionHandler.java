@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
     log.debug("Constraint violation: {}", ex.getMessage());
     var detail = ex.getConstraintViolations().stream()
-      .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+      .map(cv -> cv.getMessage())
       .findFirst()
       .orElse("Validation failed");
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);

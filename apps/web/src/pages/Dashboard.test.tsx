@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { FoodItemId, ISODate, UserId } from "@/types";
 import type { FoodItem } from "@/db/dbService";
 import * as appState from "../state/AppState";
@@ -206,6 +206,9 @@ function makeMock(
     bodyMeasurements: [],
     openQuickAdd: vi.fn(),
     copyYesterdayLogs: vi.fn().mockResolvedValue(undefined),
+    captureOpen: false,
+    openCapture: vi.fn(),
+    closeCapture: vi.fn(),
     ...overrides,
   } as unknown as ReturnType<typeof appState.useAppState>;
 }
@@ -588,6 +591,91 @@ describe("Dashboard Today/Week tabs", () => {
     const toggleBtn = screen.getByRole("button", { name: /show trackers/i });
     fireEvent.click(toggleBtn);
     expect(screen.getByRole("button", { name: /hide trackers/i })).toBeInTheDocument();
+  });
+});
+
+describe("Dashboard capture disclosure", () => {
+  it("capture methods are hidden by default", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.queryByText("FoodLogger")).not.toBeInTheDocument();
+    expect(screen.queryByText("BarcodeScanner")).not.toBeInTheDocument();
+    expect(screen.queryByText("VoiceFoodLogger")).not.toBeInTheDocument();
+    expect(screen.queryByText("PhotoFoodLogger")).not.toBeInTheDocument();
+  });
+
+  it("shows a visible 'Add to Today's Log' trigger", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByRole("button", { name: /add to today's log/i })).toBeInTheDocument();
+  });
+
+  it("trigger has aria-expanded false by default", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByRole("button", { name: /add to today's log/i })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("reveals all four capture methods when captureOpen is true", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(makeMock({ captureOpen: true }));
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByText("FoodLogger")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("BarcodeScanner")).toBeInTheDocument());
+    expect(screen.getByText("VoiceFoodLogger")).toBeInTheDocument();
+    expect(screen.getByText("PhotoFoodLogger")).toBeInTheDocument();
+  });
+
+  it("trigger aria-expanded is true when captureOpen is true", async () => {
+    vi.mocked(appState.useAppState).mockReturnValue(makeMock({ captureOpen: true }));
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    expect(screen.getByRole("button", { name: /add to today's log/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("clicking trigger calls openCapture when capture is closed", async () => {
+    const openCapture = vi.fn();
+    const closeCapture = vi.fn();
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ captureOpen: false, openCapture, closeCapture }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /add to today's log/i }));
+    expect(openCapture).toHaveBeenCalledOnce();
+    expect(closeCapture).not.toHaveBeenCalled();
+  });
+
+  it("clicking trigger calls closeCapture when capture is open", async () => {
+    const openCapture = vi.fn();
+    const closeCapture = vi.fn();
+    vi.mocked(appState.useAppState).mockReturnValue(
+      makeMock({ captureOpen: true, openCapture, closeCapture }),
+    );
+    const Dashboard = (await import("./Dashboard")).default;
+    render(<Dashboard />);
+    fireEvent.click(screen.getByRole("button", { name: /add to today's log/i }));
+    expect(closeCapture).toHaveBeenCalledOnce();
+    expect(openCapture).not.toHaveBeenCalled();
+  });
+});
+
+describe("Dashboard Today section order", () => {
+  it("DailyVitalsStrip precedes the diary section in document order", async () => {
+    const Dashboard = (await import("./Dashboard")).default;
+    const { container } = render(<Dashboard />);
+    const vitals = screen.getByTestId("daily-vitals-strip");
+    const diarySection = container.querySelector('[data-tour-id="dashboard-log"]');
+    expect(diarySection).toBeInTheDocument();
+    expect(
+      vitals.compareDocumentPosition(diarySection!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
 

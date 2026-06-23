@@ -5,10 +5,12 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.17.0 released (June 2026); v0.18.0 in progress (June 2026). Full-stack: React
-frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool. Database schema
-v20 (frontend) + Flyway V22 (backend). Target: v1.0.0 with native mobile apps (E2E encrypted cloud
-sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
+**Context:** v0.18.0 released (June 2026); v0.19.0 planned - Legible Ledger complete (Progress
+4-tab restructure + Dashboard capture collapse + voice consistency). Full-stack: React frontend +
+Spring Boot backend (auth + PostgreSQL). Health-focused
+personal tool. Database schema v20 (frontend) + Flyway V22 (backend). Target: v1.0.0 with native
+mobile apps (E2E encrypted cloud sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in
+v0.17.0).
 
 ---
 
@@ -207,7 +209,7 @@ For quick dev commands, see @@README.md
 | **Pages**         | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx` | Main views (lazy-loaded); Settings at `#/settings`                                                                                                                                                                                     |
 | **Components**    | `apps/web/src/components/`                                     | Sub-folders: `dashboard/`, `illustrations/`, `icons/almanac/`, `settings/`, `progress/`, `recipes/`, `charts/`, `tour/`                                                                                                                |
 | **Dashboard**     | `apps/web/src/components/dashboard/`                           | AlmanacPanel (lazy), DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks; `SeasonalOrnament` (in `icons/almanac/`) is reused in App.tsx nav head - do not inline seasonal logic |
-| **Progress**      | `apps/web/src/components/progress/`                            | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal)                            |
+| **Progress**      | `apps/web/src/components/progress/`                            | TabHeadline (per-tab plain-language headline), AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal) |
 | **Settings**      | `apps/web/src/components/settings/`                            | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel                                                                                                                            |
 | **Tour**          | `apps/web/src/components/tour/`                                | ProductTourOverlay, CoachmarkCard, tourSteps, useSpotlightRect                                                                                                                                                                         |
 | **Hooks**         | `apps/web/src/hooks/`                                          | `useSyncService` (cloud sync), `useProgressData` (7-day avg), `useWeeklyHarvestTrigger`, `useFastingTimer`, `useReminders`                                                                                                             |
@@ -227,7 +229,7 @@ For quick dev commands, see @@README.md
 | **Solar lib**     | `apps/web/src/lib/solar.ts`                                    | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel                                                                                                                                           |
 | **Charts lib**    | `apps/web/src/lib/chartTheme.ts`                               | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber)                                                                                                                                                             |
 | **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts`                         | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel                                                                                                                                                                     |
-| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (139+ files, 2594+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
+| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (144+ files, 2647+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
 | **Config**        | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup                                                                                                                                                                                                          |
 | **Backend**       | `apps/backend/src/main/java/com/gryffin/calorai/`              | Spring Boot 4.0 + Java 25                                                                                                                                                                                                              |
 | **DB migrate**    | `apps/backend/src/main/resources/db/migration/`                | Flyway SQL migrations                                                                                                                                                                                                                  |
@@ -292,5 +294,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 20, 2026 | **Current release:** v0.17.0 (released June 2026) | **In
-progress:** v0.18.0 (139+ test files, 2594+ tests)
+**Last Updated:** June 22, 2026 | **Current release:** v0.18.0 (released June 2026) | **In
+progress:** v0.19.0 (142+ test files, 2657+ tests)

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Info, Plus } from "lucide-react";
+import { ChevronDown, Info, Plus } from "lucide-react";
 import { toast } from "sonner";
 import FoodLogger from "../components/FoodLogger";
 import PageLoading from "../components/PageLoading";
@@ -79,6 +79,9 @@ const Dashboard = () => {
     bodyMeasurements,
     openQuickAdd,
     copyYesterdayLogs,
+    captureOpen,
+    openCapture,
+    closeCapture,
   } = useAppState();
 
   const [activeView, setActiveView] = useState<DashboardView>("today");
@@ -416,8 +419,58 @@ const Dashboard = () => {
 
         {activeView === "today" && (
           <>
-            {/* Lead column: diary + add + recent + favorites + recurring */}
+            {/* Lead column: vitals + diary + add + recent + favorites + recurring */}
             <div className="dashboard-lead">
+              {/* Section: Daily Vitals (compact strip + expandable full trackers) */}
+              <motion.section className="col-span-12" {...sv}>
+                <div className="flex items-center gap-4 mb-3">
+                  <SectionHeader kicker="Today" title="Daily Vitals" />
+                  <button
+                    type="button"
+                    onClick={() => setShowTrackers((v) => !v)}
+                    aria-expanded={showTrackers}
+                    className="ml-auto font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1"
+                  >
+                    {showTrackers ? "Hide Trackers" : "Show Trackers"}
+                  </button>
+                </div>
+                <DailyVitalsStrip
+                  totalWaterMl={totalWaterMl}
+                  waterGoalMl={waterGoalMl ?? DAILY_WATER_GOAL_ML}
+                  totalSteps={totalSteps}
+                  totalBurned={totalBurned}
+                  fastingTargetHours={activeFastingSession?.targetHours}
+                  fastingRemaining={activeFastingSession ? fastingRemaining : undefined}
+                  fastingComplete={activeFastingSession ? fastingComplete : undefined}
+                />
+                <AnimatePresence>
+                  {showTrackers && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 grid grid-cols-12 gap-4">
+                        <div
+                          data-tour-id="dashboard-fasting"
+                          className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4"
+                        >
+                          <FastingTimer />
+                        </div>
+                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
+                          <WaterTracker />
+                        </div>
+                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
+                          <StepTracker />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.section>
+
               {/* Insight cards */}
               {visibleInsights.length > 0 && (
                 <motion.div className="col-span-12 flex flex-col gap-2 sm:flex-row" {...sv}>
@@ -558,37 +611,68 @@ const Dashboard = () => {
                 )}
               </motion.section>
 
-              {/* Section: Add to Today's Log */}
-              <motion.section
-                data-tour-id="dashboard-add"
-                className="col-span-12 grid grid-cols-12 gap-6"
-                {...sv}
-              >
-                <SectionHeader className="col-span-12" kicker="Log" title="Add to Today's Log" />
-                <div className="col-span-12 lg:col-span-6">
-                  <EditorialFrame label="Write">
-                    <FoodLogger />
-                  </EditorialFrame>
-                </div>
-                <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                  <EditorialFrame label="Scan">
-                    <Suspense fallback={<PageLoading message="Loading scanner..." />}>
-                      <BarcodeScanner onBarcodeDetected={handleBarcodeDetected} />
-                    </Suspense>
-                  </EditorialFrame>
-                </div>
-                <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                  <EditorialFrame label="Speak">
-                    <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
-                  </EditorialFrame>
-                </div>
-                <div className="col-span-12 md:col-span-4 lg:col-span-2">
-                  <EditorialFrame label="Photo">
-                    <PhotoFoodLogger
-                      onPhotoReady={(img, thumb, mime) => void handlePhotoReady(img, thumb, mime)}
+              {/* Section: Add to Today's Log (collapsed capture disclosure) */}
+              <motion.section data-tour-id="dashboard-add" className="col-span-12" {...sv}>
+                <div className="flex items-center gap-4 border-b border-rule pb-3">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-ink-soft">
+                    Log
+                  </span>
+                  <button
+                    type="button"
+                    onClick={captureOpen ? closeCapture : openCapture}
+                    aria-expanded={captureOpen}
+                    aria-controls="capture-panel"
+                    className={cn(
+                      "flex items-center gap-2 font-serif text-xl font-medium text-ink transition-colors",
+                      "hover:text-persimmon focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon focus-visible:ring-offset-1",
+                    )}
+                  >
+                    Add to Today&apos;s Log
+                    <ChevronDown
+                      className={cn(
+                        "size-4 transition-transform duration-200",
+                        captureOpen && "rotate-180",
+                      )}
+                      aria-hidden="true"
                     />
-                  </EditorialFrame>
+                  </button>
                 </div>
+                <AnimatePresence>
+                  {captureOpen && (
+                    <motion.div
+                      id="capture-panel"
+                      key="capture"
+                      initial={{ opacity: shouldReduceMotion ? 1 : 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: shouldReduceMotion ? 1 : 0 }}
+                      transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+                      className="mt-4 grid grid-cols-12 gap-4"
+                    >
+                      <div className="col-span-12 lg:col-span-6">
+                        <EditorialFrame label="Write">
+                          <FoodLogger onSuccess={closeCapture} />
+                        </EditorialFrame>
+                      </div>
+                      <div className="col-span-12 sm:col-span-4 lg:col-span-2">
+                        <EditorialFrame label="Scan">
+                          <Suspense fallback={<PageLoading />}>
+                            <BarcodeScanner onBarcodeDetected={handleBarcodeDetected} />
+                          </Suspense>
+                        </EditorialFrame>
+                      </div>
+                      <div className="col-span-12 sm:col-span-4 lg:col-span-2">
+                        <EditorialFrame label="Speak">
+                          <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
+                        </EditorialFrame>
+                      </div>
+                      <div className="col-span-12 sm:col-span-4 lg:col-span-2">
+                        <EditorialFrame label="Photo">
+                          <PhotoFoodLogger onPhotoReady={handlePhotoReady} />
+                        </EditorialFrame>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.section>
 
               {/* Section: Recently Logged */}
@@ -713,62 +797,12 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Sidebar column: almanac panel + vitals */}
+            {/* Sidebar column: almanac panel */}
             <div className="dashboard-sidebar">
               {/* E5 Almanac Panel */}
               <Suspense fallback={null}>
                 <AlmanacPanel />
               </Suspense>
-
-              {/* Section: Daily Vitals (compact strip + expandable full trackers) */}
-              <motion.section className="col-span-12" {...sv}>
-                <div className="flex items-center gap-4 mb-3">
-                  <SectionHeader kicker="Today" title="Daily Vitals" />
-                  <button
-                    type="button"
-                    onClick={() => setShowTrackers((v) => !v)}
-                    aria-expanded={showTrackers}
-                    className="ml-auto font-mono text-[10px] uppercase tracking-[0.15em] text-ink-soft transition-colors hover:text-ink"
-                  >
-                    {showTrackers ? "Hide Trackers" : "Show Trackers"}
-                  </button>
-                </div>
-                <DailyVitalsStrip
-                  totalWaterMl={totalWaterMl}
-                  waterGoalMl={waterGoalMl ?? DAILY_WATER_GOAL_ML}
-                  totalSteps={totalSteps}
-                  totalBurned={totalBurned}
-                  fastingTargetHours={activeFastingSession?.targetHours}
-                  fastingRemaining={activeFastingSession ? fastingRemaining : undefined}
-                  fastingComplete={activeFastingSession ? fastingComplete : undefined}
-                />
-                <AnimatePresence>
-                  {showTrackers && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-4 grid grid-cols-12 gap-4">
-                        <div
-                          data-tour-id="dashboard-fasting"
-                          className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4"
-                        >
-                          <FastingTimer />
-                        </div>
-                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
-                          <WaterTracker />
-                        </div>
-                        <div className="col-span-12 border border-rule p-5 bg-paper-raised sm:col-span-6 lg:col-span-4">
-                          <StepTracker />
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.section>
             </div>
           </>
         )}

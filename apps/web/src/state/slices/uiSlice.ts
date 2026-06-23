@@ -101,6 +101,9 @@ export interface UiSlice {
   quickAddOpen: boolean;
   openQuickAdd: () => void;
   closeQuickAdd: () => void;
+  captureOpen: boolean;
+  openCapture: () => void;
+  closeCapture: () => void;
   commandPaletteOpen: boolean;
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
@@ -127,6 +130,9 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   quickAddOpen: false,
   openQuickAdd: () => set({ quickAddOpen: true }),
   closeQuickAdd: () => set({ quickAddOpen: false }),
+  captureOpen: false,
+  openCapture: () => set({ captureOpen: true }),
+  closeCapture: () => set({ captureOpen: false }),
   commandPaletteOpen: false,
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),

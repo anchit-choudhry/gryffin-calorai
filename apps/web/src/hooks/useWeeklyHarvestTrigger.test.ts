@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { isoWeekKey } from "./useWeeklyHarvestTrigger";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { isoWeekKey, useWeeklyHarvestTrigger } from "./useWeeklyHarvestTrigger";
+
+const HARVEST_WEEK_KEY = "gc_harvest_week";
 
 describe("isoWeekKey", () => {
   it("returns YYYY-WXX format", () => {
@@ -32,5 +35,32 @@ describe("isoWeekKey", () => {
   it("Dec 28 2026 (Monday) is in week 53 or week 1 of 2027", () => {
     const key = isoWeekKey(new Date(2026, 11, 28));
     expect(key).toMatch(/^202[67]-W\d{2}$/);
+  });
+});
+
+describe("useWeeklyHarvestTrigger", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("shouldOpenThisSession is true when no week has been seen", () => {
+    const { result } = renderHook(() => useWeeklyHarvestTrigger());
+    expect(result.current.shouldOpenThisSession).toBe(true);
+  });
+
+  it("shouldOpenThisSession is false when the current week was already seen", () => {
+    localStorage.setItem(HARVEST_WEEK_KEY, isoWeekKey());
+    const { result } = renderHook(() => useWeeklyHarvestTrigger());
+    expect(result.current.shouldOpenThisSession).toBe(false);
+  });
+
+  it("markSeen writes the current week key to localStorage", () => {
+    const { result } = renderHook(() => useWeeklyHarvestTrigger());
+    result.current.markSeen();
+    expect(localStorage.getItem(HARVEST_WEEK_KEY)).toBe(isoWeekKey());
   });
 });

@@ -90,6 +90,7 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const openQuickAdd = useAppState((s) => s.openQuickAdd);
   const closeQuickAdd = useAppState((s) => s.closeQuickAdd);
+  const openCapture = useAppState((s) => s.openCapture);
   const openCommandPalette = useAppState((s) => s.openCommandPalette);
   const density = useAppState((s) => s.density);
   const accentTheme = useAppState((s) => s.accentTheme);
@@ -301,8 +302,9 @@ function App() {
     (_action: "write" | "scan" | "speak") => {
       closeQuickAdd();
       navigate(normalizeHash("#dashboard"));
+      openCapture();
     },
-    [closeQuickAdd, navigate],
+    [closeQuickAdd, navigate, openCapture],
   );
 
   const tablistRef = useRef<HTMLDivElement>(null);

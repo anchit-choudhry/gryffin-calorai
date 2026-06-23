@@ -69,8 +69,9 @@ cleanup() {
 trap cleanup ERR
 
 # --- 1. open audit log row ---
+PARQUET_FILE_ESCAPED=$(printf '%s' "$PARQUET_FILE" | sed "s/'/''/g")
 LOG_ID=$($PSQL -t -A -c "
-  INSERT INTO off_import_log (parquet_file) VALUES ('$PARQUET_FILE') RETURNING id;
+  INSERT INTO off_import_log (parquet_file) VALUES ('$PARQUET_FILE_ESCAPED') RETURNING id;
 " | grep -E '^[0-9]+$' | tail -1)
 echo "[$(date -u +%FT%TZ)] Import log id: $LOG_ID"
 

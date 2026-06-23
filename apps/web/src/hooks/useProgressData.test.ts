@@ -160,7 +160,7 @@ describe("useProgressData", () => {
     expect(Array.isArray(result.current.data)).toBe(true);
   });
 
-  it("should return null for mealTypeData and macroData on 30-day view", async () => {
+  it("returns null for mealTypeData but populated macroData on 30-day view", async () => {
     const today = new Date().toISOString().split("T")[0];
     vi.mocked(dbService).getAllFoodLogs.mockResolvedValue([
       {
@@ -181,11 +181,17 @@ describe("useProgressData", () => {
     const { result } = renderHook(() => useProgressData(30));
 
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(result.current.macroData).not.toBeNull();
     });
 
     expect(result.current.mealTypeData).toBeNull();
-    expect(result.current.macroData).toBeNull();
+    expect(result.current.macroData).not.toBeNull();
+    expect(result.current.macroData?.protein).toHaveLength(30);
+    const todayLabel = today!.substring(5);
+    const todayIdx = result.current.labels.indexOf(todayLabel);
+    expect(result.current.macroData?.protein[todayIdx]).toBe(10);
+    expect(result.current.macroData?.carbs[todayIdx]).toBe(20);
+    expect(result.current.macroData?.fat[todayIdx]).toBe(5);
   });
 
   it("uses 0 for protein/carbs/fat when they are undefined on a log entry", async () => {
