@@ -37,4 +37,19 @@ describe("ProvenanceBadge", () => {
     render(<ProvenanceBadge method="photo" className="my-class" />);
     expect(screen.getByLabelText("Logged via Photo")).toHaveClass("my-class");
   });
+
+  it("renders badge with aria-label for photo_ai", () => {
+    render(<ProvenanceBadge method="photo_ai" />);
+    expect(screen.getByLabelText("Logged via AI Photo")).toBeInTheDocument();
+  });
+
+  it("renders badge with aria-label for text_ai", () => {
+    render(<ProvenanceBadge method="text_ai" />);
+    expect(screen.getByLabelText("Logged via AI Text")).toBeInTheDocument();
+  });
+
+  it("renders badge with aria-label for voice_ai", () => {
+    render(<ProvenanceBadge method="voice_ai" />);
+    expect(screen.getByLabelText("Logged via AI Voice")).toBeInTheDocument();
+  });
 });

@@ -1,21 +1,27 @@
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
 import VoiceFoodLogger from "./VoiceFoodLogger";
 import { useVoiceCapture } from "../hooks/useVoiceCapture";
-import { useAppState } from "../state/AppState";
 import { FoodItemId, fuzzyMatchFoodName, ISODate, UserId } from "../types";
 import type { FoodItem } from "../db/dbService";
+import type { RecognizedFoodItem } from "../lib/aiLoggingApi";
+
+const mockUseVoiceCapture = vi.hoisted(() => vi.fn());
+const mockUseAppState = vi.hoisted(() => vi.fn());
 
 vi.mock("../hooks/useVoiceCapture", () => ({
-  useVoiceCapture: vi.fn(),
+  useVoiceCapture: mockUseVoiceCapture,
 }));
 vi.mock("../state/AppState", () => ({
-  useAppState: vi.fn(),
+  useAppState: mockUseAppState,
 }));
 vi.mock("../types", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../types")>();
   return { ...actual, fuzzyMatchFoodName: vi.fn() };
 });
+vi.mock("../lib/aiLoggingApi", () => ({
+  parseText: vi.fn(),
+}));
 
 const mockStart = vi.fn();
 const mockStop = vi.fn();
@@ -46,21 +52,30 @@ function makeFood(partial: Partial<FoodItem> & { name: string; calories: number 
   };
 }
 
+function makeNonAiState(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    allFoodItems: [],
+    favoriteFoods: [],
+    aiEnabled: false,
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockUseVoiceCapture.mockReturnValue(makeVoiceCapture());
+  mockUseAppState.mockImplementation((selector?: (s: Record<string, unknown>) => unknown) => {
+    const state = makeNonAiState();
+    return selector ? selector(state) : state;
+  });
+  vi.mocked(fuzzyMatchFoodName).mockReturnValue([]);
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe("VoiceFoodLogger", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useVoiceCapture).mockReturnValue(makeVoiceCapture());
-    vi.mocked(useAppState).mockReturnValue({
-      allFoodItems: [],
-      favoriteFoods: [],
-    } as unknown as ReturnType<typeof useAppState>);
-    vi.mocked(fuzzyMatchFoodName).mockReturnValue([]);
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("idle state (not listening, no transcript)", () => {
     it("shows 'Click to start listening' when voice is supported", () => {
       render(<VoiceFoodLogger />);
@@ -68,7 +83,7 @@ describe("VoiceFoodLogger", () => {
     });
 
     it("shows 'Not supported in this browser' when voice is not supported", () => {
-      vi.mocked(useVoiceCapture).mockReturnValue(makeVoiceCapture({ isSupported: false }));
+      mockUseVoiceCapture.mockReturnValue(makeVoiceCapture({ isSupported: false }));
       render(<VoiceFoodLogger />);
       expect(screen.getByText(/not supported in this browser/i)).toBeDefined();
     });
@@ -80,7 +95,7 @@ describe("VoiceFoodLogger", () => {
     });
 
     it("disables the Speak Food button when not supported", () => {
-      vi.mocked(useVoiceCapture).mockReturnValue(makeVoiceCapture({ isSupported: false }));
+      mockUseVoiceCapture.mockReturnValue(makeVoiceCapture({ isSupported: false }));
       render(<VoiceFoodLogger />);
       const btn = screen.getByRole("button", { name: /speak food/i }) as HTMLButtonElement;
       expect(btn.disabled).toBe(true);
@@ -95,7 +110,7 @@ describe("VoiceFoodLogger", () => {
 
   describe("listening state", () => {
     beforeEach(() => {
-      vi.mocked(useVoiceCapture).mockReturnValue(makeVoiceCapture({ isListening: true }));
+      mockUseVoiceCapture.mockReturnValue(makeVoiceCapture({ isListening: true }));
     });
 
     it("shows the Listening indicator", () => {
@@ -122,15 +137,13 @@ describe("VoiceFoodLogger", () => {
 
   describe("error display", () => {
     it("renders the error message when error is set", () => {
-      vi.mocked(useVoiceCapture).mockReturnValue(
-        makeVoiceCapture({ error: "Microphone access denied" }),
-      );
+      mockUseVoiceCapture.mockReturnValue(makeVoiceCapture({ error: "Microphone access denied" }));
       render(<VoiceFoodLogger />);
       expect(screen.getByText("Microphone access denied")).toBeDefined();
     });
 
     it("shows error even while in idle state", () => {
-      vi.mocked(useVoiceCapture).mockReturnValue(
+      mockUseVoiceCapture.mockReturnValue(
         makeVoiceCapture({ error: "Permission error", isSupported: true }),
       );
       render(<VoiceFoodLogger />);
@@ -141,7 +154,7 @@ describe("VoiceFoodLogger", () => {
 
   describe("transcript state - no matches", () => {
     beforeEach(() => {
-      vi.mocked(useVoiceCapture).mockReturnValue(
+      mockUseVoiceCapture.mockReturnValue(
         makeVoiceCapture({ transcript: "unknown xyz food", isListening: false }),
       );
       vi.mocked(fuzzyMatchFoodName).mockReturnValue([]);
@@ -183,7 +196,7 @@ describe("VoiceFoodLogger", () => {
     const match = makeFood({ name: "Grilled Chicken", calories: 165 });
 
     beforeEach(() => {
-      vi.mocked(useVoiceCapture).mockReturnValue(
+      mockUseVoiceCapture.mockReturnValue(
         makeVoiceCapture({ transcript: "chicken", isListening: false }),
       );
       vi.mocked(fuzzyMatchFoodName).mockReturnValue([match]);
@@ -239,16 +252,19 @@ describe("VoiceFoodLogger", () => {
     const otherFood = makeFood({ id: FoodItemId(2), name: "Banana", calories: 105 });
 
     beforeEach(() => {
-      vi.mocked(useVoiceCapture).mockReturnValue(
+      mockUseVoiceCapture.mockReturnValue(
         makeVoiceCapture({ transcript: "fruit", isListening: false }),
       );
     });
 
     it("passes favorites first in the corpus to fuzzyMatchFoodName", () => {
-      vi.mocked(useAppState).mockReturnValue({
-        allFoodItems: [otherFood, favFood],
-        favoriteFoods: [favFood],
-      } as unknown as ReturnType<typeof useAppState>);
+      mockUseAppState.mockImplementation((selector?: (s: Record<string, unknown>) => unknown) => {
+        const state = makeNonAiState({
+          allFoodItems: [otherFood, favFood],
+          favoriteFoods: [favFood],
+        });
+        return selector ? selector(state) : state;
+      });
 
       render(<VoiceFoodLogger />);
 
@@ -257,10 +273,13 @@ describe("VoiceFoodLogger", () => {
     });
 
     it("deduplicates items that appear in both favorites and allFoodItems", () => {
-      vi.mocked(useAppState).mockReturnValue({
-        allFoodItems: [favFood, otherFood],
-        favoriteFoods: [favFood],
-      } as unknown as ReturnType<typeof useAppState>);
+      mockUseAppState.mockImplementation((selector?: (s: Record<string, unknown>) => unknown) => {
+        const state = makeNonAiState({
+          allFoodItems: [favFood, otherFood],
+          favoriteFoods: [favFood],
+        });
+        return selector ? selector(state) : state;
+      });
 
       render(<VoiceFoodLogger />);
 
@@ -271,20 +290,97 @@ describe("VoiceFoodLogger", () => {
     });
 
     it("passes the transcript and limit=3 to fuzzyMatchFoodName", () => {
-      vi.mocked(useAppState).mockReturnValue({
-        allFoodItems: [],
-        favoriteFoods: [],
-      } as unknown as ReturnType<typeof useAppState>);
-
       render(<VoiceFoodLogger />);
-
       expect(vi.mocked(fuzzyMatchFoodName)).toHaveBeenCalledWith("fruit", [], 3);
     });
 
     it("does not call fuzzyMatchFoodName when transcript is null", () => {
-      vi.mocked(useVoiceCapture).mockReturnValue(makeVoiceCapture({ transcript: null }));
+      mockUseVoiceCapture.mockReturnValue(makeVoiceCapture({ transcript: null }));
       render(<VoiceFoodLogger />);
       expect(vi.mocked(fuzzyMatchFoodName)).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("VoiceFoodLogger AI mode (aiEnabled=true)", () => {
+  const AI_ITEM: RecognizedFoodItem = {
+    name: "Margherita Pizza",
+    confidence: 1.0,
+    source: "off_match",
+    offProductId: "001",
+    calories: 250,
+    protein: 11,
+    carbs: 33,
+    fat: 8,
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockUseVoiceCapture.mockReturnValue({
+      isSupported: true,
+      isListening: false,
+      transcript: "",
+      error: null,
+      startListening: vi.fn(),
+      stopListening: vi.fn(),
+    });
+    mockUseAppState.mockImplementation((selector?: (s: Record<string, unknown>) => unknown) => {
+      const state: Record<string, unknown> = {
+        allFoodItems: [],
+        favoriteFoods: [],
+        selectedDate: ISODate("2026-06-22"),
+        userId: UserId("user-1"),
+        addFoodLog: vi.fn().mockResolvedValue(undefined),
+        aiEnabled: true,
+        aiModelConsented: true,
+      };
+      return selector ? selector(state) : state;
+    });
+  });
+
+  it("renders text area when aiEnabled is true", () => {
+    render(<VoiceFoodLogger />);
+    expect(screen.getByRole("textbox", { name: /describe your meal/i })).toBeInTheDocument();
+  });
+
+  it("Parse Meal button calls parseText with text area content", async () => {
+    const { parseText } = await import("../lib/aiLoggingApi");
+    vi.mocked(parseText).mockResolvedValue([]);
+
+    render(<VoiceFoodLogger />);
+    const textarea = screen.getByRole("textbox", { name: /describe your meal/i });
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "I had pizza for lunch" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /parse meal/i }));
+    });
+    await waitFor(() => expect(vi.mocked(parseText)).toHaveBeenCalledWith("I had pizza for lunch"));
+  });
+
+  it("shows FoodReviewRow when parseText returns results", async () => {
+    const { parseText } = await import("../lib/aiLoggingApi");
+    vi.mocked(parseText).mockResolvedValue([AI_ITEM]);
+
+    render(<VoiceFoodLogger />);
+    const textarea = screen.getByRole("textbox", { name: /describe your meal/i });
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "pizza" } });
+      fireEvent.click(screen.getByRole("button", { name: /parse meal/i }));
+    });
+    await waitFor(() => expect(screen.getByDisplayValue("Margherita Pizza")).toBeInTheDocument());
+  });
+
+  it("shows no-foods-found message when parseText returns empty", async () => {
+    const { parseText } = await import("../lib/aiLoggingApi");
+    vi.mocked(parseText).mockResolvedValue([]);
+
+    render(<VoiceFoodLogger />);
+    const textarea = screen.getByRole("textbox", { name: /describe your meal/i });
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "zzzz" } });
+      fireEvent.click(screen.getByRole("button", { name: /parse meal/i }));
+    });
+    await waitFor(() => expect(screen.getByText(/no foods found/i)).toBeInTheDocument());
   });
 });

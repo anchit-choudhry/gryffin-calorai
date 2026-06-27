@@ -5,10 +5,12 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.17.0 released (June 2026); v0.18.0 in progress (June 2026). Full-stack: React
-frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool. Database schema
-v20 (frontend) + Flyway V22 (backend). Target: v1.0.0 with native mobile apps (E2E encrypted cloud
-sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
+**Context:** v0.19.0 released (June 2026); v0.20.0 planned - Effortless Capture shipped
+(on-device AI food logging via transformers.js: photo recognition, text parse, voice-to-parse;
+consent gate + AiLoggingPanel). Full-stack: React frontend + Spring Boot backend (auth +
+PostgreSQL). Health-focused personal tool. Database schema v20 (frontend) + Flyway V22
+(backend). Target: v1.0.0 with native mobile apps (E2E encrypted cloud sync shipped in
+v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0; AI capture shipped in v0.19.0).
 
 ---
 
@@ -65,7 +67,8 @@ sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
   `#/settings`; `PageLoading` used as Suspense fallback
 - **Chunking:** `apps/web/vite.config.ts` `manualChunks` (function form, required by Rolldown/
   Vite 8): `vendor-react`, `vendor-charts`, `vendor-barcode`, `vendor-db`, `vendor-icons`,
-  `vendor-state`, `vendor-form`, `vendor-motion`, `vendor-ui`
+  `vendor-state`, `vendor-form`, `vendor-motion`, `vendor-ui`, `vendor-local-ai`
+  (`@huggingface/transformers` for on-device food classification)
 - **Store:** 9 Zustand slices (`foodSlice`, `recipeSlice`, `bodySlice`, `activitySlice`,
   `trackerSlice`, `settingsSlice`, `coreSlice`, `syncSlice`, `uiSlice`) in `AppState.ts`.
   `coreSlice.selectedDate` drives date nav; `syncSlice` has `e2eEnabled` (persisted as
@@ -75,7 +78,10 @@ sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
   `trainingDays` (`gc_training_days`), `broadsheet` (`gc_broadsheet`; two-column dashboard
   grid on lg screens), `almanacLocation` (`gc_almanac_loc`; JSON `{lat, lng, label}` for
   AlmanacPanel sunrise/sunset), `edition` (`gc_edition`;
-  `standard/lamplight/sepia/large-print` paper editions);
+  `standard/lamplight/sepia/large-print` paper editions),
+  `aiEnabled` (`gc_ai_enabled`; on-device AI logging toggle - no-op when
+  `aiModelConsented` is false), `aiModelConsented` (`gc_ai_consent`; user consent
+  to local model download; both keys required for AI features to activate);
   `settingsSlice.customMacroGoals` (`gc_custom_macros`)
   overrides periodized macro targets.
 - **DB:** Dexie.js tables with compound indices; schema version 20
@@ -113,6 +119,16 @@ sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
 - Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`
 - Atomic commits only; one logical change per commit
 - Never force-push to main unless explicitly authorized
+
+**Release versioning (bump ALL of these together):**
+
+- `apps/web/package.json` - `"version"` field
+- `apps/backend/pom.xml` - `<version>` element
+- `apps/web/src/pages/Settings.tsx` - `APP_VERSION` constant
+- `GEMINI.md` - context line, footer (`Last Updated` / `Current release` / `In progress`)
+- `ROADMAP.md` - header, footer (`Last Updated` / `Status`), section heading for the shipped
+  version, feature table rows, and the Release Overview list
+- `release-notes/<version>.md` - create the file (use the `/release-notes` skill)
 
 **Safety & Confirmation:**
 
@@ -172,8 +188,9 @@ sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0).
   continuations = 6+ spaces
 - **Line Length:** Max 100 characters; break long annotations and method signatures across lines
 - **Method Names:** No underscores in test method names; camelCase throughout
-- **Before every backend commit:** Run `mvn clean install`; Checkstyle runs at `validate` phase
-  and fails the build on violations (`maven-checkstyle-plugin` 3.6.0)
+- **Before every backend commit:** Run `mvn clean install`. Style is enforced via
+  `maven-checkstyle-plugin` 3.6.0 (currently commented out in `pom.xml` - run
+  `mvn checkstyle:check` manually to validate; re-enable plugin to make it a build gate)
 
 ---
 
@@ -184,11 +201,16 @@ For persistent cross-session context, read @@project-knowledge/AGENTS.md first, 
 For automation, check `.gemini/agents/` (migration-safety-reviewer, backend-code-reviewer,
 a11y-reviewer, web-bundle-analysis, web-dead-code-finder, web-test-coverage-gap-finder) and
 `.gemini/skills/` (dexie-migration, flyway-migration, scaffold-backend,
-scaffold-new-react-component,
-scaffold-new-react-hook, scaffold-zustand-slice, generate-vitest) before implementing manually.
-For architecture details, see @@docs/gryffin-calorai-specifications.md
+scaffold-new-react-component, scaffold-new-react-hook, scaffold-zustand-slice,
+generate-vitest, release-notes, update-dependencies, update-session-wiki,
+typescript-standards, reactjs-standards, specifications-extractor,
+owasp-security-audit, web-security-audit, vibe-coding-security-audit) before implementing
+manually.
+For architecture details, see @@docs/specifications/architecture.md
+For data model and schema details, see @@docs/specifications/data-model.md
+For feature requirements, API, and non-functional requirements, see @@docs/specifications/features.md
 For security guidelines, see @@.gemini/skills/owasp-security-audit/SKILL.md
-For release history, see @@release-notes/0.15.0.md (latest), @@release-notes/0.14.0.md, and
+For release history, see @@release-notes/0.19.0.md (latest), @@release-notes/0.18.0.md, and
 older files in `release-notes/`
 For roadmap, implemented history, and DB schema versions, see @@ROADMAP.md
 For UX/design system guidelines, see @@.gemini/rules/ux-principles.md (auto-loaded for
@@ -207,8 +229,8 @@ For quick dev commands, see @@README.md
 | **Pages**         | `apps/web/src/pages/{Dashboard,Recipes,Progress,Settings}.tsx` | Main views (lazy-loaded); Settings at `#/settings`                                                                                                                                                                                     |
 | **Components**    | `apps/web/src/components/`                                     | Sub-folders: `dashboard/`, `illustrations/`, `icons/almanac/`, `settings/`, `progress/`, `recipes/`, `charts/`, `tour/`                                                                                                                |
 | **Dashboard**     | `apps/web/src/components/dashboard/`                           | AlmanacPanel (lazy), DashboardHero, DateKicker, EditorialFrame, LogEntry, MacroStat, SectionHeader, DailyVitalsStrip, RuleTicks; `SeasonalOrnament` (in `icons/almanac/`) is reused in App.tsx nav head - do not inline seasonal logic |
-| **Progress**      | `apps/web/src/components/progress/`                            | AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal)                            |
-| **Settings**      | `apps/web/src/components/settings/`                            | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel                                                                                                                            |
+| **Progress**      | `apps/web/src/components/progress/`                            | TabHeadline (per-tab plain-language headline), AdaptiveTdeePanel, CorrelationInsightsPanel, EnergyForecastCard, ProjectedWeightCard, MicronutrientPanel, MicronutrientHeatmap, PhenologyWheel (polar SVG), ProgressHero, SpecimenPlate (HarvestStamp seal) |
+| **Settings**      | `apps/web/src/components/settings/`                            | TdeeProfilePanel (lazy-loaded), GoalSettings, CsvImportPanel, AppleHealthImportPanel, CustomMacroGoalsPanel, AiLoggingPanel (consent + toggle)                                                                                       |
 | **Tour**          | `apps/web/src/components/tour/`                                | ProductTourOverlay, CoachmarkCard, tourSteps, useSpotlightRect                                                                                                                                                                         |
 | **Hooks**         | `apps/web/src/hooks/`                                          | `useSyncService` (cloud sync), `useProgressData` (7-day avg), `useWeeklyHarvestTrigger`, `useFastingTimer`, `useReminders`                                                                                                             |
 | **Forms**         | `apps/web/src/forms/schemas.ts`                                | Zod schemas: food, recipe, water, step, body, TDEE profile, activity, backup, diet profile, recurring meal                                                                                                                             |
@@ -217,6 +239,8 @@ For quick dev commands, see @@README.md
 | **E2E crypto**    | `apps/web/src/lib/e2eEncryption.ts`                            | PBKDF2 (600k iterations) + AES-GCM-256: `deriveKey`, `encryptData`, `decryptData`, `exportSalt` pure async functions                                                                                                                   |
 | **E2E key store** | `apps/web/src/lib/e2eKeyStore.ts`                              | In-memory `CryptoKey` singleton; never persisted; `setKey`, `getKey`, `clearKey`                                                                                                                                                       |
 | **OFF API**       | `apps/web/src/lib/offProductApi.ts`                            | `searchOff(q)` FTS search + `lookupBarcode(code)` exact match; converts g/100g nutrients to `FoodItem` prefill; 300ms debounce fallback in FoodSearchCombobox                                                                          |
+| **AI classifier** | `apps/web/src/lib/localFoodClassifier.ts`                      | Wraps `@huggingface/transformers` pipeline; zero-shot food-101 classification; singleton with retry-on-failure reset                                                                                                                    |
+| **AI logging**    | `apps/web/src/lib/aiLoggingApi.ts`                             | `recognizePhoto(file)` + `parseText(text)`; per-item error isolation; `RecognizedFoodItem` type                                                                                                                                        |
 | **API client**    | `apps/web/src/lib/apiClient.ts`                                | JWT-aware HTTP; auto-refresh 60s before expiry; `api.get/post/put/delete`; `api.auth.exchangeToken/logout`; `isAuthenticated()`                                                                                                        |
 | **TDEE lib**      | `apps/web/src/lib/tdee.ts`                                     | `mifflinStJeorBMR`, `computeTDEE`, `computeCalorieGoal`, `computeMacroTargets`, `applyPeriodization`                                                                                                                                   |
 | **Adaptive TDEE** | `apps/web/src/lib/adaptiveTdee.ts`                             | `computeAdaptiveTdee`, `detectPlateau`, `computeWeeklyForecast`; EMA smoothing; uses `FoodLogEntry` structural type (not full `FoodItem`)                                                                                              |
@@ -227,7 +251,7 @@ For quick dev commands, see @@README.md
 | **Solar lib**     | `apps/web/src/lib/solar.ts`                                    | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel                                                                                                                                           |
 | **Charts lib**    | `apps/web/src/lib/chartTheme.ts`                               | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber)                                                                                                                                                             |
 | **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts`                         | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel                                                                                                                                                                     |
-| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (139+ files, 2594+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
+| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (146+ files, 2726+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
 | **Config**        | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup                                                                                                                                                                                                          |
 | **Backend**       | `apps/backend/src/main/java/com/gryffin/calorai/`              | Spring Boot 4.0 + Java 25                                                                                                                                                                                                              |
 | **DB migrate**    | `apps/backend/src/main/resources/db/migration/`                | Flyway SQL migrations                                                                                                                                                                                                                  |
@@ -292,5 +316,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 20, 2026 | **Current release:** v0.17.0 (released June 2026) | **In
-progress:** v0.18.0 (139+ test files, 2594+ tests)
+**Last Updated:** June 27, 2026 | **Current release:** v0.19.0 (released June 2026) | **In
+progress:** v0.20.0 (Production Hardening) (146+ test files, 2726+ tests)

@@ -14,6 +14,8 @@ const TRAINING_DAYS_KEY = "gc_training_days";
 const EDITION_KEY = "gc_edition";
 const ALMANAC_LOC_KEY = "gc_almanac_loc";
 const BROADSHEET_KEY = "gc_broadsheet";
+const AI_ENABLED_KEY = "gc_ai_enabled";
+const AI_CONSENT_KEY = "gc_ai_consent";
 
 const VALID_EDITIONS: readonly Edition[] = ["standard", "lamplight", "sepia", "large-print"];
 
@@ -97,6 +99,19 @@ function loadBroadsheet(): boolean {
   return localStorage.getItem(BROADSHEET_KEY) === "true";
 }
 
+function loadAiEnabled(): boolean {
+  // Both flags must be set to prevent a localStorage bypass where only
+  // gc_ai_enabled is set manually without the user going through consent flow.
+  return (
+    localStorage.getItem(AI_ENABLED_KEY) === "true" &&
+    localStorage.getItem(AI_CONSENT_KEY) === "true"
+  );
+}
+
+function loadAiModelConsented(): boolean {
+  return localStorage.getItem(AI_CONSENT_KEY) === "true";
+}
+
 export interface UiSlice {
   quickAddOpen: boolean;
   openQuickAdd: () => void;
@@ -124,6 +139,10 @@ export interface UiSlice {
   setAlmanacLocation: (loc: AlmanacLocation | null) => void;
   broadsheet: boolean;
   setBroadsheet: (enabled: boolean) => void;
+  aiEnabled: boolean;
+  setAiEnabled: (enabled: boolean) => void;
+  aiModelConsented: boolean;
+  setAiModelConsented: () => void;
 }
 
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
@@ -185,5 +204,17 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
   setBroadsheet: (enabled: boolean) => {
     localStorage.setItem(BROADSHEET_KEY, String(enabled));
     set({ broadsheet: enabled });
+  },
+  aiEnabled: loadAiEnabled(),
+  setAiEnabled: (enabled: boolean) => {
+    if (enabled && !get().aiModelConsented) return;
+    localStorage.setItem(AI_ENABLED_KEY, String(enabled));
+    set({ aiEnabled: enabled });
+  },
+  aiModelConsented: loadAiModelConsented(),
+  setAiModelConsented: () => {
+    if (get().aiModelConsented) return;
+    localStorage.setItem(AI_CONSENT_KEY, "true");
+    set({ aiModelConsented: true });
   },
 });

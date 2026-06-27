@@ -409,4 +409,85 @@ describe("uiSlice", () => {
       expect(store.getState().captureOpen).toBe(false);
     });
   });
+
+  describe("aiEnabled", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it("initializes aiEnabled as false", () => {
+      const store = makeStore();
+      expect(store.getState().aiEnabled).toBe(false);
+    });
+
+    it("setAiEnabled(true) sets aiEnabled to true and persists to gc_ai_enabled", () => {
+      const store = makeStore();
+      store.getState().setAiModelConsented();
+      store.getState().setAiEnabled(true);
+      expect(store.getState().aiEnabled).toBe(true);
+      expect(localStorage.getItem("gc_ai_enabled")).toBe("true");
+    });
+
+    it("setAiEnabled(true) is a no-op when aiModelConsented is false", () => {
+      const store = makeStore();
+      store.getState().setAiEnabled(true);
+      expect(store.getState().aiEnabled).toBe(false);
+      expect(localStorage.getItem("gc_ai_enabled")).toBeNull();
+    });
+
+    it("setAiEnabled(false) sets aiEnabled to false and persists", () => {
+      const store = makeStore();
+      store.getState().setAiModelConsented();
+      store.getState().setAiEnabled(true);
+      store.getState().setAiEnabled(false);
+      expect(store.getState().aiEnabled).toBe(false);
+      expect(localStorage.getItem("gc_ai_enabled")).toBe("false");
+    });
+
+    it("loads aiEnabled true from localStorage on init when both gc_ai_enabled and gc_ai_consent are set", () => {
+      localStorage.setItem("gc_ai_enabled", "true");
+      localStorage.setItem("gc_ai_consent", "true");
+      const store = makeStore();
+      expect(store.getState().aiEnabled).toBe(true);
+    });
+
+    it("loads aiEnabled false from localStorage on init when only gc_ai_enabled is set", () => {
+      localStorage.setItem("gc_ai_enabled", "true");
+      const store = makeStore();
+      expect(store.getState().aiEnabled).toBe(false);
+    });
+  });
+
+  describe("aiModelConsented", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it("initializes aiModelConsented as false", () => {
+      const store = makeStore();
+      expect(store.getState().aiModelConsented).toBe(false);
+    });
+
+    it("setAiModelConsented sets aiModelConsented to true and persists to gc_ai_consent", () => {
+      const store = makeStore();
+      store.getState().setAiModelConsented();
+      expect(store.getState().aiModelConsented).toBe(true);
+      expect(localStorage.getItem("gc_ai_consent")).toBe("true");
+    });
+
+    it("setAiModelConsented is idempotent - calling twice stays true", () => {
+      const store = makeStore();
+      store.getState().setAiModelConsented();
+      store.getState().setAiModelConsented();
+      expect(store.getState().aiModelConsented).toBe(true);
+      expect(localStorage.getItem("gc_ai_consent")).toBe("true");
+    });
+
+    it("setAiModelConsented cannot be reversed via setAiEnabled", () => {
+      const store = makeStore();
+      store.getState().setAiModelConsented();
+      store.getState().setAiEnabled(false);
+      expect(store.getState().aiModelConsented).toBe(true);
+    });
+  });
 });

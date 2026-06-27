@@ -88,7 +88,16 @@ export function isFoodPhotoId(value: unknown): value is FoodPhotoId {
   return isPositiveIntegerId(value);
 }
 
-export type CaptureMethod = "manual" | "voice" | "photo" | "barcode" | "recurring" | "template";
+export type CaptureMethod =
+  | "manual"
+  | "voice"
+  | "photo"
+  | "barcode"
+  | "recurring"
+  | "template"
+  | "photo_ai"
+  | "text_ai"
+  | "voice_ai";
 
 export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
   manual: "Manual",
@@ -97,6 +106,9 @@ export const CAPTURE_METHOD_LABELS: Record<CaptureMethod, string> = {
   barcode: "Scan",
   recurring: "Recurring",
   template: "Template",
+  photo_ai: "AI Photo",
+  text_ai: "AI Text",
+  voice_ai: "AI Voice",
 };
 
 // --- Feature 17: Reminders ---

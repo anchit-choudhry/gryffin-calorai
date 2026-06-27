@@ -47,3 +47,7 @@ verifyStoreIntegrity: true
 # Never set dangerouslyAllowAllBuilds: true.
 # allowBuilds:
 #   esbuild: true   # example: add only after reviewing the script
+allowBuilds:
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: false

@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.gryffin</groupId>
   <artifactId>gryffin-calorai-backend</artifactId>
-  <version>0.17.0</version>
+  <version>0.19.0</version>
   <name>Gryffin Calorai Backend</name>
   <description>Spring Boot backend for Gryffin Calorai</description>
 

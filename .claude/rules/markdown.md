@@ -198,7 +198,7 @@ pnpm test --reporter=verbose \
 **Use explicit paths** for internal Markdown links; omit the full qualified URL:
 
 ```markdown
-See [architecture](specifications/gryffin-calorai-specifications.md).
+See [architecture](docs/specifications/architecture.md).
 ```
 
 **Avoid `../` relative paths** - use root-relative paths instead:
@@ -225,7 +225,7 @@ keeps table cells short:
 ```markdown
 See the [sync architecture][sync-doc] for details.
 
-[sync-doc]: specifications/gryffin-calorai-specifications.md#cloud-sync
+[sync-doc]: docs/specifications/architecture.md#cloud-sync
 ```
 
 Place reference link definitions just before the next heading (end of the section where
@@ -304,7 +304,7 @@ is a Claude Code `@file` shorthand, not standard Markdown. Only use it in docume
 that AI agents read, never in user-facing docs like README.md or release notes:
 
 ```markdown
-For architecture details, see @@specifications/gryffin-calorai-specifications.md
+For architecture details, see @@docs/specifications/architecture.md
 ```
 
 ---

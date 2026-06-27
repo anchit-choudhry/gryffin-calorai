@@ -4,8 +4,6 @@ import { ChevronDown, Info, Plus } from "lucide-react";
 import { toast } from "sonner";
 import FoodLogger from "../components/FoodLogger";
 import PageLoading from "../components/PageLoading";
-import VoiceFoodLogger from "../components/VoiceFoodLogger";
-import PhotoFoodLogger from "../components/PhotoFoodLogger";
 import WeeklySummary from "../components/WeeklySummary";
 import WaterTracker from "../components/WaterTracker";
 import StepTracker from "../components/StepTracker";
@@ -52,6 +50,8 @@ import { useWeeklyHarvestTrigger } from "../hooks/useWeeklyHarvestTrigger";
 import { lookupBarcode, offProductToFoodItem } from "../lib/offProductApi";
 
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner"));
+const VoiceFoodLogger = lazy(() => import("../components/VoiceFoodLogger"));
+const PhotoFoodLogger = lazy(() => import("../components/PhotoFoodLogger"));
 const AlmanacPanel = lazy(() =>
   import("../components/dashboard/AlmanacPanel").then((m) => ({
     default: m.AlmanacPanel,
@@ -662,12 +662,18 @@ const Dashboard = () => {
                       </div>
                       <div className="col-span-12 sm:col-span-4 lg:col-span-2">
                         <EditorialFrame label="Speak">
-                          <VoiceFoodLogger onTranscriptMatched={(name) => setVoiceFood({ name })} />
+                          <Suspense fallback={<PageLoading />}>
+                            <VoiceFoodLogger
+                              onTranscriptMatched={(name) => setVoiceFood({ name })}
+                            />
+                          </Suspense>
                         </EditorialFrame>
                       </div>
                       <div className="col-span-12 sm:col-span-4 lg:col-span-2">
                         <EditorialFrame label="Photo">
-                          <PhotoFoodLogger onPhotoReady={handlePhotoReady} />
+                          <Suspense fallback={<PageLoading />}>
+                            <PhotoFoodLogger onPhotoReady={handlePhotoReady} />
+                          </Suspense>
                         </EditorialFrame>
                       </div>
                     </motion.div>

@@ -13,13 +13,14 @@ import { PrivacyPanel } from "../components/settings/PrivacyPanel";
 import DietProfileEditor from "../components/DietProfileEditor";
 import RemindersSettings from "../components/RemindersSettings";
 import { CloudSyncPanel } from "../components/CloudSyncPanel";
+import { AiLoggingPanel } from "../components/settings/AiLoggingPanel";
 import { useAppState } from "../state/AppState";
 import type { AccentTheme, Density, Edition } from "../state/slices/uiSlice";
 import { cn } from "../lib/utils";
 
 const TdeeProfilePanel = lazy(() => import("../components/settings/TdeeProfilePanel"));
 
-const APP_VERSION = "0.17.0";
+const APP_VERSION = "0.19.0";
 
 const DENSITY_OPTIONS: { value: Density; label: string; description: string }[] = [
   { value: "comfortable", label: "Comfortable", description: "Standard spacing" },
@@ -107,6 +108,14 @@ function useSettingsSections(): SettingsSection[] {
       keywords: ["macros", "protein", "carbs", "fat", "custom", "goal", "target", "override"],
       colSpan: "col-span-12 lg:col-span-4",
       content: <CustomMacroGoalsPanel />,
+    },
+    {
+      id: "ai-logging",
+      group: "Logging",
+      title: "AI Logging",
+      keywords: ["ai", "photo", "recognition", "model", "identify", "vision", "text"],
+      colSpan: "col-span-12 lg:col-span-4",
+      content: <AiLoggingPanel />,
     },
     {
       id: "reminders",

@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { Camera, LayoutTemplate, Mic, QrCode, RefreshCw } from "lucide-react";
+import { Camera, LayoutTemplate, Mic, QrCode, RefreshCw, Sparkles } from "lucide-react";
 import type { CaptureMethod } from "@/types";
 import { CAPTURE_METHOD_LABELS } from "@/types";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,9 @@ const ICONS: Partial<Record<CaptureMethod, FC<{ className?: string }>>> = {
   barcode: ({ className }) => <QrCode className={className} aria-hidden="true" />,
   recurring: ({ className }) => <RefreshCw className={className} aria-hidden="true" />,
   template: ({ className }) => <LayoutTemplate className={className} aria-hidden="true" />,
+  photo_ai: ({ className }) => <Sparkles className={className} aria-hidden="true" />,
+  text_ai: ({ className }) => <Sparkles className={className} aria-hidden="true" />,
+  voice_ai: ({ className }) => <Sparkles className={className} aria-hidden="true" />,
 };
 
 export const ProvenanceBadge: FC<Props> = ({ method, className }) => {

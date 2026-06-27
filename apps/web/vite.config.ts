@@ -22,7 +22,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   // frame-ancestors is intentionally omitted from the <meta> CSP in index.html because
   // browsers ignore it there (W3C spec). It is enforced only via this HTTP header.
   "Content-Security-Policy":
-    `default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; font-src 'self'; connect-src 'self' https://corsproxy.io https://accounts.google.com ${API_ORIGIN}; worker-src 'self'; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+    `default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://lh3.googleusercontent.com; font-src 'self'; connect-src 'self' https://corsproxy.io https://accounts.google.com https://huggingface.co https://cdn.jsdelivr.net ${API_ORIGIN}; worker-src 'self'; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
   "X-Frame-Options": "DENY",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -63,6 +63,8 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/react-hook-form", "vendor-form"],
   ["node_modules/@hookform", "vendor-form"],
   ["node_modules/zod", "vendor-form"],
+  ["node_modules/@huggingface/transformers", "vendor-local-ai"],
+  ["node_modules/onnxruntime-web", "vendor-local-ai"],
 ];
 
 export default defineConfig({

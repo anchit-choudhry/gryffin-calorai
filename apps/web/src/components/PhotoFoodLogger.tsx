@@ -7,6 +7,8 @@ import { cn, EDITORIAL_INPUT_CLS, LABEL_MONO_CLS } from "@/lib/utils";
 import { useAppState } from "@/state/AppState";
 import type { MealType } from "@/types";
 import { MEAL_TYPES } from "@/types";
+import type { RecognizedFoodItem } from "@/lib/aiLoggingApi";
+import { FoodReviewRow } from "./FoodReviewRow";
 
 const THUMBNAIL_WIDTH = 120;
 
@@ -43,6 +45,12 @@ interface DraftEntry {
   mealType: MealType;
 }
 
+interface ThumbnailInfo {
+  imageData: string;
+  thumbnailData: string;
+  mimeType: string;
+}
+
 interface Props {
   onPhotoReady?: (imageData: string, thumbnailData: string, mimeType: string) => void;
   className?: string;
@@ -52,46 +60,76 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
   const addFoodLog = useAppState((s) => s.addFoodLog);
   const userId = useAppState((s) => s.userId);
   const selectedDate = useAppState((s) => s.selectedDate);
+  const aiEnabled = useAppState((s) => s.aiEnabled);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftEntry | null>(null);
+  const [recognizedItems, setRecognizedItems] = useState<RecognizedFoodItem[]>([]);
+  const [thumbnailInfo, setThumbnailInfo] = useState<ThumbnailInfo | null>(null);
 
-  const handleFile = useCallback(async (file: File) => {
-    setError(null);
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result;
-      if (typeof dataUrl !== "string") return;
-      setPreview(dataUrl);
-      setAnalyzing(true);
-      try {
-        const thumbnail = await buildThumbnail(dataUrl, file.type);
-        setDraft({
-          imageData: dataUrl,
-          thumbnailData: thumbnail,
-          mimeType: file.type,
-          name: "",
-          calories: "",
-          protein: "",
-          carbs: "",
-          fat: "",
-          mealType: "Breakfast",
-        });
-      } catch {
-        setError("Could not process the image. Please try another.");
-      } finally {
-        setAnalyzing(false);
+  const handleFile = useCallback(
+    async (file: File) => {
+      setError(null);
+      if (!file.type.startsWith("image/")) {
+        setError("Please select an image file.");
+        return;
       }
-    };
-    reader.readAsDataURL(file);
-  }, []);
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Image must be under 10 MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result;
+        if (typeof dataUrl !== "string") return;
+        setPreview(dataUrl);
+        setAnalyzing(true);
+        try {
+          const thumbnail = await buildThumbnail(dataUrl, file.type);
+          const info: ThumbnailInfo = {
+            imageData: dataUrl,
+            thumbnailData: thumbnail,
+            mimeType: file.type,
+          };
+          setThumbnailInfo(info);
+
+          if (aiEnabled) {
+            const { recognizePhoto } = await import("@/lib/aiLoggingApi");
+            const items = await recognizePhoto(thumbnail);
+            if (items.length > 0) {
+              setRecognizedItems(items);
+              setPreview(null);
+              return;
+            }
+          }
+
+          setDraft({
+            imageData: dataUrl,
+            thumbnailData: thumbnail,
+            mimeType: file.type,
+            name: "",
+            calories: "",
+            protein: "",
+            carbs: "",
+            fat: "",
+            mealType: "Breakfast",
+          });
+        } catch {
+          setError("Could not process the image. Please try another.");
+        } finally {
+          setAnalyzing(false);
+        }
+      };
+      reader.onerror = () => {
+        setError("Could not read the image file. Please try another.");
+      };
+      reader.readAsDataURL(file);
+    },
+    [aiEnabled],
+  );
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,6 +153,8 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
     setAnalyzing(false);
     setError(null);
     setDraft(null);
+    setRecognizedItems([]);
+    setThumbnailInfo(null);
     if (inputRef.current) inputRef.current.value = "";
   }, []);
 
@@ -150,6 +190,76 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
     setDraft((prev) => (prev ? { ...prev, [field]: value } : null));
     setError(null);
   }, []);
+
+  const handleItemLogged = useCallback(
+    (index: number) => {
+      const next = recognizedItems.filter((_, i) => i !== index);
+      setRecognizedItems(next);
+      if (next.length === 0) {
+        if (thumbnailInfo) {
+          onPhotoReady?.(
+            thumbnailInfo.imageData,
+            thumbnailInfo.thumbnailData,
+            thumbnailInfo.mimeType,
+          );
+        }
+        clearPreview();
+      }
+    },
+    [recognizedItems, thumbnailInfo, onPhotoReady, clearPreview],
+  );
+
+  const handleItemRemoved = useCallback(
+    (index: number) => {
+      const next = recognizedItems.filter((_, i) => i !== index);
+      setRecognizedItems(next);
+      if (next.length === 0) {
+        clearPreview();
+      }
+    },
+    [recognizedItems, clearPreview],
+  );
+
+  if (recognizedItems.length > 0) {
+    return (
+      <div className={cn("flex flex-col gap-3", className)}>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          aria-label="Select or capture a food photo"
+          onChange={handleInputChange}
+          data-testid="photo-input"
+        />
+        <div className="space-y-2">
+          <p className={cn(LABEL_MONO_CLS, "text-persimmon")}>Review detected foods</p>
+          {recognizedItems.map((item, i) => (
+            <FoodReviewRow
+              key={item.offProductId ?? `${item.name}-${i}`}
+              item={item}
+              captureMethod="photo_ai"
+              onLogged={() => handleItemLogged(i)}
+              onRemove={() => handleItemRemoved(i)}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={clearPreview}
+          className="font-mono text-[9px] uppercase tracking-[0.15em] text-ink-soft transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon"
+        >
+          Discard all
+        </button>
+        {error && (
+          <p role="alert" className="font-mono text-[10px] text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -314,7 +424,7 @@ const PhotoFoodLogger = ({ onPhotoReady, className }: Props) => {
           tabIndex={0}
           aria-label="Upload or capture a food photo"
           onClick={() => inputRef.current?.click()}
-          onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
         >
           <Camera className="size-6 text-ink-soft/60" aria-hidden="true" />
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft">
