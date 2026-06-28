@@ -8,6 +8,7 @@ import {
   updateRecipe as updateRecipeInDB,
 } from "../../db/dbService";
 import type { RecipeId, UserId } from "@/types";
+import { enqueueSyncOperation } from "../../hooks/useSyncService";
 
 export interface RecipeSlice {
   recipes: Recipe[];
@@ -33,9 +34,19 @@ export const createRecipeSlice: StateCreator<AppState, [], [], RecipeSlice> = (s
   deleteRecipe: async (id: RecipeId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.recipes.find((r) => r.id === id)?.syncId;
     try {
       await deleteRecipeFromDB(id, state.userId);
       await state.fetchRecipes(state.userId);
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "recipe",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete recipe");
       if (import.meta.env.DEV) console.error("Error deleting recipe:", error);
@@ -49,6 +60,15 @@ export const createRecipeSlice: StateCreator<AppState, [], [], RecipeSlice> = (s
     try {
       await updateRecipeInDB(recipe, state.userId);
       await state.fetchRecipes(state.userId);
+      if (recipe.syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "recipe",
+          syncId: recipe.syncId,
+          operation: "update",
+          payload: recipe,
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to update recipe");
       if (import.meta.env.DEV) console.error("Error updating recipe:", error);

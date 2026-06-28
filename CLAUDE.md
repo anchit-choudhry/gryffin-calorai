@@ -5,12 +5,13 @@
 **Project Name:** Gryffin Calorai
 **Purpose:** Offline-first React app for tracking daily food intake, managing recipes, and
 visualizing calorie progress.
-**Context:** v0.19.0 released (June 2026); v0.20.0 planned - Effortless Capture shipped
-(on-device AI food logging via transformers.js: photo recognition, text parse, voice-to-parse;
-consent gate + AiLoggingPanel). Full-stack: React frontend + Spring Boot backend (auth +
-PostgreSQL). Health-focused personal tool. Database schema v20 (frontend) + Flyway V22
-(backend). Target: v1.0.0 with native mobile apps (E2E encrypted cloud sync shipped in
-v0.16.0; Food DB + Barcode Lookup shipped in v0.17.0; AI capture shipped in v0.19.0).
+**Context:** v0.20.0 released (June 2026); v0.21.0 planned - Production Hardening shipped
+(SEC-002 HttpOnly refresh cookies; sync expansion for recipes/templates/reminders/dietProfiles;
+Dexie v21 backfill; on-device AI food logging via transformers.js in v0.19.0). Full-stack:
+React frontend + Spring Boot backend (auth + PostgreSQL). Health-focused personal tool.
+Database schema v21 (frontend) + Flyway V22 (backend). Target: v1.0.0 with native mobile
+apps (E2E encrypted cloud sync shipped in v0.16.0; Food DB + Barcode Lookup shipped in
+v0.17.0; AI capture shipped in v0.19.0; SEC-002 + sync expansion shipped in v0.20.0).
 
 ---
 
@@ -251,7 +252,7 @@ For quick dev commands, see @@README.md
 | **Solar lib**     | `apps/web/src/lib/solar.ts`                                    | `getDayOfYear`, `getSeason`, `getMoonPhase` (JDN), `getSunTimes` (NOAA); powers AlmanacPanel                                                                                                                                           |
 | **Charts lib**    | `apps/web/src/lib/chartTheme.ts`                               | 7-stop semantic palette; domain colors (water, protein, carbs, fat, fiber)                                                                                                                                                             |
 | **Micronutrient** | `apps/web/src/lib/micronutrientRDA.ts`                         | `getPersonalizedRDA()` - RDA by sex/age; powers MicronutrientPanel                                                                                                                                                                     |
-| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (146+ files, 2726+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
+| **Tests**         | `apps/web/src/**/*.test.{ts,tsx}` (146+ files, 2760+ tests)    | Vitest + jsdom + fake-indexeddb + coverage                                                                                                                                                                                             |
 | **Config**        | `apps/web/vite.config.ts`, `vitest.config.ts`, `tsconfig.json` | Build (with CSP) & test setup                                                                                                                                                                                                          |
 | **Backend**       | `apps/backend/src/main/java/com/gryffin/calorai/`              | Spring Boot 4.0 + Java 25                                                                                                                                                                                                              |
 | **DB migrate**    | `apps/backend/src/main/resources/db/migration/`                | Flyway SQL migrations                                                                                                                                                                                                                  |
@@ -316,5 +317,5 @@ bash apps/backend/openapi-codegen/generate.sh
 
 ---
 
-**Last Updated:** June 27, 2026 | **Current release:** v0.19.0 (released June 2026) | **In
-progress:** v0.20.0 (Production Hardening) (146+ test files, 2726+ tests)
+**Last Updated:** June 28, 2026 | **Current release:** v0.20.0 (released June 2026) | **In
+progress:** v0.21.0 (Native Foundation Spike) (146+ test files, 2760+ tests)

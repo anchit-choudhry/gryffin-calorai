@@ -1,7 +1,7 @@
 {
   "name": "@gryffin-calorai/web",
   "private": true,
-  "version": "0.19.0",
+  "version": "0.20.0",
   "type": "module",
   "engines": {
     "node": "^24",
@@ -60,7 +60,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testing-library/dom": "^10.4.1",
-    "@types/node": "^25.9.3",
+    "@types/node": "^25.9.4",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/eslint-plugin": "^1.6.20",
     "@vitest/ui": "^4.1.8",
@@ -69,9 +69,9 @@
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
+    "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.8.4",
-    "typescript-eslint": "^8.61.0"
+    "typescript-eslint": "^8.62.0"
   }
 }

@@ -503,7 +503,7 @@ describe("Photo CRUD", () => {
 // --- DB schema version ---
 
 describe("DB schema version", () => {
-  it("is at version 20", () => {
-    expect(db.verno).toBe(20);
+  it("is at version 21", () => {
+    expect(db.verno).toBe(21);
   });
 });

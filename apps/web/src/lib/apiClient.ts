@@ -1,41 +1,43 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
-const REFRESH_TOKEN_KEY = "gc_refresh_token";
+// Legacy key - present if user had an old session before SEC-002 cookie migration.
+// Clear it immediately so the plaintext refresh token is not left in localStorage.
+const LEGACY_REFRESH_KEY = "gc_refresh_token";
+if (typeof localStorage !== "undefined" && localStorage.getItem(LEGACY_REFRESH_KEY)) {
+  localStorage.removeItem(LEGACY_REFRESH_KEY);
+}
 
-// Access token and expiry live in module memory only - not localStorage.
-// This prevents direct token theft via localStorage.getItem() in an XSS scenario.
-// The refresh token stays in localStorage so the session survives page reloads.
+// sessionStorage flag: "1" means the user has an active session in this browser tab.
+// Survives page reloads (sessionStorage persists within a tab) but is cleared when the
+// tab is closed. The actual credential is the HttpOnly refresh cookie set by the server;
+// this flag lets isAuthenticated() remain synchronous.
+const SESSION_FLAG_KEY = "gc_session";
+
 let _accessToken: string | null = null;
 let _expiresAt: number | null = null;
+let _hasSession =
+  typeof sessionStorage !== "undefined" && sessionStorage.getItem(SESSION_FLAG_KEY) === "1";
 
 export function getAccessToken(): string | null {
   return _accessToken;
 }
 
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
 export function isAuthenticated(): boolean {
-  // True if there is an active in-memory session OR a stored refresh token that
-  // getValidToken() can silently exchange for a new access token.
-  return (!!_accessToken && !isTokenExpired()) || !!getRefreshToken();
+  return (!!_accessToken && !isTokenExpired()) || _hasSession;
 }
 
-export function storeTokens(
-  accessToken: string,
-  refreshToken: string,
-  expiresInSeconds: number,
-): void {
+export function storeTokens(accessToken: string, expiresInSeconds: number): void {
   _accessToken = accessToken;
   _expiresAt = Date.now() + expiresInSeconds * 1000;
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  _hasSession = true;
+  sessionStorage.setItem(SESSION_FLAG_KEY, "1");
 }
 
 export function clearTokens(): void {
   _accessToken = null;
   _expiresAt = null;
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  _hasSession = false;
+  sessionStorage.removeItem(SESSION_FLAG_KEY);
 }
 
 function isTokenExpired(): boolean {
@@ -44,20 +46,17 @@ function isTokenExpired(): boolean {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh-cookie`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      credentials: "include",
     });
     if (!res.ok) {
       clearTokens();
       return null;
     }
-    const data: { accessToken: string; refreshToken: string; expiresIn: number } = await res.json();
-    storeTokens(data.accessToken, data.refreshToken, data.expiresIn);
+    const data: { accessToken: string; expiresIn: number } = await res.json();
+    storeTokens(data.accessToken, data.expiresIn);
     return data.accessToken;
   } catch {
     return null;
@@ -115,25 +114,22 @@ export const api = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, idToken }),
+        credentials: "include",
       });
       if (!res.ok) {
         const text = await res.text().catch(() => res.statusText);
         throw new ApiError(res.status, text);
       }
-      const data: { accessToken: string; refreshToken: string; expiresIn: number } =
-        await res.json();
-      storeTokens(data.accessToken, data.refreshToken, data.expiresIn);
+      const data: { accessToken: string; expiresIn: number } = await res.json();
+      storeTokens(data.accessToken, data.expiresIn);
       return data;
     },
 
     logout: async () => {
-      const refreshToken = getRefreshToken();
-      if (refreshToken) {
-        await request<void>("/api/v1/auth/logout", {
-          method: "POST",
-          body: JSON.stringify({ refreshToken }),
-        }).catch(() => {});
-      }
+      await fetch(`${BASE_URL}/api/v1/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      }).catch(() => {});
       clearTokens();
     },
   },

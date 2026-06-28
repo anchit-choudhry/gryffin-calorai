@@ -83,6 +83,7 @@ export interface Recipe {
     serving: number;
   }[];
   totalCalories: number;
+  syncId?: string;
   totalProtein?: number;
   totalCarbs?: number;
   totalFat?: number;
@@ -183,6 +184,7 @@ export interface DietProfile {
   preset: DietPreset;
   restrictions: RestrictionFlag[];
   updatedAt: string;
+  syncId?: string;
 }
 
 export interface RecurringMealFood {
@@ -213,6 +215,7 @@ export interface Reminder {
   time: string; // HH:MM
   daysOfWeek: number; // bitmask: bit 0 = Mon, bit 6 = Sun
   enabled: boolean;
+  syncId?: string;
 }
 
 // --- Feature 16: Meal Templates & Plans ---
@@ -235,6 +238,7 @@ export interface MealTemplate {
   foods: MealTemplateFood[];
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
+  syncId?: string;
 }
 
 export interface MealPlanDay {
@@ -258,7 +262,11 @@ export type SyncEntityType =
   | "bodyMeasurement"
   | "stepLog"
   | "fastingSession"
-  | "tdeeProfile";
+  | "tdeeProfile"
+  | "recipe"
+  | "mealTemplate"
+  | "reminder"
+  | "dietProfile";
 
 export interface SyncQueueEntry {
   id?: number;
@@ -580,6 +588,44 @@ db.version(20).stores({
   photos: "++id, userId, createdAt",
 });
 
+// 21. Version 21: v0.20.0 Sync expansion - add syncId index to recipes, mealTemplates,
+// reminders, and dietProfiles so these entities can participate in cloud sync.
+// The upgrade callback backfills a UUID syncId for any existing rows so the pull/push
+// logic in useSyncService can match them by syncId from the first sync after upgrade.
+db.version(21)
+  .stores({
+    recipes: "++id, name, description, createdBy, dateCreated, userId, syncId",
+    mealTemplates: "++id, userId, createdAt, syncId",
+    reminders: "++id, userId, [userId+type], syncId",
+    dietProfiles: "++id, &userId, updatedAt, syncId",
+  })
+  .upgrade(async (tx) => {
+    await tx
+      .table("recipes")
+      .toCollection()
+      .modify((row: Recipe) => {
+        if (!row.syncId) row.syncId = crypto.randomUUID();
+      });
+    await tx
+      .table("mealTemplates")
+      .toCollection()
+      .modify((row: MealTemplate) => {
+        if (!row.syncId) row.syncId = crypto.randomUUID();
+      });
+    await tx
+      .table("reminders")
+      .toCollection()
+      .modify((row: Reminder) => {
+        if (!row.syncId) row.syncId = crypto.randomUUID();
+      });
+    await tx
+      .table("dietProfiles")
+      .toCollection()
+      .modify((row: DietProfile) => {
+        if (!row.syncId) row.syncId = crypto.randomUUID();
+      });
+  });
+
 // Define table references AFTER schema is set
 export const users: Table<UserProfile> = db.table("users");
 export const foodItems: Table<FoodItem> = db.table("foodItems");
@@ -687,7 +733,8 @@ export const getRecentFoodItems = async (userId: UserId, daysBack: number): Prom
 };
 
 export const saveRecipe = async (recipe: Recipe): Promise<RecipeId> => {
-  const id = await recipes.add(recipe);
+  const withSyncId = recipe.syncId ? recipe : { ...recipe, syncId: crypto.randomUUID() };
+  const id = await recipes.add(withSyncId);
   return makeRecipeId(id);
 };
 
@@ -960,12 +1007,13 @@ export const getDietProfile = async (userId: UserId): Promise<DietProfile | null
 };
 
 export const saveDietProfile = async (profile: DietProfile): Promise<DietProfileId> => {
+  const withSyncId = profile.syncId ? profile : { ...profile, syncId: crypto.randomUUID() };
   const existing = await getDietProfile(profile.userId);
   if (existing?.id !== undefined) {
-    await dietProfiles.put({ ...profile, id: existing.id });
+    await dietProfiles.put({ ...withSyncId, id: existing.id });
     return existing.id;
   }
-  const id = await dietProfiles.add(profile);
+  const id = await dietProfiles.add(withSyncId);
   return makeDietProfileId(id);
 };
 
@@ -1000,23 +1048,24 @@ export const getReminders = async (userId: UserId): Promise<Reminder[]> => {
 };
 
 export const upsertReminder = async (reminder: Reminder): Promise<ReminderId> => {
-  if (reminder.id !== undefined) {
-    const existing = await reminders.get(reminder.id);
-    if (!existing || existing.userId !== reminder.userId) {
+  const withSyncId = reminder.syncId ? reminder : { ...reminder, syncId: crypto.randomUUID() };
+  if (withSyncId.id !== undefined) {
+    const existing = await reminders.get(withSyncId.id);
+    if (!existing || existing.userId !== withSyncId.userId) {
       throw new Error("Unauthorized: cannot modify another user's reminder");
     }
-    await reminders.put(reminder);
-    return reminder.id;
+    await reminders.put(withSyncId);
+    return withSyncId.id;
   }
   const existing = await reminders
     .where("[userId+type]")
-    .equals([reminder.userId, reminder.type])
+    .equals([withSyncId.userId, withSyncId.type])
     .first();
   if (existing?.id !== undefined) {
-    await reminders.put({ ...reminder, id: existing.id });
+    await reminders.put({ ...withSyncId, id: existing.id });
     return existing.id;
   }
-  const id = await reminders.add(reminder);
+  const id = await reminders.add(withSyncId);
   return makeReminderId(id);
 };
 
@@ -1029,7 +1078,8 @@ export const deleteReminder = async (id: ReminderId, userId: UserId): Promise<vo
 // --- Meal Template CRUD ---
 
 export const addMealTemplate = async (template: MealTemplate): Promise<MealTemplateId> => {
-  const id = await mealTemplates.add(template);
+  const withSyncId = template.syncId ? template : { ...template, syncId: crypto.randomUUID() };
+  const id = await mealTemplates.add(withSyncId);
   return makeMealTemplateId(id);
 };
 

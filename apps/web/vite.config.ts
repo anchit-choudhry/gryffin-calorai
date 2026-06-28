@@ -161,6 +161,9 @@ export default defineConfig({
   server: { headers: DEV_HEADERS },
   preview: { headers: SECURITY_HEADERS },
   build: {
+    // vendor-local-ai (@huggingface/transformers + onnxruntime-web) is ~849 kB minified.
+    // It is lazy-loaded on demand and never blocks the initial paint.
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
         manualChunks: (id) => {

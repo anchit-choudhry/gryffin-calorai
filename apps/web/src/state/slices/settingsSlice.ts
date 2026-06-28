@@ -194,14 +194,23 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
     const state = get();
     if (!state.userId) return;
     try {
+      const syncId = state.dietProfile?.syncId ?? crypto.randomUUID();
       const profile: DietProfile = {
         userId: state.userId,
         preset,
         restrictions,
         updatedAt: new Date().toISOString(),
+        syncId,
       };
       await saveDietProfileToDB(profile);
       set({ dietProfile: profile });
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "dietProfile",
+        syncId,
+        operation: state.dietProfile ? "update" : "create",
+        payload: profile,
+      });
       toast.success(`Diet profile set to ${DIET_PRESETS[preset].label}`);
     } catch (error) {
       const message = mapDbError(error, "Failed to save diet profile");
@@ -317,9 +326,22 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
     const state = get();
     if (!state.userId) return;
     try {
-      await upsertReminderInDB({ ...reminder, userId: state.userId } as Reminder);
+      const existing =
+        reminder.id !== undefined
+          ? state.reminders.find((r) => r.id === reminder.id)
+          : state.reminders.find((r) => r.type === reminder.type);
+      const syncId = existing?.syncId ?? reminder.syncId ?? crypto.randomUUID();
+      const full: Reminder = { ...reminder, userId: state.userId, syncId } as Reminder;
+      await upsertReminderInDB(full);
       const data = await getRemindersFromDB(state.userId);
       set({ reminders: data });
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "reminder",
+        syncId,
+        operation: existing ? "update" : "create",
+        payload: full,
+      });
     } catch (error) {
       const message = mapDbError(error, "Failed to save reminder");
       if (import.meta.env.DEV) console.error("Error saving reminder:", error);
@@ -331,10 +353,20 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   deleteReminder: async (id: ReminderId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.reminders.find((r) => r.id === id)?.syncId;
     try {
       await deleteReminderFromDB(id, state.userId);
       const data = await getRemindersFromDB(state.userId);
       set({ reminders: data });
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "reminder",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete reminder");
       if (import.meta.env.DEV) console.error("Error deleting reminder:", error);
@@ -356,14 +388,24 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
     const state = get();
     if (!state.userId) return;
     try {
-      await addMealTemplateToDB({
+      const syncId = crypto.randomUUID();
+      const full: MealTemplate = {
         ...template,
         userId: state.userId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      });
+        syncId,
+      };
+      await addMealTemplateToDB(full);
       const templates = await getMealTemplatesFromDB(state.userId);
       set({ mealTemplates: templates });
+      void enqueueSyncOperation({
+        userId: state.userId,
+        entityType: "mealTemplate",
+        syncId,
+        operation: "create",
+        payload: full,
+      });
       toast.success(`Template "${template.name}" saved`);
     } catch (error) {
       const message = mapDbError(error, "Failed to save template");
@@ -380,6 +422,15 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
       await updateMealTemplateInDB(template, state.userId);
       const templates = await getMealTemplatesFromDB(state.userId);
       set({ mealTemplates: templates });
+      if (template.syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "mealTemplate",
+          syncId: template.syncId,
+          operation: "update",
+          payload: template,
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to update template");
       if (import.meta.env.DEV) console.error("Error updating meal template:", error);
@@ -391,10 +442,20 @@ export const createSettingsSlice: StateCreator<AppState, [], [], SettingsSlice> 
   deleteMealTemplate: async (id: MealTemplateId) => {
     const state = get();
     if (!state.userId) return;
+    const syncId = state.mealTemplates.find((t) => t.id === id)?.syncId;
     try {
       await deleteMealTemplateFromDB(id, state.userId);
       const templates = await getMealTemplatesFromDB(state.userId);
       set({ mealTemplates: templates });
+      if (syncId) {
+        void enqueueSyncOperation({
+          userId: state.userId,
+          entityType: "mealTemplate",
+          syncId,
+          operation: "delete",
+          payload: {},
+        });
+      }
     } catch (error) {
       const message = mapDbError(error, "Failed to delete template");
       if (import.meta.env.DEV) console.error("Error deleting meal template:", error);

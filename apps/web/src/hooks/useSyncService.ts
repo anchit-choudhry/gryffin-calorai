@@ -6,10 +6,19 @@ import {
   activityLogs,
   type BodyMeasurement,
   bodyMeasurements,
+  type DietProfile,
+  dietProfiles,
   type FastingSession,
   fastingSessions,
   type FoodItem,
   foodItems,
+  type MealTemplate,
+  mealTemplates,
+  type MealTemplateFood,
+  type Recipe,
+  recipes,
+  type Reminder,
+  reminders,
   saveTdeeProfile,
   type StepLog,
   stepLogs,
@@ -22,7 +31,7 @@ import {
 } from "../db/dbService";
 import { decryptBlob, deriveKey, encryptBlob } from "../lib/e2eEncryption";
 import { clearE2EKey, getE2EKey, setE2EKey } from "../lib/e2eKeyStore";
-import type { SyncBlobPayload, UserId } from "@/types";
+import type { DietPreset, RestrictionFlag, ReminderType, SyncBlobPayload, UserId } from "@/types";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RETRIES = 3;
@@ -100,6 +109,48 @@ interface ServerTdeeProfile {
   activityLevel: string;
   goal: string;
   updatedAt: string;
+}
+
+interface ServerRecipe {
+  id: string;
+  name: string;
+  description: string;
+  ingredients: { foodItemId: string; quantity: number; serving: number }[];
+  totalCalories: number;
+  totalProtein?: number;
+  totalCarbs?: number;
+  totalFat?: number;
+  createdBy: string;
+  dateCreated: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+interface ServerMealTemplate {
+  id: string;
+  name: string;
+  foods: MealTemplateFood[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+interface ServerReminder {
+  id: string;
+  type: string;
+  time: string;
+  daysOfWeek: number;
+  enabled: boolean;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+interface ServerDietProfile {
+  id: string;
+  preset: string;
+  restrictions: string[];
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 async function pullFoodItems(userId: UserId, since: string): Promise<void> {
@@ -286,6 +337,117 @@ async function pullTdeeProfile(userId: UserId): Promise<void> {
   await saveTdeeProfile(merged);
 }
 
+async function pullRecipes(userId: UserId, since: string): Promise<void> {
+  const items = await api.get<ServerRecipe[]>(
+    `/api/v1/recipes/changes?since=${encodeURIComponent(since)}`,
+  );
+  for (const item of items) {
+    const existing = await recipes.where("syncId").equals(item.id).first();
+    if (item.deletedAt) {
+      if (existing?.id != null) await recipes.delete(existing.id);
+      continue;
+    }
+    const record: Recipe = {
+      userId,
+      name: item.name,
+      description: item.description,
+      ingredients: item.ingredients.map((ing) => ({
+        foodItemId: ing.foodItemId as unknown as Recipe["ingredients"][0]["foodItemId"],
+        quantity: ing.quantity,
+        serving: ing.serving,
+      })),
+      totalCalories: item.totalCalories,
+      totalProtein: item.totalProtein,
+      totalCarbs: item.totalCarbs,
+      totalFat: item.totalFat,
+      createdBy: item.createdBy as UserId,
+      dateCreated: item.dateCreated,
+      syncId: item.id,
+    };
+    if (existing?.id != null) {
+      await recipes.put({ ...record, id: existing.id });
+    } else {
+      await recipes.add(record);
+    }
+  }
+}
+
+async function pullMealTemplates(userId: UserId, since: string): Promise<void> {
+  const items = await api.get<ServerMealTemplate[]>(
+    `/api/v1/meal-templates/changes?since=${encodeURIComponent(since)}`,
+  );
+  for (const item of items) {
+    const existing = await mealTemplates.where("syncId").equals(item.id).first();
+    if (item.deletedAt) {
+      if (existing?.id != null) await mealTemplates.delete(existing.id);
+      continue;
+    }
+    const record: MealTemplate = {
+      userId,
+      name: item.name,
+      foods: item.foods,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      syncId: item.id,
+    };
+    if (existing?.id != null) {
+      await mealTemplates.put({ ...record, id: existing.id });
+    } else {
+      await mealTemplates.add(record);
+    }
+  }
+}
+
+async function pullReminders(userId: UserId, since: string): Promise<void> {
+  const items = await api.get<ServerReminder[]>(
+    `/api/v1/reminders/changes?since=${encodeURIComponent(since)}`,
+  );
+  for (const item of items) {
+    const existing = await reminders.where("syncId").equals(item.id).first();
+    if (item.deletedAt) {
+      if (existing?.id != null) await reminders.delete(existing.id);
+      continue;
+    }
+    const record: Reminder = {
+      userId,
+      type: item.type as ReminderType,
+      time: item.time,
+      daysOfWeek: item.daysOfWeek,
+      enabled: item.enabled,
+      syncId: item.id,
+    };
+    if (existing?.id != null) {
+      await reminders.update(existing.id, record);
+    } else {
+      await reminders.add(record);
+    }
+  }
+}
+
+async function pullDietProfile(userId: UserId): Promise<void> {
+  let profile: ServerDietProfile | null;
+  try {
+    profile = await api.get<ServerDietProfile>("/api/v1/diet-profile");
+  } catch {
+    return;
+  }
+  if (!profile) return;
+  const existing = await dietProfiles.where("userId").equals(userId).first();
+  const record: DietProfile = {
+    id: existing?.id,
+    userId,
+    preset: profile.preset as DietPreset,
+    restrictions: profile.restrictions as RestrictionFlag[],
+    updatedAt: profile.updatedAt,
+    syncId: profile.id,
+  };
+  if (existing?.id != null) {
+    await dietProfiles.put({ ...record, id: existing.id });
+  } else {
+    await dietProfiles.add(record);
+  }
+}
+
 async function flushQueueEntry(entry: SyncQueueEntry): Promise<void> {
   const { entityType, operation, payload, syncId } = entry;
 
@@ -297,6 +459,10 @@ async function flushQueueEntry(entry: SyncQueueEntry): Promise<void> {
     stepLog: "/api/v1/step-logs",
     fastingSession: "/api/v1/fasting-sessions",
     tdeeProfile: "/api/v1/tdee-profile",
+    recipe: "/api/v1/recipes",
+    mealTemplate: "/api/v1/meal-templates",
+    reminder: "/api/v1/reminders",
+    dietProfile: "/api/v1/diet-profile",
   };
   const basePath = entityPaths[entityType];
   if (!basePath) return;
@@ -372,6 +538,26 @@ async function applyRemoteDelete(entityType: string, syncId: string): Promise<vo
       if (existing?.id !== undefined) await fastingSessions.delete(existing.id);
       break;
     }
+    case "recipe": {
+      const existing = await recipes.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await recipes.delete(existing.id);
+      break;
+    }
+    case "mealTemplate": {
+      const existing = await mealTemplates.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await mealTemplates.delete(existing.id);
+      break;
+    }
+    case "reminder": {
+      const existing = await reminders.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await reminders.delete(existing.id);
+      break;
+    }
+    case "dietProfile": {
+      const existing = await dietProfiles.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) await dietProfiles.delete(existing.id);
+      break;
+    }
     default:
       break;
   }
@@ -440,6 +626,46 @@ async function applyRemoteUpsert(userId: UserId, decoded: SyncBlobPayload): Prom
       }
       break;
     }
+    case "recipe": {
+      const record = { ...(payload as Recipe), userId, syncId };
+      const existing = await recipes.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await recipes.put({ ...record, id: existing.id });
+      } else {
+        await recipes.add(record);
+      }
+      break;
+    }
+    case "mealTemplate": {
+      const record = { ...(payload as MealTemplate), userId, syncId };
+      const existing = await mealTemplates.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await mealTemplates.put({ ...record, id: existing.id });
+      } else {
+        await mealTemplates.add(record);
+      }
+      break;
+    }
+    case "reminder": {
+      const record = { ...(payload as Reminder), userId, syncId };
+      const existing = await reminders.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await reminders.put({ ...record, id: existing.id });
+      } else {
+        await reminders.add(record);
+      }
+      break;
+    }
+    case "dietProfile": {
+      const record = { ...(payload as DietProfile), userId, syncId };
+      const existing = await dietProfiles.where("syncId").equals(syncId).first();
+      if (existing?.id !== undefined) {
+        await dietProfiles.put({ ...record, id: existing.id });
+      } else {
+        await dietProfiles.add(record);
+      }
+      break;
+    }
     default:
       break;
   }
@@ -500,6 +726,10 @@ async function enqueueAllLocalData(userId: UserId): Promise<void> {
     allBodyMeasurements,
     allStepLogs,
     allFastingSessions,
+    allRecipes,
+    allMealTemplates,
+    allReminders,
+    allDietProfiles,
   ] = await Promise.all([
     foodItems.where("userId").equals(userId).toArray(),
     waterLogs.where("userId").equals(userId).toArray(),
@@ -507,6 +737,10 @@ async function enqueueAllLocalData(userId: UserId): Promise<void> {
     bodyMeasurements.where("userId").equals(userId).toArray(),
     stepLogs.where("userId").equals(userId).toArray(),
     fastingSessions.where("userId").equals(userId).toArray(),
+    recipes.where("userId").equals(userId).toArray(),
+    mealTemplates.where("userId").equals(userId).toArray(),
+    reminders.where("userId").equals(userId).toArray(),
+    dietProfiles.where("userId").equals(userId).toArray(),
   ]);
 
   type QueueEntry = Omit<SyncQueueEntry, "id" | "retries">;
@@ -571,6 +805,46 @@ async function enqueueAllLocalData(userId: UserId): Promise<void> {
         payload: s,
         createdAt: now,
       })),
+    ...allRecipes
+      .filter((r) => r.syncId !== undefined)
+      .map((r) => ({
+        userId,
+        entityType: "recipe" as const,
+        syncId: r.syncId as string,
+        operation: "update" as const,
+        payload: r,
+        createdAt: now,
+      })),
+    ...allMealTemplates
+      .filter((t) => t.syncId !== undefined)
+      .map((t) => ({
+        userId,
+        entityType: "mealTemplate" as const,
+        syncId: t.syncId as string,
+        operation: "update" as const,
+        payload: t,
+        createdAt: now,
+      })),
+    ...allReminders
+      .filter((r) => r.syncId !== undefined)
+      .map((r) => ({
+        userId,
+        entityType: "reminder" as const,
+        syncId: r.syncId as string,
+        operation: "update" as const,
+        payload: r,
+        createdAt: now,
+      })),
+    ...allDietProfiles
+      .filter((p) => p.syncId !== undefined)
+      .map((p) => ({
+        userId,
+        entityType: "dietProfile" as const,
+        syncId: p.syncId as string,
+        operation: "update" as const,
+        payload: p,
+        createdAt: now,
+      })),
   ];
 
   if (entries.length === 0) return;
@@ -633,6 +907,10 @@ export function useSyncService() {
           pullStepLogs(userId, since),
           pullFastingSessions(userId, since),
           pullTdeeProfile(userId),
+          pullRecipes(userId, since),
+          pullMealTemplates(userId, since),
+          pullReminders(userId, since),
+          pullDietProfile(userId),
         ]);
       }
 

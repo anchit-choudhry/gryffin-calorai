@@ -67,7 +67,9 @@ vi.mock("../lib/apiClient", async (importOriginal) => {
     },
   };
 });
+
 vi.mock("../db/dbService");
+
 vi.mock("../state/AppState", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../state/AppState")>();
   return {
@@ -97,6 +99,17 @@ describe("useSyncService", () => {
     mockApiPost.mockResolvedValue({});
     vi.mocked(apiClient.api.put).mockResolvedValue({});
     vi.mocked(apiClient.api.delete).mockResolvedValue(undefined);
+
+    // Ensure syncQueue.where exists as a mock for test bodies to override
+    Object.assign(dbService.syncQueue, {
+      where: vi.fn(),
+      orderBy: vi.fn(),
+      count: vi.fn(),
+      add: vi.fn(),
+      bulkAdd: vi.fn(),
+      delete: vi.fn(),
+      update: vi.fn(),
+    });
 
     vi.mocked(dbService.syncQueue.orderBy).mockReturnValue({
       toArray: vi.fn().mockResolvedValue([]),
@@ -153,6 +166,33 @@ describe("useSyncService", () => {
     } as unknown as ReturnType<typeof dbService.tdeeProfiles.where>);
 
     vi.mocked(dbService.saveTdeeProfile).mockResolvedValue(undefined);
+
+    vi.mocked(dbService.recipes.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+    } as unknown as ReturnType<typeof dbService.recipes.where>);
+    vi.mocked(dbService.recipes.add).mockResolvedValue(1);
+    vi.mocked(dbService.recipes.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.recipes.put).mockResolvedValue(1);
+
+    vi.mocked(dbService.mealTemplates.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+    } as unknown as ReturnType<typeof dbService.mealTemplates.where>);
+    vi.mocked(dbService.mealTemplates.add).mockResolvedValue(1);
+    vi.mocked(dbService.mealTemplates.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.mealTemplates.put).mockResolvedValue(1);
+
+    vi.mocked(dbService.reminders.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+    } as unknown as ReturnType<typeof dbService.reminders.where>);
+    vi.mocked(dbService.reminders.add).mockResolvedValue(1);
+    vi.mocked(dbService.reminders.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.reminders.update).mockResolvedValue(1);
+
+    vi.mocked(dbService.dietProfiles.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+    } as unknown as ReturnType<typeof dbService.dietProfiles.where>);
+    vi.mocked(dbService.dietProfiles.add).mockResolvedValue(1);
+    vi.mocked(dbService.dietProfiles.put).mockResolvedValue(1);
 
     mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
       const state = {
@@ -281,6 +321,10 @@ describe("useSyncService", () => {
       expect(calls.some((u) => u.includes("/step-logs/changes"))).toBe(true);
       expect(calls.some((u) => u.includes("/fasting-sessions/changes"))).toBe(true);
       expect(calls.some((u) => u.includes("/tdee-profile"))).toBe(true);
+      expect(calls.some((u) => u.includes("/recipes/changes"))).toBe(true);
+      expect(calls.some((u) => u.includes("/meal-templates/changes"))).toBe(true);
+      expect(calls.some((u) => u.includes("/reminders/changes"))).toBe(true);
+      expect(calls.some((u) => u.includes("/diet-profile"))).toBe(true);
     });
 
     it("uses epoch time as since when lastSyncedAt is null", async () => {
@@ -1022,6 +1066,369 @@ describe("useSyncService", () => {
     });
   });
 
+  describe("pullRecipes via runSync", () => {
+    it("adds new recipe when no existing local record", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/recipes/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-recipe-1",
+              name: "Pasta Primavera",
+              description: "Light pasta dish",
+              ingredients: [{ foodItemId: "fi-1", quantity: 1, serving: 200 }],
+              totalCalories: 450,
+              createdBy: "user-1",
+              dateCreated: "2026-06-01",
+              updatedAt: "2026-06-01T10:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.recipes.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      } as unknown as ReturnType<typeof dbService.recipes.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.recipes.add).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Pasta Primavera", syncId: "sync-recipe-1" }),
+      );
+    });
+
+    it("updates existing recipe when local record found", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/recipes/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-recipe-2",
+              name: "Updated Pasta",
+              description: "Updated description",
+              ingredients: [],
+              totalCalories: 500,
+              createdBy: "user-1",
+              dateCreated: "2026-06-01",
+              updatedAt: "2026-06-01T12:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.recipes.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 11, syncId: "sync-recipe-2" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.recipes.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.recipes.put).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Updated Pasta", id: 11 }),
+      );
+    });
+
+    it("deletes recipe when deletedAt is set", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/recipes/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-recipe-del",
+              name: "Deleted Recipe",
+              description: "",
+              ingredients: [],
+              totalCalories: 0,
+              createdBy: "user-1",
+              dateCreated: "2026-06-01",
+              updatedAt: "2026-06-01T10:00:00Z",
+              deletedAt: "2026-06-01T11:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.recipes.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 12, syncId: "sync-recipe-del" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.recipes.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.recipes.delete).toHaveBeenCalledWith(12);
+    });
+  });
+
+  describe("pullMealTemplates via runSync", () => {
+    it("adds new meal template when no existing local record", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/meal-templates/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-tmpl-1",
+              name: "Healthy Breakfast",
+              foods: [
+                {
+                  name: "Oats",
+                  calories: 150,
+                  servingSize: 100,
+                  protein: 5,
+                  carbs: 27,
+                  fat: 3,
+                  mealType: "Breakfast",
+                },
+              ],
+              createdAt: "2026-06-01T08:00:00Z",
+              updatedAt: "2026-06-01T08:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.mealTemplates.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      } as unknown as ReturnType<typeof dbService.mealTemplates.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.mealTemplates.add).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Healthy Breakfast", syncId: "sync-tmpl-1" }),
+      );
+    });
+
+    it("updates existing meal template when local record found", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/meal-templates/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-tmpl-2",
+              name: "Updated Template",
+              foods: [],
+              createdAt: "2026-06-01T08:00:00Z",
+              updatedAt: "2026-06-01T12:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.mealTemplates.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 21, syncId: "sync-tmpl-2" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.mealTemplates.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.mealTemplates.put).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Updated Template", id: 21 }),
+      );
+    });
+
+    it("deletes meal template when deletedAt is set", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/meal-templates/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-tmpl-del",
+              name: "Deleted Template",
+              foods: [],
+              createdAt: "2026-06-01T08:00:00Z",
+              updatedAt: "2026-06-01T10:00:00Z",
+              deletedAt: "2026-06-01T11:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.mealTemplates.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 22, syncId: "sync-tmpl-del" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.mealTemplates.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.mealTemplates.delete).toHaveBeenCalledWith(22);
+    });
+  });
+
+  describe("pullReminders via runSync", () => {
+    it("adds new reminder when no existing local record", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/reminders/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-rem-1",
+              type: "meal",
+              time: "08:00",
+              daysOfWeek: [1, 2, 3, 4, 5],
+              enabled: true,
+              updatedAt: "2026-06-01T10:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.reminders.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      } as unknown as ReturnType<typeof dbService.reminders.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.reminders.add).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "meal", syncId: "sync-rem-1" }),
+      );
+    });
+
+    it("updates existing reminder using reminders.update when local record found", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/reminders/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-rem-2",
+              type: "water",
+              time: "10:00",
+              daysOfWeek: [0, 6],
+              enabled: false,
+              updatedAt: "2026-06-01T12:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.reminders.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 31, syncId: "sync-rem-2" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.reminders.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.reminders.update).toHaveBeenCalledWith(
+        31,
+        expect.objectContaining({ type: "water" }),
+      );
+    });
+
+    it("deletes reminder when deletedAt is set", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/reminders/changes")) {
+          return Promise.resolve([
+            {
+              id: "sync-rem-del",
+              type: "meal",
+              time: "09:00",
+              daysOfWeek: [],
+              enabled: false,
+              updatedAt: "2026-06-01T10:00:00Z",
+              deletedAt: "2026-06-01T11:00:00Z",
+            },
+          ]);
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.reminders.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 32, syncId: "sync-rem-del" }),
+        }),
+      } as unknown as ReturnType<typeof dbService.reminders.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.reminders.delete).toHaveBeenCalledWith(32);
+    });
+  });
+
+  describe("pullDietProfile via runSync", () => {
+    it("adds new diet profile when no existing local record", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/diet-profile")) {
+          return Promise.resolve({
+            id: "sync-diet-1",
+            preset: "mediterranean",
+            restrictions: ["gluten-free"],
+            updatedAt: "2026-06-01T10:00:00Z",
+          });
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.dietProfiles.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }),
+      } as unknown as ReturnType<typeof dbService.dietProfiles.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.dietProfiles.add).toHaveBeenCalledWith(
+        expect.objectContaining({ preset: "mediterranean", syncId: "sync-diet-1" }),
+      );
+    });
+
+    it("updates existing diet profile when local record found", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/diet-profile")) {
+          return Promise.resolve({
+            id: "sync-diet-2",
+            preset: "vegan",
+            restrictions: [],
+            updatedAt: "2026-06-01T12:00:00Z",
+          });
+        }
+        return Promise.resolve([]);
+      });
+      vi.mocked(dbService.dietProfiles.where).mockReturnValue({
+        equals: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue({ id: 41, userId }),
+        }),
+      } as unknown as ReturnType<typeof dbService.dietProfiles.where>);
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.dietProfiles.put).toHaveBeenCalledWith(
+        expect.objectContaining({ preset: "vegan", id: 41 }),
+      );
+    });
+
+    it("returns early without saving when api returns null", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/diet-profile")) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve([]);
+      });
+      const { result } = renderHook(() => useSyncService());
+      await act(async () => {
+        await result.current.runSync();
+      });
+      expect(dbService.dietProfiles.add).not.toHaveBeenCalled();
+      expect(dbService.dietProfiles.put).not.toHaveBeenCalled();
+    });
+
+    it("returns early without throwing when api call throws", async () => {
+      vi.mocked(apiClient.api.get).mockImplementation((url: string) => {
+        if ((url as string).includes("/diet-profile")) {
+          return Promise.reject(new Error("Diet profile fetch failed"));
+        }
+        return Promise.resolve([]);
+      });
+      const { result } = renderHook(() => useSyncService());
+      await expect(
+        act(async () => {
+          await result.current.runSync();
+        }),
+      ).resolves.not.toThrow();
+    });
+  });
+
   describe("flushQueue via runSync", () => {
     function makeQueueEntry(overrides: Partial<SyncQueueEntry> = {}): SyncQueueEntry {
       return {
@@ -1272,43 +1679,6 @@ describe("enqueueAllLocalData via activateE2E", () => {
       toArray: vi.fn().mockResolvedValue([]),
     } as unknown as ReturnType<typeof dbService.syncQueue.orderBy>);
 
-    vi.mocked(dbService.foodItems.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.foodItems.where>);
-    vi.mocked(dbService.waterLogs.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.waterLogs.where>);
-    vi.mocked(dbService.activityLogs.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.activityLogs.where>);
-    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.bodyMeasurements.where>);
-    vi.mocked(dbService.stepLogs.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.stepLogs.where>);
-    vi.mocked(dbService.fastingSessions.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: vi.fn().mockResolvedValue([]),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.fastingSessions.where>);
-
     mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
       const state = {
         setSyncStatus: vi.fn(),
@@ -1330,8 +1700,9 @@ describe("enqueueAllLocalData via activateE2E", () => {
   // mockReturnValue on foodItems.where, waterLogs.where, syncQueue.where etc. all
   // override the SAME underlying vi.fn(). The fix: use mockImplementation with a
   // toArray vi.fn() that uses mockReturnValueOnce to return different data per call.
-  // enqueueAllLocalData calls 6 entity toArray() calls, then flushQueueE2E calls
-  // syncQueue toArray(). Use mockReturnValueOnce for entity calls, mockReturnValue
+  // enqueueAllLocalData calls 10 entity toArray() calls (food, water, activity, body,
+  // step, fasting, recipes, mealTemplates, reminders, dietProfiles), then flushQueueE2E
+  // calls syncQueue toArray(). Use mockReturnValueOnce for entity calls, mockReturnValue
   // for the syncQueue call (the fallback).
 
   it("returns early without calling bulkAdd when no entities have syncId", async () => {
@@ -1344,6 +1715,10 @@ describe("enqueueAllLocalData via activateE2E", () => {
       .mockResolvedValueOnce([]) // body
       .mockResolvedValueOnce([]) // step
       .mockResolvedValueOnce([]) // fasting
+      .mockResolvedValueOnce([]) // recipes
+      .mockResolvedValueOnce([]) // mealTemplates
+      .mockResolvedValueOnce([]) // reminders
+      .mockResolvedValueOnce([]) // dietProfiles
       .mockResolvedValue([]); // syncQueue toArray (fallback for flushQueueE2E)
 
     vi.mocked(dbService.syncQueue.where).mockReturnValue({
@@ -1359,115 +1734,163 @@ describe("enqueueAllLocalData via activateE2E", () => {
     expect(dbService.syncQueue.bulkAdd).not.toHaveBeenCalled();
   });
 
-  it("calls bulkAdd with foodItem entries when food items have syncId", async () => {
-    const foodItem = {
-      id: 1,
-      name: "Apple",
-      calories: 80,
-      syncId: "sync-food-enqueue-1",
-      userId,
-    };
+  it("calls bulkAdd with one entry per entity when all 10 tables have records with syncId", async () => {
+    // This test covers all 10 filter/map callback pairs in enqueueAllLocalData (each arrow
+    // counts as a distinct function in v8 coverage). Each entity table has its own separate
+    // vi.fn() for where() (the outer describe's beforeEach confirms this by mocking each
+    // individually). We set up each table's where().equals().toArray() to return one record
+    // with syncId, so every filter/map pair executes, populating entries with 10 items and
+    // triggering syncQueue.bulkAdd. syncQueue.where returns [] so flushQueueE2E returns early.
 
-    // Call order: food, water, activity, body, step, fasting (enqueueAllLocalData),
-    // then syncQueue (flushQueueE2E). Fallback returns [] so flushQueueE2E exits early.
-    const toArrayMock = vi
-      .fn()
-      .mockResolvedValueOnce([foodItem]) // food - has syncId
-      .mockResolvedValueOnce([]) // water
-      .mockResolvedValueOnce([]) // activity
-      .mockResolvedValueOnce([]) // body
-      .mockResolvedValueOnce([]) // step
-      .mockResolvedValueOnce([]) // fasting
-      .mockResolvedValue([]); // syncQueue toArray (fallback)
-
-    vi.mocked(dbService.syncQueue.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: toArrayMock,
-        delete: vi.fn().mockResolvedValue(undefined),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
-
-    await activateE2E(userId, "pass");
-
-    expect(dbService.syncQueue.bulkAdd).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          entityType: "foodItem",
-          syncId: "sync-food-enqueue-1",
-          operation: "update",
-          retries: 0,
+    const makeWhereChain = (data: unknown[]) =>
+      ({
+        equals: vi.fn().mockReturnValue({
+          toArray: vi.fn().mockResolvedValue(data),
+          delete: vi.fn().mockResolvedValue(undefined),
         }),
+      }) as unknown as ReturnType<typeof dbService.foodItems.where>;
+
+    vi.mocked(dbService.foodItems.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 1,
+          userId,
+          name: "Apple",
+          calories: 80,
+          servingSize: 100,
+          protein: 1,
+          carbs: 20,
+          fat: 0,
+          dateLogged: "2026-06-01",
+          isFavorite: false,
+          syncId: "s-food-1",
+        },
       ]),
     );
-  });
+    vi.mocked(dbService.waterLogs.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 2,
+          userId,
+          amount: 250,
+          dateLogged: "2026-06-01",
+          loggedAt: "2026-06-01T08:00:00Z",
+          syncId: "s-water-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.waterLogs.where>,
+    );
+    vi.mocked(dbService.activityLogs.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 3,
+          userId,
+          activityType: "Running",
+          durationMin: 30,
+          caloriesBurned: 200,
+          dateLogged: "2026-06-01",
+          syncId: "s-activity-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.activityLogs.where>,
+    );
+    vi.mocked(dbService.bodyMeasurements.where).mockReturnValue(
+      makeWhereChain([
+        { id: 4, userId, measuredAt: "2026-06-01", weight: 70, syncId: "s-body-1" },
+      ]) as unknown as ReturnType<typeof dbService.bodyMeasurements.where>,
+    );
+    vi.mocked(dbService.stepLogs.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 5,
+          userId,
+          steps: 8000,
+          dateLogged: "2026-06-01",
+          loggedAt: "2026-06-01T20:00:00Z",
+          syncId: "s-step-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.stepLogs.where>,
+    );
+    vi.mocked(dbService.fastingSessions.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 6,
+          userId,
+          startTime: "2026-06-01T10:00:00Z",
+          targetHours: 16,
+          dateLogged: "2026-06-01",
+          completed: false,
+          syncId: "s-fasting-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.fastingSessions.where>,
+    );
+    vi.mocked(dbService.recipes.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 7,
+          userId,
+          name: "Salad",
+          description: "",
+          ingredients: [],
+          totalCalories: 0,
+          createdBy: userId,
+          dateCreated: "2026-06-01",
+          syncId: "s-recipe-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.recipes.where>,
+    );
+    vi.mocked(dbService.mealTemplates.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 8,
+          userId,
+          name: "Breakfast Bowl",
+          foods: [],
+          createdAt: "2026-06-01T00:00:00Z",
+          updatedAt: "2026-06-01T00:00:00Z",
+          syncId: "s-template-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.mealTemplates.where>,
+    );
+    vi.mocked(dbService.reminders.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 9,
+          userId,
+          type: "water",
+          time: "08:00",
+          daysOfWeek: 127,
+          enabled: true,
+          syncId: "s-reminder-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.reminders.where>,
+    );
+    vi.mocked(dbService.dietProfiles.where).mockReturnValue(
+      makeWhereChain([
+        {
+          id: 10,
+          userId,
+          preset: "generic",
+          restrictions: [],
+          updatedAt: "2026-06-01T00:00:00Z",
+          syncId: "s-diet-1",
+        },
+      ]) as unknown as ReturnType<typeof dbService.dietProfiles.where>,
+    );
 
-  it("calls bulkAdd with entries for all entity types that have syncId", async () => {
-    const foodItem = { id: 1, name: "Apple", calories: 80, syncId: "sync-food-all-1", userId };
-    const waterLog = {
-      id: 2,
-      amount: 250,
-      dateLogged: "2026-06-01",
-      syncId: "sync-water-all-1",
-      userId,
-    };
-    const activityLog = {
-      id: 3,
-      activityType: "Running",
-      durationMin: 30,
-      caloriesBurned: 300,
-      syncId: "sync-act-all-1",
-      userId,
-    };
-    const bodyMeasurement = {
-      id: 4,
-      weight: 72.5,
-      measuredAt: "2026-06-01",
-      syncId: "sync-body-all-1",
-      userId,
-    };
-    const stepLog = {
-      id: 5,
-      steps: 8000,
-      dateLogged: "2026-06-01",
-      syncId: "sync-step-all-1",
-      userId,
-    };
-    const fastingSession = {
-      id: 6,
-      startTime: "2026-06-01T08:00:00Z",
-      targetHours: 16,
-      completed: false,
-      syncId: "sync-fast-all-1",
-      userId,
-    };
-
-    // One entity per type, all with syncId. flushQueueE2E gets [] on 7th call.
-    const toArrayMock = vi
-      .fn()
-      .mockResolvedValueOnce([foodItem])
-      .mockResolvedValueOnce([waterLog])
-      .mockResolvedValueOnce([activityLog])
-      .mockResolvedValueOnce([bodyMeasurement])
-      .mockResolvedValueOnce([stepLog])
-      .mockResolvedValueOnce([fastingSession])
-      .mockResolvedValue([]); // syncQueue toArray fallback
-
+    // syncQueue.where is used by flushQueueE2E - return [] so it exits early.
     vi.mocked(dbService.syncQueue.where).mockReturnValue({
       equals: vi.fn().mockReturnValue({
-        toArray: toArrayMock,
+        toArray: vi.fn().mockResolvedValue([]),
         delete: vi.fn().mockResolvedValue(undefined),
-        first: vi.fn().mockResolvedValue(null),
       }),
     } as unknown as ReturnType<typeof dbService.syncQueue.where>);
 
     await activateE2E(userId, "pass");
 
-    const bulkAddCall = vi.mocked(dbService.syncQueue.bulkAdd).mock.calls[0]?.[0];
-    expect(bulkAddCall).toBeDefined();
-    const entityTypes = (bulkAddCall as unknown as Array<{ entityType: string }>).map(
-      (e) => e.entityType,
-    );
+    // One entry per entity = 10 total entries queued for E2E flush.
+    expect(dbService.syncQueue.bulkAdd).toHaveBeenCalledTimes(1);
+    const bulkAddArg = vi.mocked(dbService.syncQueue.bulkAdd).mock.calls[0]?.[0];
+    expect(bulkAddArg).toHaveLength(10);
+    const entityTypes = (bulkAddArg as SyncQueueEntry[]).map((e) => e.entityType);
     expect(entityTypes).toStrictEqual([
       "foodItem",
       "waterLog",
@@ -1475,54 +1898,11 @@ describe("enqueueAllLocalData via activateE2E", () => {
       "bodyMeasurement",
       "stepLog",
       "fastingSession",
+      "recipe",
+      "mealTemplate",
+      "reminder",
+      "dietProfile",
     ]);
-    const syncIds = (bulkAddCall as unknown as Array<{ syncId: string }>).map((e) => e.syncId);
-    expect(syncIds).toStrictEqual([
-      "sync-food-all-1",
-      "sync-water-all-1",
-      "sync-act-all-1",
-      "sync-body-all-1",
-      "sync-step-all-1",
-      "sync-fast-all-1",
-    ]);
-  });
-
-  it("filters out entities without syncId and only enqueues those with syncId", async () => {
-    const foodItemWithSync = {
-      id: 1,
-      name: "Apple",
-      calories: 80,
-      syncId: "sync-food-filter-1",
-      userId,
-    };
-    const foodItemNoSync = { id: 2, name: "Banana", calories: 89, userId };
-
-    // Two food items: one with syncId, one without. Only one should be enqueued.
-    const toArrayMock = vi
-      .fn()
-      .mockResolvedValueOnce([foodItemWithSync, foodItemNoSync]) // food - mixed
-      .mockResolvedValueOnce([]) // water
-      .mockResolvedValueOnce([]) // activity
-      .mockResolvedValueOnce([]) // body
-      .mockResolvedValueOnce([]) // step
-      .mockResolvedValueOnce([]) // fasting
-      .mockResolvedValue([]); // syncQueue toArray fallback
-
-    vi.mocked(dbService.syncQueue.where).mockReturnValue({
-      equals: vi.fn().mockReturnValue({
-        toArray: toArrayMock,
-        delete: vi.fn().mockResolvedValue(undefined),
-        first: vi.fn().mockResolvedValue(null),
-      }),
-    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
-
-    await activateE2E(userId, "pass");
-
-    const bulkAddCall = vi.mocked(dbService.syncQueue.bulkAdd).mock.calls[0]?.[0];
-    expect(bulkAddCall).toHaveLength(1);
-    expect((bulkAddCall as unknown as Array<{ syncId: string }>)[0]?.syncId).toBe(
-      "sync-food-filter-1",
-    );
   });
 });
 
@@ -1614,6 +1994,30 @@ describe("runSync - E2E path", () => {
     vi.mocked(dbService.activityLogs.delete).mockResolvedValue(undefined);
     vi.mocked(dbService.waterLogs.delete).mockResolvedValue(undefined);
     vi.mocked(dbService.foodItems.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.recipes.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.recipes.where>);
+    vi.mocked(dbService.mealTemplates.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.mealTemplates.where>);
+    vi.mocked(dbService.reminders.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.reminders.where>);
+    vi.mocked(dbService.dietProfiles.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.dietProfiles.where>);
+    vi.mocked(dbService.recipes.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.mealTemplates.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.reminders.delete).mockResolvedValue(undefined);
+    vi.mocked(dbService.dietProfiles.delete).mockResolvedValue(undefined);
 
     mockUseAppState.mockImplementation((selector: (s: AppState) => unknown) => {
       const state = {
@@ -2020,6 +2424,133 @@ describe("runSync - E2E path", () => {
         await result.current.runSync();
       }),
     ).resolves.not.toThrow();
+  });
+
+  it("flushQueueE2E encrypts and posts entries when queue is non-empty", async () => {
+    const queueEntry: SyncQueueEntry = {
+      id: 1,
+      userId,
+      entityType: "recipe",
+      syncId: "sync-flush-r-1",
+      operation: "create",
+      payload: { name: "Flush Pasta" },
+      retries: 0,
+      createdAt: new Date().toISOString(),
+    };
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([queueEntry]),
+        delete: vi.fn().mockResolvedValue(undefined),
+        first: vi.fn().mockResolvedValue(null),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      "/api/v1/sync/blobs/batch",
+      expect.arrayContaining([expect.objectContaining({ clientBlobId: "recipe:sync-flush-r-1" })]),
+    );
+  });
+
+  it("decrypts and upserts recipe, mealTemplate, reminder, and dietProfile blobs", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "recipe:sync-r-e2e", iv: "iv1", ciphertext: "ct1", isDeleted: false },
+      { clientBlobId: "mealTemplate:sync-mt-e2e", iv: "iv2", ciphertext: "ct2", isDeleted: false },
+      { clientBlobId: "reminder:sync-rem-e2e", iv: "iv3", ciphertext: "ct3", isDeleted: false },
+      { clientBlobId: "dietProfile:sync-dp-e2e", iv: "iv4", ciphertext: "ct4", isDeleted: false },
+    ]);
+    mockDecryptBlob
+      .mockResolvedValueOnce({
+        entityType: "recipe",
+        operation: "create",
+        syncId: "sync-r-e2e",
+        payload: {
+          name: "E2E Pasta",
+          description: "",
+          ingredients: [],
+          totalCalories: 400,
+          dateCreated: "2026-06-01",
+          createdBy: "user-1",
+        },
+      })
+      .mockResolvedValueOnce({
+        entityType: "mealTemplate",
+        operation: "create",
+        syncId: "sync-mt-e2e",
+        payload: { name: "E2E Breakfast", foods: [], createdAt: "2026-06-01T08:00:00Z" },
+      })
+      .mockResolvedValueOnce({
+        entityType: "reminder",
+        operation: "create",
+        syncId: "sync-rem-e2e",
+        payload: { type: "meal", time: "08:00", daysOfWeek: [1, 2], enabled: true },
+      })
+      .mockResolvedValueOnce({
+        entityType: "dietProfile",
+        operation: "create",
+        syncId: "sync-dp-e2e",
+        payload: { preset: "vegan", restrictions: [] },
+      });
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.recipes.add).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "E2E Pasta", syncId: "sync-r-e2e" }),
+    );
+    expect(dbService.mealTemplates.add).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "E2E Breakfast", syncId: "sync-mt-e2e" }),
+    );
+    expect(dbService.reminders.add).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "meal", syncId: "sync-rem-e2e" }),
+    );
+    expect(dbService.dietProfiles.add).toHaveBeenCalledWith(
+      expect.objectContaining({ preset: "vegan", syncId: "sync-dp-e2e" }),
+    );
+  });
+
+  it("updates existing recipe via put when remote upsert finds an existing local record", async () => {
+    mockApiGet.mockResolvedValue([
+      { clientBlobId: "recipe:sync-r-put", iv: "iv1", ciphertext: "ct1", isDeleted: false },
+    ]);
+    mockDecryptBlob.mockResolvedValue({
+      entityType: "recipe",
+      operation: "update",
+      syncId: "sync-r-put",
+      payload: {
+        name: "Updated Pasta",
+        description: "",
+        ingredients: [],
+        totalCalories: 500,
+        dateCreated: "2026-06-01",
+        createdBy: "user-1",
+      },
+    });
+    vi.mocked(dbService.syncQueue.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+        delete: vi.fn().mockResolvedValue(undefined),
+      }),
+    } as unknown as ReturnType<typeof dbService.syncQueue.where>);
+    vi.mocked(dbService.recipes.where).mockReturnValue({
+      equals: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue({ id: 50 }) }),
+    } as unknown as ReturnType<typeof dbService.recipes.where>);
+
+    const { result } = renderHook(() => useSyncService());
+    await act(async () => {
+      await result.current.runSync();
+    });
+
+    expect(dbService.recipes.put).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Updated Pasta", id: 50, syncId: "sync-r-put" }),
+    );
+    expect(dbService.recipes.add).not.toHaveBeenCalled();
   });
 });
 

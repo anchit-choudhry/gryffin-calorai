@@ -5,10 +5,23 @@ import type {
   DietProfile,
   ImportableBackup,
   MealPlan,
+  MealTemplate,
   RecurringMeal,
+  Reminder,
   TdeeProfile,
 } from "../../db/dbService";
-import type { DietPreset, ISODate, MealPlanId, RecurringMealId, UserId } from "@/types";
+import type {
+  DietPreset,
+  ISODate,
+  MealPlanId,
+  MealTemplateId,
+  RecurringMealId,
+  ReminderId,
+  ReminderType,
+  UserId,
+} from "@/types";
+import * as syncService from "../../hooks/useSyncService";
+import { addMealTemplate, deleteRecurringMeal, updateMealTemplate } from "../../db/dbService";
 
 const mockToast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 const mockGetTdeeProfile = vi.hoisted(() => vi.fn());
@@ -289,6 +302,40 @@ describe("settingsSlice", () => {
       store.getState().checkAndPromptRecurringMeals();
       expect(mockToast).not.toHaveBeenCalled();
     });
+
+    it("invokes addFoodLog for each food when the toast action onClick is called", () => {
+      const store = makeStore();
+      const meal: RecurringMeal = {
+        id: 2 as unknown as RecurringMealId,
+        userId: "user-1" as UserId,
+        name: "Lunch Special",
+        mealType: "Lunch",
+        scheduledTime: "12:00",
+        dayMask: 0x7f,
+        foods: [
+          {
+            name: "Rice",
+            calories: 200,
+            servingSize: 150,
+            protein: 5,
+            carbs: 45,
+            fat: 1,
+            mealType: "Lunch",
+          },
+        ],
+      };
+      store.setState({ userId: "user-1" as UserId, recurringMeals: [meal], dailyLogs: [] });
+      store.getState().checkAndPromptRecurringMeals();
+
+      const toastOptions = (
+        mockToast.mock.calls[0] as [string, { action: { onClick: () => void } }]
+      )[1];
+      toastOptions.action.onClick();
+
+      expect(store.getState().addFoodLog).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Rice", calories: 200 }),
+      );
+    });
   });
 
   describe("fetchTdeeProfile", () => {
@@ -386,6 +433,72 @@ describe("settingsSlice", () => {
       await store.getState().applyWeekPlan(1 as unknown as MealPlanId);
       expect(mockToast).toHaveBeenCalledWith("No template assigned for today in this plan");
     });
+
+    it("sets error when logAllFoodsFromTemplate throws", async () => {
+      mockAddFoodItemLog.mockRejectedValueOnce(new Error("DB error"));
+      const store = makeStore();
+      const templateId = 10 as unknown as MealTemplateId;
+      const plan: MealPlan = {
+        id: 1 as unknown as MealPlanId,
+        userId: "user-1" as UserId,
+        name: "My Plan",
+        days: Array.from({ length: 7 }, (_, dayIndex) => ({ dayIndex, templateId })),
+        createdAt: "",
+      };
+      const template: MealTemplate = {
+        id: templateId,
+        userId: "user-1" as UserId,
+        name: "Template",
+        foods: [
+          {
+            name: "Apple",
+            calories: 100,
+            servingSize: 150,
+            protein: 0,
+            carbs: 25,
+            fat: 0,
+            mealType: "Breakfast" as const,
+          },
+        ],
+        createdAt: "",
+        updatedAt: "",
+      };
+      store.setState({
+        userId: "user-1" as UserId,
+        mealPlans: [plan],
+        mealTemplates: [template],
+      });
+      await store.getState().applyWeekPlan(1 as unknown as MealPlanId);
+      expect(store.getState().error).toBeTruthy();
+    });
+
+    it("sets error when logAllFoodsFromTemplate itself rejects (applyWeekPlan catch block)", async () => {
+      // logAllFoodsFromTemplate has its own try/catch and swallows errors internally, so
+      // the only way to reach applyWeekPlan's catch block is to override the function in
+      // the store state with one that actually rejects. Zustand setState does a shallow
+      // merge so the get() call inside applyWeekPlan picks up the replacement.
+      const store = makeStore();
+      const templateId = 10 as unknown as MealTemplateId;
+      const plan: MealPlan = {
+        id: 1 as unknown as MealPlanId,
+        userId: "user-1" as UserId,
+        name: "My Plan",
+        days: Array.from({ length: 7 }, (_, dayIndex) => ({ dayIndex, templateId })),
+        createdAt: "",
+      };
+      store.setState({
+        userId: "user-1" as UserId,
+        mealPlans: [plan],
+        logAllFoodsFromTemplate: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("Unexpected rejection")) as unknown as (
+          id: MealTemplateId,
+        ) => Promise<void>,
+      });
+      await store.getState().applyWeekPlan(1 as unknown as MealPlanId);
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
+    });
   });
 
   describe("checkAndUnlockAchievements", () => {
@@ -474,6 +587,15 @@ describe("settingsSlice", () => {
       expect(store.getState().mealPlans).toStrictEqual([newPlan]);
       expect(mockToast.success).toHaveBeenCalledWith('Plan "Week A" saved');
     });
+
+    it("sets error and shows error toast when addMealPlan throws", async () => {
+      mockAddMealPlan.mockRejectedValueOnce(new Error("DB write failed"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().saveMealPlan({ name: "Failing Plan", days: [] });
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
+    });
   });
 
   describe("deleteMealPlan", () => {
@@ -490,6 +612,14 @@ describe("settingsSlice", () => {
       await store.getState().deleteMealPlan(1 as unknown as MealPlanId);
       expect(mockDeleteMealPlan).toHaveBeenCalledTimes(1);
       expect(store.getState().mealPlans).toStrictEqual([]);
+    });
+
+    it("sets error when deleteMealPlan throws", async () => {
+      mockDeleteMealPlan.mockRejectedValueOnce(new Error("DB error"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().deleteMealPlan(1 as unknown as MealPlanId);
+      expect(store.getState().error).toBeTruthy();
     });
   });
 
@@ -519,6 +649,44 @@ describe("settingsSlice", () => {
       expect(mockAddFoodItemLog).toHaveBeenCalledTimes(1);
       expect(mockToast.success).toHaveBeenCalledWith("Copied 1 items from 2026-06-01");
     });
+
+    it("sets error and shows error toast when addFoodItemLog throws", async () => {
+      vi.stubEnv("DEV", true);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const logs = [
+        {
+          name: "Oatmeal",
+          calories: 300,
+          servingSize: "1 cup",
+          protein: 10,
+          carbs: 50,
+          fat: 6,
+          mealType: "Breakfast" as const,
+        },
+      ];
+      mockGetDailyFoodLogs.mockResolvedValueOnce(logs);
+      mockAddFoodItemLog.mockRejectedValueOnce(new Error("DB write failed"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().copyFoodsFromDate("2026-06-01" as ISODate);
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    });
+  });
+
+  describe("saveTemplateFromTodayLogs", () => {
+    it("sets error and shows error toast when addMealTemplate throws", async () => {
+      vi.stubEnv("DEV", true);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.mocked(addMealTemplate).mockRejectedValueOnce(new Error("DB error"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().saveTemplateFromTodayLogs("Fail Template");
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
+      vi.unstubAllEnvs();
+    });
   });
 
   describe("fetchMealPlans", () => {
@@ -536,6 +704,231 @@ describe("settingsSlice", () => {
       const store = makeStore();
       await store.getState().fetchMealPlans("user-1" as UserId);
       expect(store.getState().mealPlans).toStrictEqual(plans);
+    });
+  });
+
+  describe("saveDietProfile with userId", () => {
+    it("enqueues create when no existing dietProfile", async () => {
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId, dietProfile: null });
+      await store.getState().saveDietProfile("generic", []);
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "dietProfile", operation: "create" }),
+      );
+    });
+
+    it("enqueues update when dietProfile already exists", async () => {
+      const store = makeStore();
+      const existing: DietProfile = {
+        userId: "user-1" as UserId,
+        preset: "vegetarian" as DietPreset,
+        restrictions: [],
+        updatedAt: new Date().toISOString(),
+        syncId: "existing-sync-id",
+      };
+      store.setState({ userId: "user-1" as UserId, dietProfile: existing });
+      await store.getState().saveDietProfile("generic", []);
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "dietProfile", operation: "update" }),
+      );
+    });
+  });
+
+  describe("saveReminder with userId", () => {
+    it("enqueues create for a new reminder", async () => {
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId, reminders: [] });
+      await store.getState().saveReminder({
+        type: "water" as ReminderType,
+        time: "08:00",
+        daysOfWeek: 127,
+        enabled: true,
+      });
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "reminder", operation: "create" }),
+      );
+    });
+
+    it("looks up existing reminder by id when id is provided and enqueues update", async () => {
+      const reminderId = 9 as unknown as ReminderId;
+      const existing: Reminder = {
+        id: reminderId,
+        userId: "user-1" as UserId,
+        type: "water" as ReminderType,
+        time: "08:00",
+        daysOfWeek: 127,
+        enabled: true,
+        syncId: "reminder-id-sync",
+      };
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId, reminders: [existing] });
+      await store.getState().saveReminder({
+        id: reminderId,
+        type: "water" as ReminderType,
+        time: "10:00",
+        daysOfWeek: 127,
+        enabled: false,
+      });
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "reminder", operation: "update" }),
+      );
+    });
+
+    it("enqueues update when reminder type already exists", async () => {
+      const store = makeStore();
+      const existing: Reminder = {
+        id: 1 as unknown as ReminderId,
+        userId: "user-1" as UserId,
+        type: "water" as ReminderType,
+        time: "08:00",
+        daysOfWeek: 127,
+        enabled: true,
+        syncId: "reminder-sync-id",
+      };
+      store.setState({ userId: "user-1" as UserId, reminders: [existing] });
+      await store.getState().saveReminder({
+        type: "water" as ReminderType,
+        time: "09:00",
+        daysOfWeek: 127,
+        enabled: true,
+      });
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "reminder", operation: "update" }),
+      );
+    });
+  });
+
+  describe("deleteReminder with userId and syncId", () => {
+    it("enqueues delete when the reminder has a syncId", async () => {
+      const store = makeStore();
+      const reminderId = 5 as unknown as ReminderId;
+      const existing: Reminder = {
+        id: reminderId,
+        userId: "user-1" as UserId,
+        type: "water" as ReminderType,
+        time: "08:00",
+        daysOfWeek: 127,
+        enabled: true,
+        syncId: "reminder-to-delete-sync-id",
+      };
+      store.setState({ userId: "user-1" as UserId, reminders: [existing] });
+      await store.getState().deleteReminder(reminderId);
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: "reminder",
+          operation: "delete",
+          syncId: "reminder-to-delete-sync-id",
+        }),
+      );
+    });
+  });
+
+  describe("addMealTemplate with userId", () => {
+    it("enqueues create and refreshes templates", async () => {
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().addMealTemplate({ name: "Breakfast Bowl", foods: [] });
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({ entityType: "mealTemplate", operation: "create" }),
+      );
+    });
+  });
+
+  describe("updateMealTemplate with userId and syncId", () => {
+    it("enqueues update when template has a syncId", async () => {
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      const template: MealTemplate = {
+        id: 1 as unknown as MealTemplateId,
+        userId: "user-1" as UserId,
+        name: "Lunch",
+        foods: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        syncId: "template-sync-id",
+      };
+      await store.getState().updateMealTemplate(template);
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: "mealTemplate",
+          operation: "update",
+          syncId: "template-sync-id",
+        }),
+      );
+    });
+
+    it("sets error and shows error toast when updateMealTemplate throws", async () => {
+      vi.mocked(updateMealTemplate).mockRejectedValueOnce(new Error("DB write failed"));
+      const store = makeStore();
+      const template: MealTemplate = {
+        id: 2 as unknown as MealTemplateId,
+        userId: "user-1" as UserId,
+        name: "Brunch",
+        foods: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().updateMealTemplate(template);
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+  });
+
+  describe("deleteMealTemplate with userId and syncId", () => {
+    it("enqueues delete when the template has a syncId", async () => {
+      const store = makeStore();
+      const templateId = 3 as unknown as MealTemplateId;
+      const template: MealTemplate = {
+        id: templateId,
+        userId: "user-1" as UserId,
+        name: "Dinner",
+        foods: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        syncId: "template-delete-sync-id",
+      };
+      store.setState({ userId: "user-1" as UserId, mealTemplates: [template] });
+      await store.getState().deleteMealTemplate(templateId);
+      expect(syncService.enqueueSyncOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: "mealTemplate",
+          operation: "delete",
+          syncId: "template-delete-sync-id",
+        }),
+      );
+    });
+  });
+
+  describe("exportData error path", () => {
+    it("sets error and returns null when exportAllData throws", async () => {
+      mockExportAllData.mockRejectedValueOnce(new Error("Disk full"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      const result = await store.getState().exportData();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("importData error path", () => {
+    it("sets error and returns null when importBackup throws", async () => {
+      mockImportBackup.mockRejectedValueOnce(new Error("Corrupt file"));
+      const store = makeStore();
+      store.setState({ userId: "user-1" as UserId });
+      const result = await store.getState().importData({} as ImportableBackup);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("deleteRecurringMeal error path", () => {
+    it("sets error and shows error toast when deleteRecurringMeal throws", async () => {
+      vi.mocked(deleteRecurringMeal).mockRejectedValueOnce(new Error("DB write failed"));
+      const store = makeStore();
+      const mealId = 1 as unknown as RecurringMealId;
+      store.setState({ userId: "user-1" as UserId });
+      await store.getState().deleteRecurringMeal(mealId);
+      expect(store.getState().error).toBeTruthy();
+      expect(mockToast.error).toHaveBeenCalled();
     });
   });
 });

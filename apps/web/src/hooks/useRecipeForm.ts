@@ -6,6 +6,7 @@ import { type Recipe, saveRecipe, updateRecipe } from "../db/dbService";
 import { FoodItemId, type UserId } from "@/types";
 import { RecipeFormSchema, type RecipeFormValues } from "../forms/schemas";
 import { useAppState } from "../state/AppState";
+import { enqueueSyncOperation } from "./useSyncService";
 
 type UseRecipeFormReturn = {
   form: ReturnType<typeof useForm<RecipeFormValues>>;
@@ -88,22 +89,30 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
             }));
 
             if (mode === "edit" && initialRecipe) {
-              await updateRecipe(
-                {
-                  ...initialRecipe,
-                  name: data.recipeName,
-                  description: data.description,
-                  ingredients: mappedIngredients,
-                  totalCalories,
-                  totalProtein,
-                  totalCarbs,
-                  totalFat,
-                },
-                userId,
-              );
+              const updated: Recipe = {
+                ...initialRecipe,
+                name: data.recipeName,
+                description: data.description,
+                ingredients: mappedIngredients,
+                totalCalories,
+                totalProtein,
+                totalCarbs,
+                totalFat,
+              };
+              await updateRecipe(updated, userId);
+              if (updated.syncId) {
+                void enqueueSyncOperation({
+                  userId,
+                  entityType: "recipe",
+                  syncId: updated.syncId,
+                  operation: "update",
+                  payload: updated,
+                });
+              }
               toast.success(`"${data.recipeName}" saved`);
             } else {
-              await saveRecipe({
+              const syncId = crypto.randomUUID();
+              const newRecipe: Recipe = {
                 name: data.recipeName,
                 description: data.description,
                 ingredients: mappedIngredients,
@@ -114,6 +123,15 @@ export function useRecipeForm(userId: UserId | null, initialRecipe?: Recipe): Us
                 createdBy: userId,
                 dateCreated: new Date().toISOString(),
                 userId,
+                syncId,
+              };
+              await saveRecipe(newRecipe);
+              void enqueueSyncOperation({
+                userId,
+                entityType: "recipe",
+                syncId,
+                operation: "create",
+                payload: newRecipe,
               });
               toast.success(`"${data.recipeName}" saved`);
               form.reset();
