@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { strToU8, zipSync } from "fflate";
+import JSZip from "jszip";
 import { useAppState } from "../state/AppState";
 import type { BackupPayload } from "../db/dbService";
 
@@ -62,16 +62,19 @@ export function useDataExport() {
       const payload = await exportData();
       if (!payload) return;
       const t = payload.tables;
-      const files: Record<string, Uint8Array> = {
-        "foodItems.csv": strToU8(toCSV(t.foodItems)),
-        "waterLogs.csv": strToU8(toCSV(t.waterLogs)),
-        "stepLogs.csv": strToU8(toCSV(t.stepLogs)),
-        "bodyMeasurements.csv": strToU8(toCSV(t.bodyMeasurements)),
-        "activityLogs.csv": strToU8(toCSV(t.activityLogs)),
-        "fastingSessions.csv": strToU8(toCSV(t.fastingSessions)),
-      };
-      const zipped = zipSync(files);
-      const blob = new Blob([new Uint8Array(zipped)], { type: "application/zip" });
+      const zip = new JSZip();
+      const csvTables: Array<[string, unknown[]]> = [
+        ["foodItems.csv", t.foodItems],
+        ["waterLogs.csv", t.waterLogs],
+        ["stepLogs.csv", t.stepLogs],
+        ["bodyMeasurements.csv", t.bodyMeasurements],
+        ["activityLogs.csv", t.activityLogs],
+        ["fastingSessions.csv", t.fastingSessions],
+      ];
+      for (const [name, rows] of csvTables) {
+        zip.file(name, toCSV(rows));
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

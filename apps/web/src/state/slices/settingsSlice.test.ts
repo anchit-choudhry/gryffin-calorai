@@ -10,6 +10,7 @@ import type {
   Reminder,
   TdeeProfile,
 } from "../../db/dbService";
+import { addMealTemplate, deleteRecurringMeal, updateMealTemplate } from "../../db/dbService";
 import type {
   DietPreset,
   ISODate,
@@ -21,7 +22,6 @@ import type {
   UserId,
 } from "@/types";
 import * as syncService from "../../hooks/useSyncService";
-import { addMealTemplate, deleteRecurringMeal, updateMealTemplate } from "../../db/dbService";
 
 const mockToast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 const mockGetTdeeProfile = vi.hoisted(() => vi.fn());

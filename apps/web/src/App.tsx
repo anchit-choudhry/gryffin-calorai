@@ -165,7 +165,7 @@ function App() {
           if (shareEncoded) {
             const state = useAppState.getState();
             if (state.userId) {
-              const payload = decodeSharePayload(shareEncoded);
+              const payload = await decodeSharePayload(shareEncoded);
               if (payload) {
                 try {
                   await importSharedRecipe(payload, state.userId);

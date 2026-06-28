@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useAppState } from "@/state/AppState";
 import type { Reminder } from "@/db/dbService";
 import { REMINDER_LABELS } from "@/types";
+import { initializePushSubscription } from "@/lib/pushNotifications";
 
 export function msUntilNextReminder(
   timeStr: string,
@@ -50,6 +51,12 @@ function fireNotification(reminder: Reminder) {
 
 export function useReminders() {
   const { reminders } = useAppState();
+
+  // Register service worker and subscribe to push once on mount. The in-tab setTimeout
+  // scheduling below continues to work as a reliable same-session fallback.
+  useEffect(() => {
+    void initializePushSubscription();
+  }, []);
 
   useEffect(() => {
     const notif = getSafeNotif();

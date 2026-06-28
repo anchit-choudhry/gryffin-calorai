@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.gryffin</groupId>
   <artifactId>gryffin-calorai-backend</artifactId>
-  <version>0.20.0</version>
+  <version>0.21.0</version>
   <name>Gryffin Calorai Backend</name>
   <description>Spring Boot backend for Gryffin Calorai</description>
 
@@ -130,6 +130,14 @@
       <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
+
+    <!-- Web Push / VAPID: self-implemented via JJWT (ES256) + Bouncy Castle (ECDH/AES-GCM) -->
+    <!-- RFC 8291 aes128gcm encryption; HTTP delivery via Spring RestClient -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>${bcprov-jdk18on.version}</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -237,8 +245,9 @@
     <application.name>gryffin-calorai-backend</application.name>
     <application.profiles>local</application.profiles>
 
+    <bcprov-jdk18on.version>1.84</bcprov-jdk18on.version>
     <bucket4j.version>8.19.0</bucket4j.version>
-    <checkstyle.version>13.4.2</checkstyle.version>
+    <checkstyle.version>13.6.0</checkstyle.version>
     <git-commit-id-maven-plugin.version>10.0.0</git-commit-id-maven-plugin.version>
     <jjwt.version>0.13.0</jjwt.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>

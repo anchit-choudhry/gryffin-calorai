@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST controller for OAuth2 token exchange and JWT refresh.
- * Refresh tokens are issued as HttpOnly cookies (SEC-002) rather than response body fields.
+ * REST controller for OAuth2 token exchange and JWT refresh. Refresh tokens are issued as HttpOnly
+ * cookies (SEC-002) rather than response body fields.
  */
 @Tag(name = "Auth", description = "OAuth2 token exchange and JWT refresh")
 @RestController
@@ -39,9 +39,9 @@ public class AuthController {
   /**
    * Constructs the controller.
    *
-   * @param authService the authentication service
-   * @param cookieSecure whether to set the Secure flag on the refresh cookie;
-   *                     defaults to true, set to false for local HTTP development
+   * @param authService  the authentication service
+   * @param cookieSecure whether to set the Secure flag on the refresh cookie; defaults to true, set
+   *                     to false for local HTTP development
    */
   public AuthController(
     AuthService authService,
@@ -52,10 +52,10 @@ public class AuthController {
   }
 
   /**
-   * Exchanges an OAuth2 ID token for a Calorai JWT pair.
-   * The refresh token is set as an HttpOnly cookie; only the access token is in the body.
+   * Exchanges an OAuth2 ID token for a Calorai JWT pair. The refresh token is set as an HttpOnly
+   * cookie; only the access token is in the body.
    *
-   * @param request the OAuth2 exchange request
+   * @param request  the OAuth2 exchange request
    * @param response the HTTP response used to set the refresh cookie
    * @return the access token response
    */
@@ -71,11 +71,11 @@ public class AuthController {
   }
 
   /**
-   * Issues a new access token by reading the refresh token from the HttpOnly cookie.
-   * Rotates the refresh cookie on each call.
+   * Issues a new access token by reading the refresh token from the HttpOnly cookie. Rotates the
+   * refresh cookie on each call.
    *
    * @param cookieToken the refresh token read from the gc_rt cookie
-   * @param response the HTTP response used to rotate the refresh cookie
+   * @param response    the HTTP response used to rotate the refresh cookie
    * @return the new access token response
    */
   @Operation(summary = "Refresh the access token using the HttpOnly refresh cookie")
@@ -93,7 +93,7 @@ public class AuthController {
    * Revokes the refresh token stored in the HttpOnly cookie and clears it.
    *
    * @param cookieToken the refresh token read from the gc_rt cookie
-   * @param response the HTTP response used to clear the refresh cookie
+   * @param response    the HTTP response used to clear the refresh cookie
    * @return 204 No Content
    */
   @Operation(

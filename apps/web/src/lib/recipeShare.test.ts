@@ -99,8 +99,8 @@ describe("encodeSharePayload / decodeSharePayload round-trip", () => {
     ingredients: [{ name: "Oats", quantity: 1, serving: 80, calories: 300 }],
   };
 
-  it("encodes to a non-empty string with no spaces or slashes", () => {
-    const encoded = encodeSharePayload(payload);
+  it("encodes to a non-empty string with no spaces or slashes", async () => {
+    const encoded = await encodeSharePayload(payload);
     expect(typeof encoded).toBe("string");
     expect(encoded.length).toBeGreaterThan(0);
     expect(encoded).not.toContain(" ");
@@ -109,25 +109,25 @@ describe("encodeSharePayload / decodeSharePayload round-trip", () => {
     expect(encoded).not.toContain("=");
   });
 
-  it("decodes back to original payload", () => {
-    const encoded = encodeSharePayload(payload);
-    const decoded = decodeSharePayload(encoded);
+  it("decodes back to original payload", async () => {
+    const encoded = await encodeSharePayload(payload);
+    const decoded = await decodeSharePayload(encoded);
     expect(decoded?.name).toBe(payload.name);
     expect(decoded?.totalCalories).toBe(payload.totalCalories);
     expect(decoded?.ingredients[0]?.name).toBe("Oats");
   });
 
-  it("returns undefined for invalid base64 input", () => {
-    expect(decodeSharePayload("!!!notbase64!!!")).toBeUndefined();
+  it("returns undefined for invalid base64 input", async () => {
+    expect(await decodeSharePayload("!!!notbase64!!!")).toBeUndefined();
   });
 
-  it("returns undefined for valid base64 that lacks required fields", () => {
+  it("returns undefined for valid base64 that lacks required fields", async () => {
     const bad = btoa(JSON.stringify({ foo: "bar" }));
-    expect(decodeSharePayload(bad)).toBeUndefined();
+    expect(await decodeSharePayload(bad)).toBeUndefined();
   });
 
-  it("returns undefined for empty string", () => {
-    expect(decodeSharePayload("")).toBeUndefined();
+  it("returns undefined for empty string", async () => {
+    expect(await decodeSharePayload("")).toBeUndefined();
   });
 });
 
@@ -139,15 +139,15 @@ describe("buildShareUrl", () => {
     });
   });
 
-  it("returns a URL containing #recipes?share=", () => {
-    const url = buildShareUrl(baseRecipe(), [baseFood()]);
+  it("returns a URL containing #recipes?share=", async () => {
+    const url = await buildShareUrl(baseRecipe(), [baseFood()]);
     expect(url).toContain("#recipes?share=");
   });
 
-  it("URL is decodable back to original recipe name", () => {
-    const url = buildShareUrl(baseRecipe(), [baseFood()]);
+  it("URL is decodable back to original recipe name", async () => {
+    const url = await buildShareUrl(baseRecipe(), [baseFood()]);
     const encoded = url.split("share=")[1]!;
-    const decoded = decodeSharePayload(encoded);
+    const decoded = await decodeSharePayload(encoded);
     expect(decoded?.name).toBe("Protein Bowl");
   });
 });

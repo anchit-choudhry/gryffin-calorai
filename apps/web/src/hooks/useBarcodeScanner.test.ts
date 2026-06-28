@@ -31,8 +31,8 @@ const mockPlay = vi.fn<() => Promise<void>>();
 const mockGetUserMedia = vi.fn<(constraints: MediaStreamConstraints) => Promise<MediaStream>>();
 
 class MockBarcodeDetector {
-  detect = mockDetect;
   static getSupportedFormats = vi.fn<() => Promise<string[]>>().mockResolvedValue(["ean_13"]);
+  detect = mockDetect;
 }
 
 beforeEach(() => {

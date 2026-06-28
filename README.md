@@ -10,7 +10,8 @@ lucide-react • sonner • fflate (ZIP) • vite-plugin-pwa
 **Backend:** Spring Boot 4.0 • Java 25 • PostgreSQL 18 • Flyway • Spring Security • JJWT •
 Bucket4j + Valkey (rate limiting)
 
-**Status:** v0.17.0 released (June 2026) • v0.18.0 in progress (Tracks 1-2 done; Track 3 in progress) • 144+ test files, 2647+ tests
+**Status:** v0.17.0 released (June 2026) • v0.18.0 in progress (Tracks 1-2 done; Track 3 in
+progress) • 144+ test files, 2647+ tests
 
 [![Apache License 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/anchit-choudhry/gryffin-calorai/blob/main/LICENSE)
 [![CodeQL Advanced](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml/badge.svg)](https://github.com/anchit-choudhry/gryffin-calorai/actions/workflows/codeql.yml)

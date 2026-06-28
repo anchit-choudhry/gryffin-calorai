@@ -48,7 +48,6 @@ export async function recognizePhoto(imageData: string): Promise<RecognizedFoodI
         }
       } catch (err) {
         console.error("[aiLoggingApi] searchOff failed for classification:", err);
-        continue;
       }
     }
 
@@ -251,7 +250,6 @@ export async function parseText(text: string): Promise<RecognizedFoodItem[]> {
         }
       } catch (err) {
         console.error("[aiLoggingApi] searchOff failed for token:", err);
-        continue;
       }
     }
 

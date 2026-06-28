@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { RecipeShareSheet } from "./RecipeShareSheet";
 import type { Recipe } from "@/db/dbService";
 
@@ -8,11 +8,11 @@ vi.mock("../../state/AppState", () => ({
 }));
 
 vi.mock("../../lib/recipeShare", () => ({
-  buildShareUrl: vi.fn().mockReturnValue("https://example.com/#recipes?share=abc123"),
+  buildShareUrl: vi.fn().mockResolvedValue("https://example.com/#recipes?share=abc123"),
 }));
 
-vi.mock("qr-creator", () => ({
-  default: { render: vi.fn() },
+vi.mock("qrcode", () => ({
+  toCanvas: vi.fn().mockResolvedValue(undefined),
 }));
 
 const baseRecipe: Recipe = {
@@ -80,9 +80,11 @@ describe("RecipeShareSheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it("shows truncated share URL in caption", () => {
+  it("shows truncated share URL in caption", async () => {
     render(<RecipeShareSheet recipe={baseRecipe} onClose={vi.fn()} />);
-    expect(screen.getByText(/recipes\?share=/)).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText(/recipes\?share=/)).toBeTruthy();
+    });
   });
 
   it("shows import instruction text", () => {
@@ -100,5 +102,20 @@ describe("RecipeShareSheet", () => {
     render(<RecipeShareSheet recipe={baseRecipe} onClose={vi.fn()} />);
     expect(screen.getByRole("button", { name: /^share$/i })).toBeTruthy();
     vi.unstubAllGlobals();
+  });
+
+  it("Copy Link button is disabled while share URL is loading", () => {
+    render(<RecipeShareSheet recipe={baseRecipe} onClose={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /copy link/i }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows error caption and keeps Copy Link disabled when buildShareUrl rejects", async () => {
+    const { buildShareUrl } = await import("../../lib/recipeShare");
+    vi.mocked(buildShareUrl).mockRejectedValueOnce(new Error("compression failed"));
+    render(<RecipeShareSheet recipe={baseRecipe} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText(/unable to generate share link/i)).toBeTruthy();
+    });
+    expect(screen.getByRole("button", { name: /copy link/i }).hasAttribute("disabled")).toBe(true);
   });
 });

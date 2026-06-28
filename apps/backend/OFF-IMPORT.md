@@ -164,12 +164,12 @@ psql -h localhost -p 5432 -U gcalorai -d gcalorai \
 2. Drops any orphaned staging tables from previously killed runs
 3. Opens an audit row in `off_import_log`
 4. Runs DuckDB to transform the Parquet file into a staging CSV:
-   - Deduplicates by `code` (latest `last_modified_t` wins)
-   - Zero-pads numeric EAN-8/13 codes to 13 digits
-   - Extracts English product name from the multilingual struct
-   - Extracts nutrient values from the nested `nutriments` struct array
-   - Null-outs values outside physically valid ranges
-   - Strips NUL bytes, embedded newlines, carriage returns from text fields
+  - Deduplicates by `code` (latest `last_modified_t` wins)
+  - Zero-pads numeric EAN-8/13 codes to 13 digits
+  - Extracts English product name from the multilingual struct
+  - Extracts nutrient values from the nested `nutriments` struct array
+  - Null-outs values outside physically valid ranges
+  - Strips NUL bytes, embedded newlines, carriage returns from text fields
 5. Loads the CSV into an unlogged staging table (no WAL = ~30% faster)
 6. Upserts staging into `off_products` inside `BEGIN/COMMIT`
 7. Runs `VACUUM ANALYZE`
@@ -181,12 +181,12 @@ exits non-zero.
 
 ### COALESCE upsert strategy
 
-| Scenario | Behavior |
-|---|---|
-| Product exists; new file has a value | New value overwrites |
-| Product exists; new file has NULL for a field | Existing value is kept |
-| Product is new in this file | Inserted; `first_imported_at` set to `NOW()` |
-| Product absent from this file | Row stays; `last_imported_at` unchanged |
+| Scenario                                      | Behavior                                     |
+|-----------------------------------------------|----------------------------------------------|
+| Product exists; new file has a value          | New value overwrites                         |
+| Product exists; new file has NULL for a field | Existing value is kept                       |
+| Product is new in this file                   | Inserted; `first_imported_at` set to `NOW()` |
+| Product absent from this file                 | Row stays; `last_imported_at` unchanged      |
 
 `product_name` and `brands` always take the new value (no COALESCE) because these are
 the most likely fields to be corrected by the OFF community.
@@ -207,10 +207,10 @@ the most likely fields to be corrected by the OFF community.
 
 All endpoints require a valid JWT (`Authorization: Bearer <token>`).
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/v1/off-products/barcode/{code}` | Exact barcode lookup; code is normalized |
-| `GET` | `/v1/off-products/search?q=...&limit=...` | FTS by name/brand; limit 1-50 |
+| Method | Path                                      | Description                              |
+|--------|-------------------------------------------|------------------------------------------|
+| `GET`  | `/v1/off-products/barcode/{code}`         | Exact barcode lookup; code is normalized |
+| `GET`  | `/v1/off-products/search?q=...&limit=...` | FTS by name/brand; limit 1-50            |
 
 The barcode endpoint applies the same normalization as the import script (numeric
 EAN-8/13 codes are zero-padded to 13 digits) so a raw scanner result always matches.

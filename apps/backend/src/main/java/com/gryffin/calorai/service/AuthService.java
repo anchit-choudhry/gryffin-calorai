@@ -87,14 +87,16 @@ public class AuthService {
   }
 
   /**
-   * Revokes the refresh token if present and valid. A null or blank token is a no-op
-   * so cookie-based logout works even when the cookie is absent (e.g., already expired).
+   * Revokes the refresh token if present and valid. A null or blank token is a no-op so
+   * cookie-based logout works even when the cookie is absent (e.g., already expired).
    *
    * @param refreshTokenStr the raw refresh token string, or null
    */
   @Transactional
   public void logout(String refreshTokenStr) {
-    if (refreshTokenStr == null || refreshTokenStr.isBlank()) return;
+    if (refreshTokenStr == null || refreshTokenStr.isBlank()) {
+      return;
+    }
     try {
       if (jwtService.isRefreshToken(refreshTokenStr)) {
         refreshTokenRepository.deleteByJti(jwtService.extractJti(refreshTokenStr));

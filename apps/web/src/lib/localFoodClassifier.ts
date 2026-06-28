@@ -18,7 +18,7 @@ interface ClassificationResult {
 
 type ClassifierPipeline = (
   input: string,
-  opts: { topk: number },
+  opts: { top_k: number },
 ) => Promise<ClassificationResult[]>;
 
 interface HfModule {
@@ -81,7 +81,7 @@ export async function classifyFood(
 ): Promise<FoodClassification[]> {
   const pipe = await getPipeline(onProgress);
   const resized = await resizeForClassifier(imageDataUrl);
-  const results = await pipe(resized, { topk: 3 });
+  const results = await pipe(resized, { top_k: 3 });
   return results.map((r) => ({ label: r.label.replace(/_/g, " "), score: r.score }));
 }
 

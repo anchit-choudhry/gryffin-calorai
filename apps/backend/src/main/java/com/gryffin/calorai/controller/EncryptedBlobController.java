@@ -2,14 +2,8 @@ package com.gryffin.calorai.controller;
 
 import com.gryffin.calorai.dto.EncryptedBlobDto;
 import com.gryffin.calorai.dto.UserE2ESaltDto;
-import com.gryffin.calorai.service.ActivityLogService;
-import com.gryffin.calorai.service.BodyMeasurementService;
 import com.gryffin.calorai.service.EncryptedBlobService;
-import com.gryffin.calorai.service.FastingSessionService;
-import com.gryffin.calorai.service.FoodItemService;
-import com.gryffin.calorai.service.StepLogService;
-import com.gryffin.calorai.service.TdeeProfileService;
-import com.gryffin.calorai.service.WaterLogService;
+import com.gryffin.calorai.service.UserDataResetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,34 +33,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class EncryptedBlobController {
 
   private final EncryptedBlobService blobService;
-  private final FoodItemService foodItemService;
-  private final WaterLogService waterLogService;
-  private final ActivityLogService activityLogService;
-  private final BodyMeasurementService bodyMeasurementService;
-  private final StepLogService stepLogService;
-  private final FastingSessionService fastingSessionService;
-  private final TdeeProfileService tdeeProfileService;
+  private final UserDataResetService userDataResetService;
 
   /**
    * Constructor injection.
    */
   public EncryptedBlobController(
     final EncryptedBlobService blobService,
-    final FoodItemService foodItemService,
-    final WaterLogService waterLogService,
-    final ActivityLogService activityLogService,
-    final BodyMeasurementService bodyMeasurementService,
-    final StepLogService stepLogService,
-    final FastingSessionService fastingSessionService,
-    final TdeeProfileService tdeeProfileService) {
+    final UserDataResetService userDataResetService) {
     this.blobService = blobService;
-    this.foodItemService = foodItemService;
-    this.waterLogService = waterLogService;
-    this.activityLogService = activityLogService;
-    this.bodyMeasurementService = bodyMeasurementService;
-    this.stepLogService = stepLogService;
-    this.fastingSessionService = fastingSessionService;
-    this.tdeeProfileService = tdeeProfileService;
+    this.userDataResetService = userDataResetService;
   }
 
   /**
@@ -157,29 +133,23 @@ public class EncryptedBlobController {
   }
 
   /**
-   * Wipes all plaintext entity data for this user across seven tables. Called during E2E activation
-   * before re-uploading encrypted blobs. Local IndexedDB is not affected.
+   * Wipes all plaintext entity data for this user across all sync tables. Called during E2E
+   * activation before re-uploading encrypted blobs. Local IndexedDB is not affected.
    *
    * @param jwt the authenticated user's JWT
    * @return 204 No Content
    */
   @Operation(
     summary = "Wipe all plaintext entity data",
-    description = "Deletes food items, water logs, activity logs, body measurements, "
-      + "step logs, fasting sessions, and TDEE profile for this user. "
-      + "Called once during E2E activation migration."
+    description = "Deletes food items, water logs, activity logs, body measurements, step logs, "
+      + "fasting sessions, TDEE profile, recipes, meal templates, reminders, and diet profile "
+      + "for this user. Called once during E2E activation migration."
   )
   @PostMapping("/reset")
   public ResponseEntity<Void> resetPlaintextData(
     @AuthenticationPrincipal final Jwt jwt) {
     final UUID userId = UUID.fromString(jwt.getSubject());
-    foodItemService.deleteAllByUserId(userId);
-    waterLogService.deleteAllByUserId(userId);
-    activityLogService.deleteAllByUserId(userId);
-    bodyMeasurementService.deleteAllByUserId(userId);
-    stepLogService.deleteAllByUserId(userId);
-    fastingSessionService.deleteAllByUserId(userId);
-    tdeeProfileService.deleteByUserId(userId);
+    userDataResetService.deleteAllByUserId(userId);
     return ResponseEntity.noContent().build();
   }
 }

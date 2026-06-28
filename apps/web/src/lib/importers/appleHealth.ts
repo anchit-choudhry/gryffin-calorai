@@ -1,4 +1,4 @@
-import { unzipSync } from "fflate";
+import JSZip from "jszip";
 import type { BodyMeasurement, StepLog } from "@/db/dbService";
 import type { ISODate, UserId } from "@/types";
 
@@ -23,15 +23,24 @@ function toKg(value: number, unit: string): number {
   return unit.toLowerCase().startsWith("lb") ? value * LB_TO_KG : value;
 }
 
-export function parseAppleHealthExport(buffer: ArrayBuffer, userId: UserId): AppleHealthResult {
-  const files = unzipSync(new Uint8Array(buffer));
+export async function parseAppleHealthExport(
+  buffer: ArrayBuffer,
+  userId: UserId,
+): Promise<AppleHealthResult> {
+  const zip = await JSZip.loadAsync(buffer);
 
-  const xmlBytes =
-    files["apple_health_export/export.xml"] ??
-    files["export.xml"] ??
-    Object.entries(files).find(([path]) => path.endsWith("export.xml"))?.[1];
+  const xmlFile =
+    zip.file("apple_health_export/export.xml") ??
+    zip.file("export.xml") ??
+    Object.values(zip.files).find((f) => f.name.endsWith("export.xml") && !f.dir);
 
-  if (!xmlBytes || xmlBytes.byteLength > MAX_XML_DECOMPRESSED_BYTES) {
+  if (!xmlFile) {
+    return { weightEntries: [], stepEntries: [], skippedRecords: 0 };
+  }
+
+  const xmlBytes = await xmlFile.async("uint8array");
+
+  if (xmlBytes.byteLength > MAX_XML_DECOMPRESSED_BYTES) {
     return { weightEntries: [], stepEntries: [], skippedRecords: 0 };
   }
 

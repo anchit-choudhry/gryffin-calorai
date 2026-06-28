@@ -32,11 +32,11 @@ export function AppleHealthImportPanel() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const buffer = e.target?.result;
       if (!(buffer instanceof ArrayBuffer) || !userId) return;
       try {
-        const result = parseAppleHealthExport(buffer, userId);
+        const result = await parseAppleHealthExport(buffer, userId);
         setParsed({ result, fileName: file.name });
       } catch {
         toast.error("Could not read the Apple Health export. Make sure it is a valid .zip file.");

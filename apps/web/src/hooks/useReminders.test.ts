@@ -6,6 +6,9 @@ import { ReminderId, UserId } from "@/types";
 import type { Reminder } from "@/db/dbService";
 
 vi.mock("@/state/AppState");
+vi.mock("@/lib/pushNotifications", () => ({
+  initializePushSubscription: vi.fn().mockResolvedValue(undefined),
+}));
 
 // bit 0 = Mon, ..., bit 6 = Sun
 const ALL_DAYS = 0b1111111;

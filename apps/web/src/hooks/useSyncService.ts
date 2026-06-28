@@ -13,8 +13,8 @@ import {
   type FoodItem,
   foodItems,
   type MealTemplate,
-  mealTemplates,
   type MealTemplateFood,
+  mealTemplates,
   type Recipe,
   recipes,
   type Reminder,
@@ -31,7 +31,7 @@ import {
 } from "../db/dbService";
 import { decryptBlob, deriveKey, encryptBlob } from "../lib/e2eEncryption";
 import { clearE2EKey, getE2EKey, setE2EKey } from "../lib/e2eKeyStore";
-import type { DietPreset, RestrictionFlag, ReminderType, SyncBlobPayload, UserId } from "@/types";
+import type { DietPreset, ReminderType, RestrictionFlag, SyncBlobPayload, UserId } from "@/types";
 
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_RETRIES = 3;

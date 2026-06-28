@@ -3,11 +3,11 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
-    paths: [ "apps/backend/**" ]
+    branches: [main, develop]
+    paths: ["apps/backend/**"]
   pull_request:
-    branches: [ main ]
-    paths: [ "apps/backend/**" ]
+    branches: [main]
+    paths: ["apps/backend/**"]
 
 env:
   JAVA_VERSION: "25"

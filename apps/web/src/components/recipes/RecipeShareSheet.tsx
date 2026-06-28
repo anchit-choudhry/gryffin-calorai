@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useEffect, useRef, useState } from "react";
-import QrCreator from "qr-creator";
+import { toCanvas } from "qrcode";
 import { Check, Copy, X } from "lucide-react";
 import type { Recipe } from "@/db/dbService";
 import { useAppState } from "../../state/AppState";
@@ -16,24 +16,32 @@ export const RecipeShareSheet: FC<Props> = ({ recipe, onClose }) => {
   const { allFoodItems } = useAppState();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [copied, setCopied] = useState(false);
-
-  const shareUrl = buildShareUrl(recipe, allFoodItems);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareError, setShareError] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    QrCreator.render(
-      {
-        text: shareUrl,
-        radius: 0,
-        ecLevel: "M",
-        fill: "oklch(0.18 0.020 60)",
-        background: "oklch(0.975 0.012 80)",
-        size: 180,
-      },
-      canvas,
-    );
-  }, [shareUrl]);
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const url = await buildShareUrl(recipe, allFoodItems);
+        if (cancelled) return;
+        setShareUrl(url);
+        await toCanvas(canvas, url, {
+          width: 180,
+          errorCorrectionLevel: "M",
+          color: { dark: "#1a170d", light: "#f7f4eb" },
+        });
+      } catch {
+        if (!cancelled) setShareError(true);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [recipe, allFoodItems]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareUrl);
@@ -86,17 +94,23 @@ export const RecipeShareSheet: FC<Props> = ({ recipe, onClose }) => {
         </div>
 
         <p className="font-mono text-[10px] text-ink-soft/60 text-center mb-4 leading-relaxed break-all">
-          {shareUrl.length > 80 ? `${shareUrl.slice(0, 60)}...` : shareUrl}
+          {shareError
+            ? "Unable to generate share link."
+            : shareUrl.length > 80
+              ? `${shareUrl.slice(0, 60)}...`
+              : shareUrl}
         </p>
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleCopy}
+            disabled={!shareUrl}
             className={cn(
               "flex flex-1 items-center justify-center gap-2 border border-rule px-4 py-2.5",
               "font-mono text-xs uppercase tracking-[0.15em] transition-colors",
               "hover:bg-paper-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon",
+              "disabled:pointer-events-none disabled:opacity-40",
               copied && "border-persimmon text-persimmon",
             )}
           >
@@ -111,7 +125,8 @@ export const RecipeShareSheet: FC<Props> = ({ recipe, onClose }) => {
             <button
               type="button"
               onClick={handleNativeShare}
-              className="flex flex-1 items-center justify-center gap-2 border border-rule bg-persimmon px-4 py-2.5 font-mono text-xs uppercase tracking-[0.15em] text-paper transition-colors hover:bg-persimmon/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon"
+              disabled={!shareUrl}
+              className="flex flex-1 items-center justify-center gap-2 border border-rule bg-persimmon px-4 py-2.5 font-mono text-xs uppercase tracking-[0.15em] text-paper transition-colors hover:bg-persimmon/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-persimmon disabled:pointer-events-none disabled:opacity-40"
             >
               Share
             </button>

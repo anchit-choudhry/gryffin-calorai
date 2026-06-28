@@ -1,4 +1,3 @@
-import { deflateSync, inflateSync, strFromU8, strToU8 } from "fflate";
 import { addFoodItemLog, type FoodItem, type Recipe, saveRecipe } from "@/db/dbService";
 import { FoodItemId, ISODate, type UserId } from "@/types";
 
@@ -23,6 +22,32 @@ export interface ShareableRecipe {
   totalCarbs?: number;
   totalFat?: number;
   ingredients: ShareableIngredient[];
+}
+
+async function transformBytes(
+  stream: CompressionStream | DecompressionStream,
+  data: Uint8Array<ArrayBuffer>,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const writer = stream.writable.getWriter();
+  await writer.write(data);
+  await writer.close();
+  return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+}
+
+async function deflate(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  return transformBytes(new CompressionStream("deflate-raw"), data);
+}
+
+async function inflate(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuffer>> {
+  return transformBytes(new DecompressionStream("deflate-raw"), data);
+}
+
+function uint8ToBase64url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** Resolves a Recipe's ingredient IDs against allFoodItems and returns a shareable payload. */
@@ -56,23 +81,21 @@ export function buildShareableRecipe(
   };
 }
 
-/** Encodes a ShareableRecipe to a base64url string (fflate deflate compressed). */
-export function encodeSharePayload(recipe: ShareableRecipe): string {
+/** Encodes a ShareableRecipe to a base64url string (deflate-raw compressed). */
+export async function encodeSharePayload(recipe: ShareableRecipe): Promise<string> {
   const json = JSON.stringify(recipe);
-  const compressed = deflateSync(strToU8(json));
-  return btoa(String.fromCharCode(...compressed))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+  const compressed = await deflate(new TextEncoder().encode(json));
+  return uint8ToBase64url(compressed);
 }
 
 /** Decodes a base64url string back to a ShareableRecipe. Returns undefined on any error. */
-export function decodeSharePayload(encoded: string): ShareableRecipe | undefined {
+export async function decodeSharePayload(encoded: string): Promise<ShareableRecipe | undefined> {
   try {
     const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
     const binary = atob(base64);
     const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    const json = strFromU8(inflateSync(bytes));
+    const decompressed = await inflate(bytes);
+    const json = new TextDecoder().decode(decompressed);
     const parsed: unknown = JSON.parse(json);
     if (
       typeof parsed === "object" &&
@@ -90,9 +113,12 @@ export function decodeSharePayload(encoded: string): ShareableRecipe | undefined
 }
 
 /** Builds the full share URL for a recipe. */
-export function buildShareUrl(recipe: Recipe, allFoodItems: readonly FoodItem[]): string {
+export async function buildShareUrl(
+  recipe: Recipe,
+  allFoodItems: readonly FoodItem[],
+): Promise<string> {
   const payload = buildShareableRecipe(recipe, allFoodItems);
-  const encoded = encodeSharePayload(payload);
+  const encoded = await encodeSharePayload(payload);
   const base = window.location.origin + window.location.pathname;
   return `${base}#recipes?share=${encoded}`;
 }

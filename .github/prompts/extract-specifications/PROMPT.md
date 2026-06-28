@@ -14,5 +14,5 @@ Invoke this prompt to reverse-engineer specifications from existing code in this
 
 Follow the process documented in the source files above. Output should go to
 `specifications/` at the project root (see existing
-`specifications/gryffin-calorai-specifications.md`
+`docs/specifications/architecture.md`
 as an example of the expected format and depth).

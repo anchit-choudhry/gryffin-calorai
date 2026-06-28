@@ -36,12 +36,14 @@ Ask the user:
 
 1. **What tables are being created or altered?** (new table / add column / add index / drop)
 2. **For new tables:** What are the key columns and their types?
-  - Text fields: use `TEXT` (not `VARCHAR(n)` unless a length limit is meaningful)
-  - Timestamps: use `TIMESTAMPTZ NOT NULL DEFAULT NOW()` for audit columns
-  - Numeric nutrients/measurements: use `DOUBLE PRECISION` (not `NUMERIC`) - matches Parquet
-    DOUBLE, avoids cast overhead
-  - IDs referencing `app_users(id)`: `UUID NOT NULL REFERENCES app_users(id) ON DELETE CASCADE`
-  - Auto-generated PKs: `UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+
+- Text fields: use `TEXT` (not `VARCHAR(n)` unless a length limit is meaningful)
+- Timestamps: use `TIMESTAMPTZ NOT NULL DEFAULT NOW()` for audit columns
+- Numeric nutrients/measurements: use `DOUBLE PRECISION` (not `NUMERIC`) - matches Parquet
+  DOUBLE, avoids cast overhead
+- IDs referencing `app_users(id)`: `UUID NOT NULL REFERENCES app_users(id) ON DELETE CASCADE`
+- Auto-generated PKs: `UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+
 3. **Full-text search needed?** If yes, use the stored tsvector + trigger pattern (see V22), NOT
    a functional expression index (unaccent() is STABLE, not IMMUTABLE).
 4. **Will any existing data rows be affected?** If yes, warn the user and ask how to handle

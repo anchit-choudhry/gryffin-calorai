@@ -51,20 +51,20 @@ function makeResult(
   weights = 0,
   steps = 0,
   skipped = 0,
-): ReturnType<typeof parseAppleHealthExport> {
+): Awaited<ReturnType<typeof parseAppleHealthExport>> {
   return {
     weightEntries: Array.from({ length: weights }, (_, i) => ({
       userId: "test-user" as UserId,
-      measuredAt: `2026-01-0${i + 1}` as ReturnType<
-        typeof parseAppleHealthExport
+      measuredAt: `2026-01-0${i + 1}` as Awaited<
+        ReturnType<typeof parseAppleHealthExport>
       >["weightEntries"][0]["measuredAt"],
       weight: 80 - i * 0.1,
     })),
     stepEntries: Array.from({ length: steps }, (_, i) => ({
       userId: "test-user" as UserId,
       steps: 8000 + i * 100,
-      dateLogged: `2026-01-0${i + 1}` as ReturnType<
-        typeof parseAppleHealthExport
+      dateLogged: `2026-01-0${i + 1}` as Awaited<
+        ReturnType<typeof parseAppleHealthExport>
       >["stepEntries"][0]["dateLogged"],
       loggedAt: new Date().toISOString(),
     })),
@@ -89,7 +89,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("shows detected counts after file selection", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(5, 7, 2));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(5, 7, 2));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => {
@@ -101,7 +101,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("shows import button with total record count", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(3, 4, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(3, 4, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => {
@@ -110,7 +110,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("hides import button when no records found", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(0, 0, 5));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(0, 0, 5));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => {
@@ -120,7 +120,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("calls db functions and shows success toast on confirm", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(2, 3, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(2, 3, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => screen.getByRole("button", { name: /import 5 records/i }));
@@ -133,7 +133,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("calls fetchBodyMeasurements after importing weight entries", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(2, 0, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(2, 0, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => screen.getByRole("button", { name: /import 2 records/i }));
@@ -144,7 +144,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("skips fetchBodyMeasurements when only step entries are imported", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(0, 4, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(0, 4, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => screen.getByRole("button", { name: /import 4 records/i }));
@@ -157,7 +157,7 @@ describe("AppleHealthImportPanel", () => {
 
   it("shows error toast when db call throws", async () => {
     vi.mocked(addBodyMeasurementToDB).mockRejectedValue(new Error("DB error"));
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(1, 0, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(1, 0, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => screen.getByRole("button", { name: /import 1 records/i }));
@@ -179,7 +179,7 @@ describe("AppleHealthImportPanel", () => {
   });
 
   it("resets to drop zone when cancel is clicked", async () => {
-    vi.mocked(parseAppleHealthExport).mockReturnValue(makeResult(2, 2, 0));
+    vi.mocked(parseAppleHealthExport).mockResolvedValue(makeResult(2, 2, 0));
     render(<AppleHealthImportPanel />);
     simulateFileSelect(makeZipFile());
     await waitFor(() => screen.getByRole("button", { name: /cancel/i }));

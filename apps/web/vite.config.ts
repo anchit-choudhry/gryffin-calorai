@@ -2,8 +2,8 @@ import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import viteCompression from "vite-plugin-compression2";
 import { VitePWA } from "vite-plugin-pwa";
+import { preCompress } from "./plugins/preCompress";
 // style-src requires 'unsafe-inline' for Tailwind's JIT engine (CSS-only; cannot execute JS).
 // Never allow user-controlled values in HTML style attributes.
 //
@@ -53,13 +53,13 @@ const VENDOR_CHUNKS: [string, string][] = [
   ["node_modules/lucide-react", "vendor-icons"],
   ["node_modules/sonner", "vendor-ui"],
   ["node_modules/radix-ui", "vendor-ui"],
-  ["node_modules/class-variance-authority", "vendor-ui"],
+  ["node_modules/tailwind-variants", "vendor-ui"],
   ["node_modules/clsx", "vendor-ui"],
   ["node_modules/tailwind-merge", "vendor-ui"],
   ["node_modules/motion", "vendor-motion"],
-  ["node_modules/fflate", "vendor-state"],
+  ["node_modules/jszip", "vendor-state"],
   ["node_modules/zustand", "vendor-state"],
-  ["node_modules/qr-creator", "vendor-qr"],
+  ["node_modules/qrcode", "vendor-qr"],
   ["node_modules/react-hook-form", "vendor-form"],
   ["node_modules/@hookform", "vendor-form"],
   ["node_modules/zod", "vendor-form"],
@@ -77,9 +77,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    viteCompression({
-      algorithms: ["gzip", "brotliCompress"],
-    }),
+    preCompress(),
     VitePWA({
       registerType: "autoUpdate",
       // 'script' injects <script src="registerSW.js"> which satisfies script-src 'self' CSP

@@ -1,3 +1,4 @@
+---
 # pnpm v11 configuration
 # All non-auth settings belong here (not .npmrc) per pnpm v11 conventions.
 # https://pnpm.io/settings

@@ -64,6 +64,7 @@ public class SecurityConfig {
         auth.requestMatchers(HttpMethod.POST, "/v1/auth/token", "/v1/auth/refresh")
           .permitAll();
         auth.requestMatchers(HttpMethod.GET, "/v1/ping").permitAll();
+        auth.requestMatchers(HttpMethod.GET, "/v1/push/vapid-public-key").permitAll();
         auth.requestMatchers("/actuator/health", "/actuator/info").permitAll();
         if (swaggerEnabled) {
           auth.requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
