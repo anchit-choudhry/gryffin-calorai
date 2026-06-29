@@ -18,6 +18,6 @@ pnpm build             # verify production build succeeds
 Key constraints:
 
 - Vite 8 (Rolldown-based) - `manualChunks` must use function form, not object form
-- Dexie 4 - schema version is currently v13; bumping Dexie major requires migration testing
+- Dexie 4 - schema version is currently v21; bumping Dexie major requires migration testing
 - motion 12 (`motion/react` import) - not `framer-motion`
 - zod imported via `zod/v3` (not bare `zod`) - check after any zod update

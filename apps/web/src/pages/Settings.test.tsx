@@ -157,7 +157,7 @@ describe("Settings", () => {
     await act(async () => {
       render(<Settings />);
     });
-    expect(screen.getByText(/0\.20\.0/)).toBeTruthy();
+    expect(screen.getByText(/0\.21\.0/)).toBeTruthy();
     expect(screen.getByText("Field Journal - Colophon")).toBeTruthy();
   });
 

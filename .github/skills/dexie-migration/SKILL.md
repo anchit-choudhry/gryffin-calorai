@@ -11,8 +11,7 @@ that has shipped can never be reused.
 ## Current schema
 
 - File: `apps/web/src/db/dbService.ts`
-- Current version: **v20** (cloud sync + photos baseline)
-- Version constant: `DB_SCHEMA_VERSION`
+- Current version: **v21** (sync expansion: recipes, templates, reminders, diet profiles)
 
 ## Checklist
 
@@ -21,7 +20,6 @@ that has shipped can never be reused.
 - [ ] Add new `db.version(N+1).stores({...})` block - copy ALL previous stores, not just the
   changed one
 - [ ] Update TypeScript interface for any new fields
-- [ ] Update `DB_SCHEMA_VERSION` constant
 - [ ] Add a paired test covering the new schema path
 
 ## Quick commands

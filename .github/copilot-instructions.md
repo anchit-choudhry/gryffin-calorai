@@ -10,7 +10,7 @@ for architecture details, the full file location table, and quick commands.
 
 ## Stack (quick ref)
 
-React 19 + Vite 8 + TypeScript 6 (strict) | Zustand 5 | Dexie.js 4 (schema v20) | Tailwind CSS 4
+React 19 + Vite 8 + TypeScript 6 (strict) | Zustand 5 | Dexie.js 4 (schema v21) | Tailwind CSS 4
 (dark mode: class-based) | shadcn/ui (Radix UI) | react-hook-form 7 + zod/v3 | Vitest 4 + jsdom |
 Recharts 3 | motion 12 (`motion/react`) | sonner | lucide-react | Spring Boot 4.0 + PostgreSQL 18
 

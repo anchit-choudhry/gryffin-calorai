@@ -92,3 +92,23 @@ vi.stubGlobal("Notification", MockNotification);
 
 `toEqual` is banned by ESLint (`vitest/prefer-strict-equal` is set to `"error"`). Always use
 `toStrictEqual` for deep equality checks on objects and arrays.
+
+## Dexie / fake-indexeddb
+
+`fake-indexeddb/auto` is registered globally in `vitest.config.ts` via `setupFiles` - do NOT
+import it manually in individual test files. Dexie tables are available out-of-the-box in all
+tests. Reset between tests by calling `dbService` delete helpers or by re-initialising the
+relevant state.
+
+## App routes (hash-based)
+
+The app uses `window.location.hash` routing with no router library. The four pages are:
+
+| Hash | Page |
+|------|------|
+| `/#/` | Dashboard |
+| `/#/recipes` | Recipes |
+| `/#/progress` | Progress |
+| `/#/settings` | Settings |
+
+Dev server: `pnpm dev` starts at `http://localhost:5173`.
