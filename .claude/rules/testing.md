@@ -104,11 +104,11 @@ relevant state.
 
 The app uses `window.location.hash` routing with no router library. The four pages are:
 
-| Hash | Page |
-|------|------|
-| `/#/` | Dashboard |
-| `/#/recipes` | Recipes |
-| `/#/progress` | Progress |
-| `/#/settings` | Settings |
+| Hash          | Page      |
+|---------------|-----------|
+| `/#/`         | Dashboard |
+| `/#/recipes`  | Recipes   |
+| `/#/progress` | Progress  |
+| `/#/settings` | Settings  |
 
 Dev server: `pnpm dev` starts at `http://localhost:5173`.
